@@ -16,20 +16,20 @@ module cdbus
         parameter PERIOD_LS = 433,
         parameter PERIOD_HS = 433
     )(
-        input       clk,
-        input       reset_n,
+        input               clk,
+        input               reset_n,
 
-        input       [4:0] csr_address,
-        input       csr_read,
-        output reg  [7:0] csr_readdata,
-        input       csr_write,
-        input       [7:0] csr_writedata,
+        input       [4:0]   csr_address,
+        input               csr_read,
+        output reg  [7:0]   csr_readdata,
+        input               csr_write,
+        input       [7:0]   csr_writedata,
 
-        output      irq,
+        output              irq,
 
-        input       rx,
-        output      tx,
-        output      tx_en
+        input               rx,
+        output              tx,
+        output              tx_en
     );
 
 localparam
@@ -37,24 +37,26 @@ localparam
     REG_SETTING       = 'h01,
     REG_IDLE_LEN      = 'h02,
     REG_TX_PERMIT_LEN = 'h03,
-    REG_FILTER        = 'h04,
-    REG_PERIOD_LS_L   = 'h05,
-    REG_PERIOD_LS_H   = 'h06,
-    REG_PERIOD_HS_L   = 'h07,
-    REG_PERIOD_HS_H   = 'h08,
-    REG_INT_FLAG      = 'h09,
-    REG_INT_MASK      = 'h0a,
-    REG_RX            = 'h0b,
-    REG_TX            = 'h0c,
-    REG_RX_CTRL       = 'h0d,
-    REG_TX_CTRL       = 'h0e,
-    REG_RX_ADDR       = 'h0f,
-    REG_RX_PAGE_FLAG  = 'h10;
+    REG_TX_EN_EXTRAS  = 'h04,
+    REG_FILTER        = 'h05,
+    REG_PERIOD_LS_L   = 'h06,
+    REG_PERIOD_LS_H   = 'h07,
+    REG_PERIOD_HS_L   = 'h08,
+    REG_PERIOD_HS_H   = 'h09,
+    REG_INT_FLAG      = 'h0a,
+    REG_INT_MASK      = 'h0b,
+    REG_RX            = 'h0c,
+    REG_TX            = 'h0d,
+    REG_RX_CTRL       = 'h0e,
+    REG_TX_CTRL       = 'h0f,
+    REG_RX_ADDR       = 'h10,
+    REG_RX_PAGE_FLAG  = 'h11;
 
 localparam VERSION   = 8'h03;
 
 reg  arbitrate;
-reg  [1:0] tx_en_extra_len;
+reg  [1:0] tx_en_extra_head;
+reg  [1:0] tx_en_extra_tail;
 reg  not_drop;
 reg  user_crc;
 reg  tx_invert;
@@ -112,12 +114,14 @@ always @(*)
         REG_VERSION:
             csr_readdata = VERSION;
         REG_SETTING:
-            csr_readdata = {1'b0, !arbitrate, tx_en_extra_len,
-                            not_drop, user_crc, tx_invert, tx_push_pull};
+            csr_readdata = {1'b0, arbitrate, tx_invert, tx_push_pull,
+                            user_crc, 2'b00, not_drop};
         REG_IDLE_LEN:
             csr_readdata = idle_len;
         REG_TX_PERMIT_LEN:
             csr_readdata = tx_permit_len;
+        REG_TX_EN_EXTRAS:
+            csr_readdata = {2'b00, tx_en_extra_head, 2'b00, tx_en_extra_tail};
         REG_FILTER:
             csr_readdata = filter;
         REG_PERIOD_LS_L:
@@ -146,29 +150,30 @@ always @(*)
 always @(posedge clk or negedge reset_n)
     if (!reset_n) begin
         arbitrate <= 1;
-        tx_en_extra_len <= 1;
+        tx_en_extra_head <= 1;
+        tx_en_extra_tail <= 1;
         not_drop <= 0;
         user_crc <= 0;
         tx_invert <= 0;
         tx_push_pull <= 0;
-        
+
         idle_len <= 20;         // 2 byte (10 bits per byte)
         tx_permit_len <= 10;
         filter <= 8'hff;
         period_ls <= PERIOD_LS; // div = period+1
         period_hs <= PERIOD_HS;
-        
+
         cd_error_flag <= 0;
         cd_flag <= 0;
         rx_error_flag <= 0;
         rx_lost_flag <= 0;
-        
+
         int_mask <= 0;
-        
+
         rx_ram_rd_addr <= 0;
         rx_ram_rd_done <= 0;
         rx_ram_rd_done_all <= 0;
-        
+
         tx_ram_wr_addr <= 0;
         tx_ram_switch <= 0;
     end
@@ -176,7 +181,7 @@ always @(posedge clk or negedge reset_n)
         rx_ram_rd_done <= 0;
         rx_ram_rd_done_all <= 0;
         tx_ram_switch <= 0;
-        
+
         if (rx_error)
             rx_error_flag <= 1;
         if (rx_ram_lost)
@@ -188,21 +193,24 @@ always @(posedge clk or negedge reset_n)
 
         if (csr_read && csr_address == REG_RX)
             rx_ram_rd_addr <= rx_ram_rd_addr + 1'd1;
-        
+
         if (csr_write)
             case (csr_address)
                 REG_SETTING: begin
-                    arbitrate <= !csr_writedata[6];
-                    tx_en_extra_len <= csr_writedata[5:4];
-                    not_drop <= csr_writedata[3];
-                    user_crc <= csr_writedata[2];
-                    tx_invert <= csr_writedata[1];
-                    tx_push_pull <= csr_writedata[0];
+                    arbitrate <= csr_writedata[6];
+                    tx_invert <= csr_writedata[5];
+                    tx_push_pull <= csr_writedata[4];
+                    user_crc <= csr_writedata[3];
+                    not_drop <= csr_writedata[0];
                 end
                 REG_IDLE_LEN:
                     idle_len <= csr_writedata;
                 REG_TX_PERMIT_LEN:
                     tx_permit_len <= csr_writedata;
+                REG_TX_EN_EXTRAS: begin
+                    tx_en_extra_head <= csr_writedata[5:4];
+                    tx_en_extra_tail <= csr_writedata[1:0];
+                end
                 REG_FILTER:
                     filter <= csr_writedata;
                 REG_PERIOD_LS_L:
@@ -228,6 +236,7 @@ always @(posedge clk or negedge reset_n)
                         rx_lost_flag <= 0;
                     if (csr_writedata[3])
                         rx_error_flag <= 0;
+
                     if (csr_writedata[4]) begin
                         rx_ram_rd_addr <= 0;
                         rx_ram_rd_done_all <= 1;
@@ -242,9 +251,9 @@ always @(posedge clk or negedge reset_n)
                         tx_ram_wr_addr <= 0;
                         tx_ram_switch <= 1;
                     end
-                    if (csr_writedata[3])
+                    if (csr_writedata[2])
                         cd_flag <= 0;
-                    if (csr_writedata[4])
+                    if (csr_writedata[3])
                         cd_error_flag <= 0;
                 end
                 REG_RX_ADDR: begin
@@ -263,17 +272,17 @@ wire [7:0] rx_ram_wr_flags;
 pp_ram #(.N_WIDTH(3)) pp_ram_rx_m(
     .clk(clk),
     .reset_n(reset_n),
-    
+
     .rd_byte(rx_ram_rd_data),
     .rd_addr(rx_ram_rd_addr),
     .rd_done(rx_ram_rd_done),
     .rd_done_all(rx_ram_rd_done_all),
     .unread(rx_pending),
-    
+
     .wr_byte(rx_ram_wr_data),
     .wr_addr(rx_ram_wr_addr),
     .wr_clk(rx_ram_wr_clk),
-    
+
     .switch(rx_ram_switch),
     .wr_flags(rx_ram_wr_flags),
     .rd_flags(rx_ram_rd_flags),
@@ -287,17 +296,17 @@ wire tx_read_done;
 pp_ram #(.N_WIDTH(1)) pp_ram_tx_m(
     .clk(clk),
     .reset_n(reset_n),
-    
+
     .rd_byte(tx_data),
     .rd_addr(tx_addr),
     .rd_done(tx_read_done),
     .rd_done_all(1'b0),
     .unread(tx_pending),
-    
+
     .wr_byte(tx_ram_wr_data),
     .wr_addr(tx_ram_wr_addr),
     .wr_clk(tx_ram_wr_clk),
-    
+
     .switch(tx_ram_switch)
 );
 
@@ -309,19 +318,19 @@ wire wait_bus_idle;
 rx_bytes rx_bytes_m(
     .clk(clk),
     .reset_n(reset_n),
-    
+
     .filter(filter),
     .user_crc(user_crc),
     .not_drop(not_drop),
     .abort(rx_ram_rd_done_all),
     .error(rx_error),
-    
+
     .ser_bus_idle(bus_idle),
     .ser_data(ser_data),
     .ser_crc_data(ser_crc_data),
     .ser_data_clk(ser_data_clk),
     .ser_wait_bus_idle(wait_bus_idle),
-    
+
     .wr_byte(rx_ram_wr_data),
     .wr_addr(rx_ram_wr_addr),
     .wr_clk(rx_ram_wr_clk),
@@ -329,20 +338,23 @@ rx_bytes rx_bytes_m(
     .switch(rx_ram_switch)
 );
 
+wire tx_permit;
+
 rx_ser rx_ser_m(
     .clk(clk),
     .reset_n(reset_n),
-    
+
     .period_ls(period_ls),
     .period_hs(period_hs),
     .idle_len(idle_len),
-    
+
     .bus_idle(bus_idle),
-    
+    .tx_permit(tx_permit),
+
     .wait_bus_idle(wait_bus_idle),
-    
+
     .rx(rx_d),
-    
+
     .data(ser_data),
     .crc_data(ser_crc_data),
     .data_clk(ser_data_clk)
@@ -351,26 +363,27 @@ rx_ser rx_ser_m(
 tx_bytes_des tx_bytes_des_m(
     .clk(clk),
     .reset_n(reset_n),
-    
+
     .period_ls(period_ls),
     .period_hs(period_hs),
     .user_crc(user_crc),
-    
+
     .arbitrate(arbitrate),
     .tx_permit_len(tx_permit_len),
-    .tx_en_extra_len(tx_en_extra_len),
+    .tx_en_extra_head(tx_en_extra_head),
+    .tx_en_extra_tail(tx_en_extra_tail),
     .cd(cd),
     .cd_err(cd_err),
-    
+
     .tx(tx_d),
     .tx_en(tx_en_d),
-    
+
     .unread(tx_pending),
     .data(tx_data),
     .addr(tx_addr),
     .read_done(tx_read_done),
-    
-    .bus_idle(bus_idle),
+
+    .tx_permit(tx_permit),
     .rx(rx_d)
 );
 

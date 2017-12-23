@@ -14,26 +14,24 @@ module pp_ram
            parameter A_WIDTH = 8,
            parameter N_WIDTH = 1
        )(
-           input clk,
-           input reset_n,
+           input                 clk,
+           input                 reset_n,
 
-           output reg [7:0] rd_byte,
+           output reg   [7:0]    rd_byte,
            input [(A_WIDTH-1):0] rd_addr,
-           input rd_done,
-           input rd_done_all,
-           output unread,
+           input                 rd_done,
+           input                 rd_done_all,
+           output                unread,
 
-           input [7:0] wr_byte,
+           input        [7:0]    wr_byte,
            input [(A_WIDTH-1):0] wr_addr,
-           input wr_clk,
+           input                 wr_clk,
 
-           input switch,
-           input [7:0] wr_flags,
-           output reg [7:0] rd_flags,
-           output reg switch_fail
+           input                 switch,
+           input        [7:0]    wr_flags,
+           output reg   [7:0]    rd_flags,
+           output reg            switch_fail
        );
-
-//length at byte 3 of each ram
 
 reg [7:0] ram[2**N_WIDTH-1:0][2**A_WIDTH-1:0];
 reg [7:0] flags[2**N_WIDTH-1:0];
@@ -50,7 +48,7 @@ always @(posedge clk) begin
 
     rd_byte <= ram[rd_sel][rd_addr];
     rd_flags <= flags[rd_sel];
-    
+
     if (wr_clk) begin
         ram[wr_sel][wr_addr] <= wr_byte;
     end
@@ -63,8 +61,6 @@ always @(posedge clk or negedge reset_n)
         rd_sel <= 0;
         wr_sel <= 0;
         dirty <= 0;
-        //rd_byte <= 0;
-        //rd_flags <= 0;
     end
     else begin
         switch_fail <= 0;
@@ -94,3 +90,4 @@ always @(posedge clk or negedge reset_n)
     end
 
 endmodule
+

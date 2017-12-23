@@ -10,28 +10,31 @@
  */
 
 module rx_ser(
-        input clk,
-        input reset_n,
+        input               clk,
+        input               reset_n,
 
-        input [15:0] period_ls, // low speed
-        input [15:0] period_hs, // high speed
-        input [7:0] idle_len,
+        input       [15:0]  period_ls, // low speed
+        input       [15:0]  period_hs, // high speed
+        input       [7:0]   idle_len,
 
-        output wire bus_idle,
+        output              bus_idle,
+        output              tx_permit,
 
-        input wait_bus_idle,
+        input               wait_bus_idle,
 
-        input rx, // sync already
+        input               rx, // sync already
 
-        output reg [7:0] data,
-        output wire [15:0] crc_data,
-        output reg data_clk
+        output reg  [7:0]   data,
+        output      [15:0]  crc_data,
+        output reg          data_clk
     );
 
 reg [1:0] state;
 localparam WAIT = 0, BUS_IDLE = 1, DATA = 2;
 reg allow_data;
 assign bus_idle = (state == BUS_IDLE);
+
+assign tx_permit = bus_idle; // FIXME
 
 reg [7:0] bit_cnt;
 reg [15:0] period_cnt;

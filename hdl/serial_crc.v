@@ -13,12 +13,12 @@
  */
 
 module serial_crc (
-    input clk,
-    input reset_n,
-    input clean,
-    input data_clk,
-    input data_in,
-    output wire [15:0] crc_out
+    input               clk,
+    input               reset_n,
+    input               clean,
+    input               data_clk,
+    input               data_in,
+    output wire [15:0]  crc_out
 );
 
 reg [0:15] lfsr; // reverse bits
@@ -53,3 +53,4 @@ always @ (posedge clk or negedge reset_n)
     end
 
 endmodule
+

@@ -20,19 +20,20 @@ REG_VERSION       = 0x00
 REG_SETTING       = 0x01
 REG_IDLE_LEN      = 0x02
 REG_TX_PERMIT_LEN = 0x03
-REG_FILTER        = 0x04
-REG_PERIOD_LS_L   = 0x05
-REG_PERIOD_LS_H   = 0x06
-REG_PERIOD_HS_L   = 0x07
-REG_PERIOD_HS_H   = 0x08
-REG_INT_FLAG      = 0x09
-REG_INT_MASK      = 0x0a
-REG_RX            = 0x0b
-REG_TX            = 0x0c
-REG_RX_CTRL       = 0x0d
-REG_TX_CTRL       = 0x0e
-REG_RX_ADDR       = 0x0f
-REG_RX_PAGE_FLAG  = 0x10
+REG_TX_EN_EXTRAS  = 0x04
+REG_FILTER        = 0x05
+REG_PERIOD_LS_L   = 0x06
+REG_PERIOD_LS_H   = 0x07
+REG_PERIOD_HS_L   = 0x08
+REG_PERIOD_HS_H   = 0x09
+REG_INT_FLAG      = 0x0a
+REG_INT_MASK      = 0x0b
+REG_RX            = 0x0c
+REG_TX            = 0x0d
+REG_RX_CTRL       = 0x0e
+REG_TX_CTRL       = 0x0f
+REG_RX_ADDR       = 0x10
+REG_RX_PAGE_FLAG  = 0x11
 
 
 @cocotb.coroutine
@@ -90,7 +91,8 @@ def test_cdbus(dut):
     value = yield csr_read(dut, REG_SETTING)
     dut._log.info("REG_SETTING: 0x%02x" % int(value))
     
-    yield csr_write(dut, REG_SETTING, BinaryValue("00010001"))
+    yield csr_write(dut, REG_SETTING, BinaryValue("01010000"))
+    yield csr_write(dut, REG_TX_EN_EXTRAS, BinaryValue("00010001"))
     
     yield csr_write(dut, REG_PERIOD_LS_H, 0, True)
     yield csr_write(dut, REG_PERIOD_LS_L, 27, True)

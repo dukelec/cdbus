@@ -10,29 +10,29 @@
  */
 
 module rx_bytes (
-        input clk,
-        input reset_n,
+        input               clk,
+        input               reset_n,
 
         // control center
-        input [7:0] filter,
-        input user_crc,
-        input not_drop,
-        input abort,
-        output reg error, // crc error, data lost etc...
+        input       [7:0]   filter,
+        input               user_crc,
+        input               not_drop,
+        input               abort,
+        output reg          error, // crc error, data lost etc...
 
         // rx_ser
-        input ser_bus_idle,
-        input [7:0] ser_data,
-        input [15:0] ser_crc_data,
-        input ser_data_clk,
-        output reg ser_wait_bus_idle, // clean crc by this signal
+        input               ser_bus_idle,
+        input       [7:0]   ser_data,
+        input       [15:0]  ser_crc_data,
+        input               ser_data_clk,
+        output reg          ser_wait_bus_idle,
 
         // pp_ram
-        output wire [7:0] wr_byte,
-        output reg [7:0] wr_addr,
-        output reg wr_clk,
-        output reg [7:0] wr_flags,
-        output reg switch
+        output wire [7:0]   wr_byte,
+        output reg  [7:0]   wr_addr,
+        output reg          wr_clk,
+        output reg  [7:0]   wr_flags,
+        output reg          switch
     );
 
 reg [8:0] byte_cnt;
@@ -46,19 +46,19 @@ localparam NORMAL = 0, CLEANUP = 1;
 always @(posedge clk or negedge reset_n)
     if (!reset_n) begin
         error <= 0;
-        
+
         ser_wait_bus_idle <= 0;
-        
+
         wr_addr <= 0;
         wr_clk <= 0;
         wr_flags <= 0;
         switch <= 0;
-        
+
         byte_cnt <= 0;
         data_len <= 0;
-        
+
         drop_flag <= 0;
-        
+
         state <= NORMAL;
     end
     else begin
@@ -104,12 +104,12 @@ always @(posedge clk or negedge reset_n)
                         if (ser_data == filter && filter != 8'hff)
                             drop_flag <= 1;
                     end
-                    
+
                     if (byte_cnt == 1) begin
                         if (ser_data != filter && ser_data != 8'hff && filter != 8'hff)
                             drop_flag <= 1;
                     end
-                    
+
                     if (byte_cnt == 2) begin
                         data_len <= ser_data;
                         //if (ser_data > 256 - 3) begin // data_len max 256-3 bytes
@@ -118,7 +118,7 @@ always @(posedge clk or negedge reset_n)
                         //    state <= CLEANUP;
                         //end
                     end
-                    
+
                     if (byte_cnt == data_len + 5 - 1) begin // last byte (5 bytes except datas)
                         if (!drop_flag) begin
                             if (ser_crc_data == 0 || user_crc) begin
@@ -135,14 +135,14 @@ always @(posedge clk or negedge reset_n)
                         end
                         state <= CLEANUP;
                     end
-                    
+
                     byte_cnt <= byte_cnt + 1'd1;
                 end
             end
-            
+
             default: state <= CLEANUP;
         endcase
-        
+
         if (abort) begin
             error <= 0;
             switch <= 0;
