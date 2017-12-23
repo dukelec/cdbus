@@ -40,7 +40,6 @@ reg [N_WIDTH-1:0] wr_sel;
 reg [N_WIDTH-1:0] rd_sel;
 reg [2**N_WIDTH-1:0] dirty;
 
-
 assign unread = (dirty != 0);
 
 

@@ -13,8 +13,8 @@
 
 module cdbus
     #(
-        parameter PERIOD_LS = 433,
-        parameter PERIOD_HS = 433
+        parameter PERIOD_LS = 346, // default 115200 bps at 40MHz clk
+        parameter PERIOD_HS = 346
     )(
         input               clk,
         input               reset_n,
@@ -157,8 +157,8 @@ always @(posedge clk or negedge reset_n)
         tx_invert <= 0;
         tx_push_pull <= 0;
 
-        idle_len <= 20;         // 2 byte (10 bits per byte)
-        tx_permit_len <= 10;
+        idle_len <= 10;         // 1 byte (10 bits per byte)
+        tx_permit_len <= 20;
         filter <= 8'hff;
         period_ls <= PERIOD_LS; // div = period+1
         period_hs <= PERIOD_HS;
@@ -313,7 +313,7 @@ pp_ram #(.N_WIDTH(1)) pp_ram_tx_m(
 wire [7:0] ser_data;
 wire [15:0] ser_crc_data;
 wire ser_data_clk;
-wire wait_bus_idle;
+wire force_wait_idle;
 
 rx_bytes rx_bytes_m(
     .clk(clk),
@@ -329,7 +329,7 @@ rx_bytes rx_bytes_m(
     .ser_data(ser_data),
     .ser_crc_data(ser_crc_data),
     .ser_data_clk(ser_data_clk),
-    .ser_wait_bus_idle(wait_bus_idle),
+    .ser_force_wait_idle(force_wait_idle),
 
     .wr_byte(rx_ram_wr_data),
     .wr_addr(rx_ram_wr_addr),
@@ -347,11 +347,12 @@ rx_ser rx_ser_m(
     .period_ls(period_ls),
     .period_hs(period_hs),
     .idle_len(idle_len),
+    .tx_permit_len(tx_permit_len),
 
     .bus_idle(bus_idle),
     .tx_permit(tx_permit),
 
-    .wait_bus_idle(wait_bus_idle),
+    .force_wait_idle(force_wait_idle),
 
     .rx(rx_d),
 
@@ -369,7 +370,6 @@ tx_bytes_des tx_bytes_des_m(
     .user_crc(user_crc),
 
     .arbitrate(arbitrate),
-    .tx_permit_len(tx_permit_len),
     .tx_en_extra_head(tx_en_extra_head),
     .tx_en_extra_tail(tx_en_extra_tail),
     .cd(cd),
@@ -388,3 +388,4 @@ tx_bytes_des tx_bytes_des_m(
 );
 
 endmodule
+

@@ -18,7 +18,6 @@ module tx_bytes_des (
         input       [15:0]  period_hs,  // high speed
         input               user_crc,
         input               arbitrate,
-        input       [7:0]   tx_permit_len,
         input       [1:0]   tx_en_extra_head,
         input       [1:0]   tx_en_extra_tail,
         output reg          cd,         // collision detection
@@ -295,3 +294,4 @@ serial_crc tx_crc_m(
 );
 
 endmodule
+

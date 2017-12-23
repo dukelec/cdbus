@@ -97,7 +97,7 @@ def test_cdbus(dut):
     yield csr_write(dut, REG_PERIOD_LS_H, 0, True)
     yield csr_write(dut, REG_PERIOD_LS_L, 27, True)
     yield csr_write(dut, REG_PERIOD_HS_H, 0, True)
-    yield csr_write(dut, REG_PERIOD_HS_L, 2, True)
+    yield csr_write(dut, REG_PERIOD_HS_L, 3, True)
     yield csr_write(dut, REG_FILTER, 0x00, True)
     
     yield csr_write(dut, REG_TX, 0x01, True)
