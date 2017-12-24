@@ -61,7 +61,7 @@ always @(posedge clk or negedge reset_n)
             end
 
             DATA: begin
-                if (switch || error)
+                if (finish)
                     state <= INIT;
             end
 
@@ -78,6 +78,7 @@ always @(posedge clk or negedge reset_n)
 reg [8:0] byte_cnt;
 reg [7:0] data_len; // backup 3rd byte
 reg drop_flag;
+reg finish;
 
 always @(posedge clk or negedge reset_n)
     if (!reset_n) begin
@@ -92,11 +93,13 @@ always @(posedge clk or negedge reset_n)
         data_len <= 0;
 
         drop_flag <= 0;
+        finish <= 0;
     end
     else begin
         error <= 0;
         wr_clk <= 0;
         switch <= 0;
+        finish <= 0;
 
         if (state == INIT) begin
             byte_cnt <= 0;
@@ -114,6 +117,8 @@ always @(posedge clk or negedge reset_n)
                             switch <= 1;
                         end
                     end
+                    finish <= 1;
+                    drop_flag <= 1; // avoid multi-clock switch signal
                 end
             end
 
@@ -152,6 +157,8 @@ always @(posedge clk or negedge reset_n)
                             end
                         end
                     end
+
+                    finish <= 1;
                 end
 
                 byte_cnt <= byte_cnt + 1'd1;
