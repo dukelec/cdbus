@@ -18,7 +18,7 @@ module rx_bytes (
         input               user_crc,
         input               not_drop,
         input               abort,
-        output reg          error, // crc error, data lost etc...
+        output reg          error, // frame incomplete or crc error
 
         // rx_ser
         input               ser_bus_idle,
@@ -35,9 +35,6 @@ module rx_bytes (
         output reg          switch
     );
 
-reg [8:0] byte_cnt;
-reg [7:0] data_len; // backup 3rd byte
-reg drop_flag;
 assign wr_byte = ser_data;
 
 
@@ -78,6 +75,10 @@ always @(posedge clk or negedge reset_n)
 
 //
 
+reg [8:0] byte_cnt;
+reg [7:0] data_len; // backup 3rd byte
+reg drop_flag;
+
 always @(posedge clk or negedge reset_n)
     if (!reset_n) begin
         error <= 0;
@@ -98,9 +99,9 @@ always @(posedge clk or negedge reset_n)
         switch <= 0;
 
         if (state == INIT) begin
-                byte_cnt <= 0;
-                data_len <= 0;
-                drop_flag <= 0;
+            byte_cnt <= 0;
+            data_len <= 0;
+            drop_flag <= 0;
         end
         else begin
 
@@ -116,7 +117,7 @@ always @(posedge clk or negedge reset_n)
                 end
             end
 
-            // data format: src_addr, dst_addr, data_len, [data], crc_l, crc_h
+            // frame format: src_addr, dst_addr, data_len, [data], crc_l, crc_h
             else if (ser_data_clk == 1) begin
 
                 wr_addr <= byte_cnt[7:0];
@@ -137,10 +138,10 @@ always @(posedge clk or negedge reset_n)
                     data_len <= ser_data;
                 end
 
-                if (byte_cnt == data_len + 5 - 1) begin // last byte (5 bytes except datas)
+                if (byte_cnt == data_len + 5 - 1) begin // last byte
                     if (!drop_flag) begin
                         if (ser_crc_data == 0 || user_crc) begin
-                            wr_flags <= 0; // 0: no error, else rx length
+                            wr_flags <= 0; // 0: no error; else: rx length
                             switch <= 1;
                         end
                         else begin

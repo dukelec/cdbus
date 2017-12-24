@@ -20,7 +20,7 @@ module tx_bytes_des (
         input               arbitrate,
         input       [1:0]   tx_en_extra_head,
         input       [1:0]   tx_en_extra_tail,
-        output reg          cd,         // collision detection
+        output reg          cd,         // collision detect
         output reg          cd_err,
 
         output reg          tx,
@@ -38,19 +38,16 @@ module tx_bytes_des (
         input               rx
     );
 
-wire tx_ready = tx_permit & unread;
-
 
 // FSM
 
-reg [1:0] extra_cnt;
-
-reg [3:0] state;
+reg [4:0] state;
 localparam
-    WAIT        = 4'b0001,
-    EXTRA_HEAD  = 4'b0010,
-    DATA        = 4'b0100,
-    EXTRA_TAIL  = 4'b1000;
+    WAIT            = 5'b00001,
+    EXTRA_HEAD      = 5'b00010,
+    EXTRA_HEAD_END  = 5'b00100,
+    DATA            = 5'b01000,
+    EXTRA_TAIL      = 5'b10000;
 
 always @(posedge clk or negedge reset_n)
     if (!reset_n) begin
@@ -66,13 +63,17 @@ always @(posedge clk or negedge reset_n)
 
         EXTRA_HEAD: begin
             if (extra_cnt == tx_en_extra_head)
-                state <= DATA;
+                state <= EXTRA_HEAD_END; // reset period_cnt
+        end
+
+        EXTRA_HEAD_END: begin
+            state <= DATA;
         end
 
         DATA: begin
             if (cd)
                 state <= WAIT;
-            else if (read_done)
+            else if (is_last_byte && byte_inc)
                 state <= EXTRA_TAIL;
         end
 
@@ -89,7 +90,7 @@ always @(posedge clk or negedge reset_n)
 
 // period_cnt
 
-reg hs_flag; // belongs to bits_ctrl
+reg hs_flag;
 
 reg bit_inc;
 reg bit_mid;
@@ -99,7 +100,7 @@ reg [15:0] period_cnt;
 
 always @(posedge clk or negedge reset_n)
     if (!reset_n) begin
-        period_cnt <= 0;
+        period_cnt <= 1;
         bit_inc <= 0;
         bit_mid <= 0;
     end
@@ -107,13 +108,13 @@ always @(posedge clk or negedge reset_n)
         bit_inc <= 0;
         bit_mid <= 0;
 
-        if (state == WAIT) begin
-            period_cnt <= 0;
+        if (state == WAIT || state == EXTRA_HEAD_END) begin
+            period_cnt <= 1;
         end
         else begin
             period_cnt <= period_cnt + 1'd1;
 
-            if (period_cnt == {1'd0, period_cur[15:1]})
+            if (period_cnt - 1 == {1'd0, period_cur[15:1]})
                 bit_mid <= 1;
 
             if (period_cnt >= period_cur) begin
@@ -126,7 +127,7 @@ always @(posedge clk or negedge reset_n)
 
 // extra_cnt
 
-reg bit_finished;
+reg [1:0] extra_cnt;
 
 always @(posedge clk or negedge reset_n)
     if (!reset_n) begin
@@ -144,8 +145,9 @@ always @(posedge clk or negedge reset_n)
 
 reg is_crc_byte;
 reg is_last_byte;
+reg bit_finished;
 reg crc_data_clk;
-reg [7:0] tx_byte; // belongs to bytes_ctrl
+reg [7:0] tx_byte;
 wire [9:0] tx_data = {1'b1, tx_byte, 1'b0};
 
 reg byte_inc;
@@ -175,7 +177,7 @@ always @(posedge clk or negedge reset_n)
             hs_flag <= 0;
             bit_cnt <= 0;
             tx <= 1;
-            tx_en <= (state == EXTRA_HEAD || state == EXTRA_TAIL);
+            tx_en <= (state != WAIT && state != DATA);
             bit_finished <= 0;
             tx_en_dynamic <= 1;
         end
@@ -222,6 +224,7 @@ always @(posedge clk or negedge reset_n)
         data_len <= 0;
         is_crc_byte <= 0;
         is_last_byte <= 0;
+        tx_byte <= 0;
     end
     else begin
 
@@ -238,7 +241,7 @@ always @(posedge clk or negedge reset_n)
             if (byte_cnt == 2)
                 data_len <= data;
 
-            // we have enough time to change the content which start at second bit
+            // we have enough time to change the byte which send at second bit
             else if (byte_cnt == data_len + 3) begin
                 if (!user_crc)
                     tx_byte <= crc_data[7:0];
@@ -275,7 +278,7 @@ always @(posedge clk or negedge reset_n)
             if (retry_cnt == 2'b11) begin
                 read_done <= 1;
                 cd_err <= 1;
-                // retry_cnt would return to 0 for next transmission
+                // retry_cnt becomes 0 at next time
             end
         end
         else if (is_last_byte && byte_inc) begin

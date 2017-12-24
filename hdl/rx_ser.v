@@ -30,9 +30,6 @@ module rx_ser(
         output reg          data_clk
     );
 
-reg [7:0] idle_cnt;
-reg bit_err;
-
 
 // FSM
 
@@ -123,6 +120,8 @@ always @(posedge clk or negedge reset_n)
 
 // idle_cnt
 
+reg [7:0] idle_cnt;
+
 always @(posedge clk or negedge reset_n)
     if (!reset_n) begin
         idle_cnt <= 0;
@@ -161,6 +160,8 @@ always @(posedge clk or negedge reset_n)
 
 
 // bits_ctrl
+
+reg bit_err;
 
 reg rx_d1;
 reg rx_d2;

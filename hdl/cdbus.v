@@ -307,6 +307,7 @@ pp_ram #(.N_WIDTH(1)) pp_ram_tx_m(
     .wr_addr(tx_ram_wr_addr),
     .wr_clk(tx_ram_wr_clk),
 
+    .wr_flags(8'd0),
     .switch(tx_ram_switch)
 );
 
