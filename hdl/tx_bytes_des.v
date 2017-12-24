@@ -283,6 +283,7 @@ always @(posedge clk or negedge reset_n)
         end
         else if (is_last_byte && byte_inc) begin
             read_done <= 1;
+            retry_cnt <= 0;
         end
     end
 
