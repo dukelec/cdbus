@@ -79,6 +79,7 @@ reg [8:0] byte_cnt;
 reg [7:0] data_len; // backup 3rd byte
 reg drop_flag;
 reg finish;
+reg is_promiscuous;
 
 always @(posedge clk or negedge reset_n)
     if (!reset_n) begin
@@ -100,6 +101,7 @@ always @(posedge clk or negedge reset_n)
         wr_clk <= 0;
         switch <= 0;
         finish <= 0;
+        is_promiscuous <= (filter == 8'hff);
 
         if (state == INIT) begin
             byte_cnt <= 0;
@@ -110,7 +112,7 @@ always @(posedge clk or negedge reset_n)
 
             if (ser_bus_idle) begin
                 if (byte_cnt != 0) begin
-                    if (byte_cnt != 1 && !drop_flag) begin
+                    if ((byte_cnt != 1 && !drop_flag) || is_promiscuous) begin
                         error <= 1;
                         if (not_drop) begin
                             wr_flags <= byte_cnt[8] ? 8'hff : byte_cnt[7:0];
@@ -130,12 +132,12 @@ always @(posedge clk or negedge reset_n)
                     wr_clk <= 1;
 
                 if (byte_cnt == 0) begin
-                    if (ser_data == filter && filter != 8'hff)
+                    if (ser_data == filter && !is_promiscuous)
                         drop_flag <= 1;
                 end
 
                 if (byte_cnt == 1) begin
-                    if (ser_data != filter && ser_data != 8'hff && filter != 8'hff)
+                    if (ser_data != filter && ser_data != 8'hff && !is_promiscuous)
                         drop_flag <= 1;
                 end
 

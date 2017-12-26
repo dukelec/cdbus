@@ -104,7 +104,7 @@ always @(posedge clk or negedge reset_n)
         else begin
             period_cnt <= period_cnt + 1'd1;
 
-            if (period_cnt - 1 == {1'd0, period_cur[15:1]})
+            if (period_cnt == period_cur - period_cur[15:2]) // at 3/4 position of bit
                 bit_mid <= 1;
 
             if (period_cnt >= period_cur) begin
