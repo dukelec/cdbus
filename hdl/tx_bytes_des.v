@@ -18,8 +18,7 @@ module tx_bytes_des (
         input       [15:0]  period_hs,  // high speed
         input               user_crc,
         input               arbitrate,
-        input       [1:0]   tx_en_extra_head,
-        input       [1:0]   tx_en_extra_tail,
+        input       [1:0]   tx_en_delay,
         output reg          cd,         // collision detect
         output reg          cd_err,
 
@@ -41,13 +40,12 @@ module tx_bytes_des (
 
 // FSM
 
-reg [4:0] state;
+reg [3:0] state;
 localparam
-    WAIT            = 5'b00001,
-    EXTRA_HEAD      = 5'b00010,
-    EXTRA_HEAD_END  = 5'b00100,
-    DATA            = 5'b01000,
-    EXTRA_TAIL      = 5'b10000;
+    WAIT            = 4'b0001,
+    DELAY_HEAD      = 4'b0010,
+    DELAY_HEAD_END  = 4'b0100,
+    DATA            = 4'b1000;
 
 always @(posedge clk or negedge reset_n)
     if (!reset_n) begin
@@ -58,32 +56,24 @@ always @(posedge clk or negedge reset_n)
         case (state)
         WAIT: begin
             if (tx_permit && unread)
-                state <= arbitrate ? DATA : EXTRA_HEAD;
+                state <= arbitrate ? DATA : DELAY_HEAD;
         end
 
-        EXTRA_HEAD: begin
-            if (extra_cnt == tx_en_extra_head)
-                state <= EXTRA_HEAD_END; // reset period_cnt
+        DELAY_HEAD: begin
+            if (delay_cnt == tx_en_delay)
+                state <= DELAY_HEAD_END; // reset period_cnt
         end
 
-        EXTRA_HEAD_END: begin
+        DELAY_HEAD_END: begin
             state <= DATA;
         end
 
         DATA: begin
-            if (cd)
-                state <= WAIT;
-            else if (is_last_byte && byte_inc)
-                state <= EXTRA_TAIL;
-        end
-
-        EXTRA_TAIL: begin
-            if (extra_cnt == tx_en_extra_tail)
+            if (cd || (is_last_byte && byte_inc))
                 state <= WAIT;
         end
 
         default: state <= WAIT;
-
         endcase
     end
 
@@ -108,7 +98,7 @@ always @(posedge clk or negedge reset_n)
         bit_inc <= 0;
         bit_mid <= 0;
 
-        if (state == WAIT || state == EXTRA_HEAD_END) begin
+        if (state == WAIT || state == DELAY_HEAD_END) begin
             period_cnt <= 1;
         end
         else begin
@@ -125,19 +115,19 @@ always @(posedge clk or negedge reset_n)
     end
 
 
-// extra_cnt
+// delay_cnt
 
-reg [1:0] extra_cnt;
+reg [1:0] delay_cnt;
 
 always @(posedge clk or negedge reset_n)
     if (!reset_n) begin
-        extra_cnt <= 0;
+        delay_cnt <= 0;
     end
     else begin
-        if (state == WAIT || state == DATA)
-            extra_cnt <= 0;
-        else if (bit_inc && !bit_finished)
-            extra_cnt <= extra_cnt + 1'b1;
+        if (state == WAIT)
+            delay_cnt <= 0;
+        else if (bit_inc)
+            delay_cnt <= delay_cnt + 1'b1;
     end
 
 

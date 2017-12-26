@@ -12,32 +12,91 @@ import cocotb
 from cocotb.binary import BinaryValue
 from cocotb.triggers import RisingEdge, ReadOnly, Timer
 from cocotb.clock import Clock
-from cocotb.drivers.avalon import AvalonMaster
 from cocotb.result import ReturnValue, TestFailure
 
+# pip3.6 install pycrc --user
+from PyCRC.CRC16 import CRC16
 
-REG_VERSION       = 0x00
-REG_SETTING       = 0x01
-REG_IDLE_LEN      = 0x02
-REG_TX_PERMIT_LEN = 0x03
-REG_TX_EN_EXTRAS  = 0x04
-REG_FILTER        = 0x05
-REG_PERIOD_LS_L   = 0x06
-REG_PERIOD_LS_H   = 0x07
-REG_PERIOD_HS_L   = 0x08
-REG_PERIOD_HS_H   = 0x09
-REG_INT_FLAG      = 0x0a
-REG_INT_MASK      = 0x0b
-REG_RX            = 0x0c
-REG_TX            = 0x0d
-REG_RX_CTRL       = 0x0e
-REG_TX_CTRL       = 0x0f
-REG_RX_ADDR       = 0x10
-REG_RX_PAGE_FLAG  = 0x11
+def modbus_crc(data):
+    return CRC16(modbus_flag = True).calculate(data).to_bytes(2, byteorder='little')
+
+
+REG_VERSION         = 0x00
+REG_SETTING         = 0x01
+REG_IDLE_LEN        = 0x02
+REG_TX_PERMIT_LEN   = 0x03
+REG_FILTER          = 0x04
+REG_PERIOD_LS_L     = 0x05
+REG_PERIOD_LS_H     = 0x06
+REG_PERIOD_HS_L     = 0x07
+REG_PERIOD_HS_H     = 0x08
+REG_INT_FLAG        = 0x09
+REG_INT_MASK        = 0x0a
+REG_RX              = 0x0b
+REG_TX              = 0x0c
+REG_RX_CTRL         = 0x0d
+REG_TX_CTRL         = 0x0e
+REG_RX_ADDR         = 0x0f
+REG_RX_PAGE_FLAG    = 0x10
+
+BIT_SETTING_TX_PUSH_PULL    = 1 << 0
+BIT_SETTING_TX_INVERT       = 1 << 1
+BIT_SETTING_USER_CRC        = 1 << 2
+BIT_SETTING_NO_DROP         = 1 << 3
+POS_SETTING_TX_EN_DELAY     =      4
+BIT_SETTING_DIS_ARBITRATE   = 1 << 6
+
+BIT_FLAG_BUS_IDLE           = 1 << 0
+BIT_FLAG_RX_PENDING         = 1 << 1
+BIT_FLAG_RX_LOST            = 1 << 2
+BIT_FLAG_RX_ERROR           = 1 << 3
+BIT_FLAG_TX_BUF_CLEAN       = 1 << 4
+BIT_FLAG_TX_CD              = 1 << 5
+BIT_FLAG_TX_ERROR           = 1 << 6
+
+BIT_RX_RST_POINTER          = 1 << 0
+BIT_RX_CLR_PENDING          = 1 << 1
+BIT_RX_CLR_LOST             = 1 << 2
+BIT_RX_CLR_ERROR            = 1 << 3
+BIT_RX_RST                  = 1 << 4
+
+BIT_TX_RST_POINTER          = 1 << 0
+BIT_TX_START                = 1 << 1
+BIT_TX_CLR_CD               = 1 << 2
+BIT_TX_CLR_ERROR            = 1 << 3
+
+
+CLK_FREQ = 40000000
+CLK_PERIOD = 1000000000000 / CLK_FREQ
 
 
 @cocotb.coroutine
-def reset(dut, duration=10000):
+def send_bytes(dut, bytes, factor, is_z = True):
+    yield Timer(1000)
+    factor += 1
+    for byte in bytes:
+        dut.bus_a = 0
+        yield Timer(factor * CLK_PERIOD)
+        for i in range(0,8):
+            if byte & 0x01 == 0:
+                dut.bus_a = 0
+            else:
+                dut.bus_a = BinaryValue("z") if is_z else 1
+            yield Timer(factor * CLK_PERIOD)
+            byte = byte >> 1
+        dut.bus_a = BinaryValue("z") if is_z else 1
+        yield Timer(factor * CLK_PERIOD)
+        dut.bus_a = BinaryValue("z")
+
+@cocotb.coroutine
+def send_frame(dut, bytes, factor_l, factor_h):
+    yield send_bytes(dut, bytes[0:1], factor_l)
+    yield send_bytes(dut, bytes[1:], factor_h, False)
+    yield send_bytes(dut, modbus_crc(bytes), factor_h, False)
+
+
+@cocotb.coroutine
+def reset(dut, duration = 10000):
     dut._log.debug("Resetting DUT")
     dut.reset_n = 0
     yield Timer(duration)
@@ -52,12 +111,12 @@ def csr_read(dut, address, burst = False):
     dut.csr_read = 1
     yield ReadOnly()
     data = dut.csr_readdata.value
-    
+
     if not burst:
         yield RisingEdge(dut.clk)
         dut.csr_read = 0
         dut.csr_address = BinaryValue("x" * len(dut.csr_address))
-    
+
     raise ReturnValue(data)
 
 @cocotb.coroutine
@@ -66,7 +125,7 @@ def csr_write(dut, address, data, burst = False):
     dut.csr_address = address
     dut.csr_writedata = data
     dut.csr_write = 1
-    
+
     if not burst:
         yield RisingEdge(dut.clk)
         dut.csr_write = 0
@@ -80,35 +139,39 @@ def test_cdbus(dut):
     test_cdbus
     """
     dut._log.info("test_cdbus start.")
-    
-    cocotb.fork(Clock(dut.clk, 5000).start())
+
+    cocotb.fork(Clock(dut.clk, CLK_PERIOD).start())
     yield reset(dut)
-    
-    #master = AvalonMaster(dut, "csr", dut.clk)
-    
+
     value = yield csr_read(dut, REG_VERSION, True)
     dut._log.info("REG_VERSION: 0x%02x" % int(value))
     value = yield csr_read(dut, REG_SETTING)
     dut._log.info("REG_SETTING: 0x%02x" % int(value))
-    
-    yield csr_write(dut, REG_SETTING, BinaryValue("01010000"))
-    yield csr_write(dut, REG_TX_EN_EXTRAS, BinaryValue("00010001"))
-    
+
+    yield csr_write(dut, REG_SETTING, BinaryValue("01010001"))
+
     yield csr_write(dut, REG_PERIOD_LS_H, 0, True)
-    yield csr_write(dut, REG_PERIOD_LS_L, 27, True)
+    yield csr_write(dut, REG_PERIOD_LS_L, 3, True)
     yield csr_write(dut, REG_PERIOD_HS_H, 0, True)
     yield csr_write(dut, REG_PERIOD_HS_L, 3, True)
     yield csr_write(dut, REG_FILTER, 0x00, True)
-    
+    # TODO: reset rx...
+
     yield csr_write(dut, REG_TX, 0x01, True)
     yield csr_write(dut, REG_TX, 0x00, True)
     yield csr_write(dut, REG_TX, 0x01, True)
     yield csr_write(dut, REG_TX, 0xcd, True)
-    
-    # TODO: reset rx...
-    yield csr_write(dut, REG_TX_CTRL, BinaryValue("00000010"))
-    
+
+    yield csr_write(dut, REG_TX_CTRL, BIT_TX_START)
+
+
+    #yield RisingEdge(dut.cdbus_m.rx_pending)
+    yield RisingEdge(dut.cdbus_m.bus_idle)
+    yield RisingEdge(dut.cdbus_m.bus_idle)
+    yield Timer(5000000)
+
+    yield send_frame(dut, b'\x05\x00\x01\xcd', 3, 3)
     yield Timer(50000000)
-    
+
     dut._log.info("test_cdbus done.")
 

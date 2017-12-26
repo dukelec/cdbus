@@ -37,26 +37,24 @@ localparam
     REG_SETTING       = 'h01,
     REG_IDLE_LEN      = 'h02,
     REG_TX_PERMIT_LEN = 'h03,
-    REG_TX_EN_EXTRAS  = 'h04,
-    REG_FILTER        = 'h05,
-    REG_PERIOD_LS_L   = 'h06,
-    REG_PERIOD_LS_H   = 'h07,
-    REG_PERIOD_HS_L   = 'h08,
-    REG_PERIOD_HS_H   = 'h09,
-    REG_INT_FLAG      = 'h0a,
-    REG_INT_MASK      = 'h0b,
-    REG_RX            = 'h0c,
-    REG_TX            = 'h0d,
-    REG_RX_CTRL       = 'h0e,
-    REG_TX_CTRL       = 'h0f,
-    REG_RX_ADDR       = 'h10,
-    REG_RX_PAGE_FLAG  = 'h11;
+    REG_FILTER        = 'h04,
+    REG_PERIOD_LS_L   = 'h05,
+    REG_PERIOD_LS_H   = 'h06,
+    REG_PERIOD_HS_L   = 'h07,
+    REG_PERIOD_HS_H   = 'h08,
+    REG_INT_FLAG      = 'h09,
+    REG_INT_MASK      = 'h0a,
+    REG_RX            = 'h0b,
+    REG_TX            = 'h0c,
+    REG_RX_CTRL       = 'h0d,
+    REG_TX_CTRL       = 'h0e,
+    REG_RX_ADDR       = 'h0f,
+    REG_RX_PAGE_FLAG  = 'h10;
 
 localparam VERSION   = 8'h03;
 
 reg  arbitrate;
-reg  [1:0] tx_en_extra_head;
-reg  [1:0] tx_en_extra_tail;
+reg  [1:0] tx_en_delay;
 reg  not_drop;
 reg  user_crc;
 reg  tx_invert;
@@ -114,14 +112,12 @@ always @(*)
         REG_VERSION:
             csr_readdata = VERSION;
         REG_SETTING:
-            csr_readdata = {1'b0, arbitrate, tx_invert, tx_push_pull,
-                            user_crc, 2'b00, not_drop};
+            csr_readdata = {1'b0, !arbitrate, tx_en_delay,
+                            not_drop, user_crc, tx_invert, tx_push_pull};
         REG_IDLE_LEN:
             csr_readdata = idle_len;
         REG_TX_PERMIT_LEN:
             csr_readdata = tx_permit_len;
-        REG_TX_EN_EXTRAS:
-            csr_readdata = {2'b00, tx_en_extra_head, 2'b00, tx_en_extra_tail};
         REG_FILTER:
             csr_readdata = filter;
         REG_PERIOD_LS_L:
@@ -150,8 +146,7 @@ always @(*)
 always @(posedge clk or negedge reset_n)
     if (!reset_n) begin
         arbitrate <= 1;
-        tx_en_extra_head <= 1;
-        tx_en_extra_tail <= 1;
+        tx_en_delay <= 1;
         not_drop <= 0;
         user_crc <= 0;
         tx_invert <= 0;
@@ -197,20 +192,17 @@ always @(posedge clk or negedge reset_n)
         if (csr_write)
             case (csr_address)
                 REG_SETTING: begin
-                    arbitrate <= csr_writedata[6];
-                    tx_invert <= csr_writedata[5];
-                    tx_push_pull <= csr_writedata[4];
-                    user_crc <= csr_writedata[3];
-                    not_drop <= csr_writedata[0];
+                    arbitrate <= !csr_writedata[6];
+                    tx_en_delay <= csr_writedata[5:4];
+                    not_drop <= csr_writedata[3];
+                    user_crc <= csr_writedata[2];
+                    tx_invert <= csr_writedata[1];
+                    tx_push_pull <= csr_writedata[0];
                 end
                 REG_IDLE_LEN:
                     idle_len <= csr_writedata;
                 REG_TX_PERMIT_LEN:
                     tx_permit_len <= csr_writedata;
-                REG_TX_EN_EXTRAS: begin
-                    tx_en_extra_head <= csr_writedata[5:4];
-                    tx_en_extra_tail <= csr_writedata[1:0];
-                end
                 REG_FILTER:
                     filter <= csr_writedata;
                 REG_PERIOD_LS_L:
@@ -371,8 +363,7 @@ tx_bytes_des tx_bytes_des_m(
     .user_crc(user_crc),
 
     .arbitrate(arbitrate),
-    .tx_en_extra_head(tx_en_extra_head),
-    .tx_en_extra_tail(tx_en_extra_tail),
+    .tx_en_delay(tx_en_delay),
     .cd(cd),
     .cd_err(cd_err),
 
