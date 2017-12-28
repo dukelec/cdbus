@@ -9,7 +9,7 @@
  * Author: Duke Fong <duke@dukelec.com>
  */
 
-module tx_bytes_des (
+module tx_bytes_ser (
         input               clk,
         input               reset_n,
 
@@ -31,7 +31,7 @@ module tx_bytes_des (
         output wire [7:0]   addr,
         output reg          read_done,
 
-        // rx_ser
+        // rx_des
         input               tx_permit,
 
         input               rx
@@ -180,7 +180,7 @@ always @(posedge clk or negedge reset_n)
                 if (tx && !rx)
                     cd <= 1;
                 else if (bit_cnt == 9) begin
-                    tx_en <= 1; // advance 0.5 bit active tx_en
+                    tx_en <= 1; // active tx_en
                     tx_en_dynamic <= 0;
                 end
             end

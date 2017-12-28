@@ -20,12 +20,12 @@ module rx_bytes (
         input               abort,
         output reg          error, // frame incomplete or crc error
 
-        // rx_ser
-        input               ser_bus_idle,
-        input       [7:0]   ser_data,
-        input       [15:0]  ser_crc_data,
-        input               ser_data_clk,
-        output reg          ser_force_wait_idle,
+        // rx_des
+        input               des_bus_idle,
+        input       [7:0]   des_data,
+        input       [15:0]  des_crc_data,
+        input               des_data_clk,
+        output reg          des_force_wait_idle,
 
         // pp_ram
         output wire [7:0]   wr_byte,
@@ -35,7 +35,7 @@ module rx_bytes (
         output reg          switch
     );
 
-assign wr_byte = ser_data;
+assign wr_byte = des_data;
 
 
 // FSM
@@ -48,15 +48,15 @@ localparam
 always @(posedge clk or negedge reset_n)
     if (!reset_n) begin
         state <= INIT;
-        ser_force_wait_idle <= 0;
+        des_force_wait_idle <= 0;
     end
     else begin
-        ser_force_wait_idle <= 0;
+        des_force_wait_idle <= 0;
 
         case (state)
             INIT: begin
-                if (!ser_bus_idle)
-                    ser_force_wait_idle <= 1;
+                if (!des_bus_idle)
+                    des_force_wait_idle <= 1;
                 state <= DATA;
             end
 
@@ -110,7 +110,7 @@ always @(posedge clk or negedge reset_n)
         end
         else begin
 
-            if (ser_bus_idle) begin
+            if (des_bus_idle) begin
                 if (byte_cnt != 0) begin
                     if ((byte_cnt != 1 && !drop_flag) || is_promiscuous) begin
                         error <= 1;
@@ -125,29 +125,29 @@ always @(posedge clk or negedge reset_n)
             end
 
             // frame format: src_addr, dst_addr, data_len, [data], crc_l, crc_h
-            else if (ser_data_clk == 1) begin
+            else if (des_data_clk == 1) begin
 
                 wr_addr <= byte_cnt[7:0];
                 if (!byte_cnt[8])
                     wr_clk <= 1;
 
                 if (byte_cnt == 0) begin
-                    if (ser_data == filter && !is_promiscuous)
+                    if (des_data == filter && !is_promiscuous)
                         drop_flag <= 1;
                 end
 
                 if (byte_cnt == 1) begin
-                    if (ser_data != filter && ser_data != 8'hff && !is_promiscuous)
+                    if (des_data != filter && des_data != 8'hff && !is_promiscuous)
                         drop_flag <= 1;
                 end
 
                 if (byte_cnt == 2) begin
-                    data_len <= ser_data;
+                    data_len <= des_data;
                 end
 
                 if (byte_cnt == data_len + 5 - 1) begin // last byte
                     if (!drop_flag) begin
-                        if (ser_crc_data == 0 || user_crc) begin
+                        if (des_crc_data == 0 || user_crc) begin
                             wr_flags <= 0; // 0: no error; else: rx length
                             switch <= 1;
                         end

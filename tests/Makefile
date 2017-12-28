@@ -13,9 +13,9 @@ VERILOG_SOURCES = $(PWD)/cdbus_wrapper.v \
                   $(CDBUS_HDL)/cdbus.v \
                   $(CDBUS_HDL)/pp_ram.v \
                   $(CDBUS_HDL)/rx_bytes.v \
-                  $(CDBUS_HDL)/rx_ser.v \
+                  $(CDBUS_HDL)/rx_des.v \
                   $(CDBUS_HDL)/serial_crc.v \
-                  $(CDBUS_HDL)/tx_bytes_des.v
+                  $(CDBUS_HDL)/tx_bytes_ser.v
 
 TOPLEVEL = cdbus_wrapper
 MODULE = test_cdbus

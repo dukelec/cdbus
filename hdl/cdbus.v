@@ -303,9 +303,9 @@ pp_ram #(.N_WIDTH(1)) pp_ram_tx_m(
     .switch(tx_ram_switch)
 );
 
-wire [7:0] ser_data;
-wire [15:0] ser_crc_data;
-wire ser_data_clk;
+wire [7:0] des_data;
+wire [15:0] des_crc_data;
+wire des_data_clk;
 wire force_wait_idle;
 
 rx_bytes rx_bytes_m(
@@ -318,11 +318,11 @@ rx_bytes rx_bytes_m(
     .abort(rx_ram_rd_done_all),
     .error(rx_error),
 
-    .ser_bus_idle(bus_idle),
-    .ser_data(ser_data),
-    .ser_crc_data(ser_crc_data),
-    .ser_data_clk(ser_data_clk),
-    .ser_force_wait_idle(force_wait_idle),
+    .des_bus_idle(bus_idle),
+    .des_data(des_data),
+    .des_crc_data(des_crc_data),
+    .des_data_clk(des_data_clk),
+    .des_force_wait_idle(force_wait_idle),
 
     .wr_byte(rx_ram_wr_data),
     .wr_addr(rx_ram_wr_addr),
@@ -333,7 +333,7 @@ rx_bytes rx_bytes_m(
 
 wire tx_permit;
 
-rx_ser rx_ser_m(
+rx_des rx_des_m(
     .clk(clk),
     .reset_n(reset_n),
 
@@ -349,12 +349,12 @@ rx_ser rx_ser_m(
 
     .rx(rx_d),
 
-    .data(ser_data),
-    .crc_data(ser_crc_data),
-    .data_clk(ser_data_clk)
+    .data(des_data),
+    .crc_data(des_crc_data),
+    .data_clk(des_data_clk)
 );
 
-tx_bytes_des tx_bytes_des_m(
+tx_bytes_ser tx_bytes_ser_m(
     .clk(clk),
     .reset_n(reset_n),
 

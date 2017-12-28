@@ -9,7 +9,7 @@
  * Author: Duke Fong <duke@dukelec.com>
  */
 
-module rx_ser(
+module rx_des(
         input               clk,
         input               reset_n,
 
