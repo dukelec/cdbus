@@ -26,7 +26,7 @@ The CDBUS protocol is more valuable for bus communication, e.g. RS485 or Single 
 In this case:
 
 * It introduces an arbitration mechanism that automatically avoids conflicts like the CAN bus.
-* Support dual bond rate, provide high speed communication, maximum rate ≥ 10 Mbps.
+* Support dual baud rate, provide high speed communication, maximum rate ≥ 10 Mbps.
 * Support broadcast. (set `dst_addr` to `255`)
 * Max payload data size is 253 byte. (you can increase it to 255 byte, but not recommended)
 * Hardware packing, unpacking, verification and filtering, save your time and CPU usage.
@@ -97,8 +97,8 @@ Match from top to bottom:
 
 **PERIOD_xx_x:**
 
-Bond rate divider value:
-PERIOD_xx[15:0] = sysclock ÷ bond_rate − 1
+Baud rate divider value:
+PERIOD_xx[15:0] = sysclock ÷ baud_rate − 1
 
 **INT_FLAG:**
 
@@ -110,7 +110,7 @@ PERIOD_xx[15:0] = sysclock ÷ bond_rate − 1
 | [3]     | 1: RX error: frame broken                    |
 | [4]     | 1: TX page released by hardware              |
 | [5]     | 1: TX collision detected                     |
-| [5]     | 1: TX error: conflict continued for 4 times  |
+| [6]     | 1: TX error: conflict continued for 4 times  |
 
 **INT_MASK:**
 
