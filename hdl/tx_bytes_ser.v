@@ -14,12 +14,12 @@ module tx_bytes_ser (
         input               reset_n,
 
         // control center
-        input       [15:0]  period_ls,  // low speed
-        input       [15:0]  period_hs,  // high speed
+        input       [15:0]  div_ls, // low speed
+        input       [15:0]  div_hs, // high speed
         input               user_crc,
         input               arbitrate,
         input       [1:0]   tx_en_delay,
-        output reg          cd,         // collision detect
+        output reg          cd,     // collision detect
         output reg          cd_err,
 
         output reg          tx,
@@ -61,7 +61,7 @@ always @(posedge clk or negedge reset_n)
 
         DELAY_HEAD: begin
             if (delay_cnt == tx_en_delay)
-                state <= DELAY_HEAD_END; // reset period_cnt
+                state <= DELAY_HEAD_END; // reset div_cnt
         end
 
         DELAY_HEAD_END: begin
@@ -78,19 +78,19 @@ always @(posedge clk or negedge reset_n)
     end
 
 
-// period_cnt
+// div_cnt
 
 reg hs_flag;
 
 reg bit_inc;
 reg bit_mid;
 
-wire [15:0] period_cur = hs_flag ? period_hs : period_ls;
-reg [15:0] period_cnt;
+wire [15:0] div_cur = hs_flag ? div_hs : div_ls;
+reg [15:0] div_cnt;
 
 always @(posedge clk or negedge reset_n)
     if (!reset_n) begin
-        period_cnt <= 1;
+        div_cnt <= 1;
         bit_inc <= 0;
         bit_mid <= 0;
     end
@@ -99,16 +99,16 @@ always @(posedge clk or negedge reset_n)
         bit_mid <= 0;
 
         if (state == WAIT || state == DELAY_HEAD_END) begin
-            period_cnt <= 1;
+            div_cnt <= 1;
         end
         else begin
-            period_cnt <= period_cnt + 1'd1;
+            div_cnt <= div_cnt + 1'd1;
 
-            if (period_cnt == period_cur - period_cur[15:2]) // at 3/4 position of bit
+            if (div_cnt == div_cur - div_cur[15:2]) // at 3/4 position of bit
                 bit_mid <= 1;
 
-            if (period_cnt >= period_cur) begin
-                period_cnt <= 0;
+            if (div_cnt >= div_cur) begin
+                div_cnt <= 0;
                 bit_inc <= 1;
             end
         end

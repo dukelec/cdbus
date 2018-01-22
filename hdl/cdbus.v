@@ -13,8 +13,8 @@
 
 module cdbus
     #(
-        parameter PERIOD_LS = 346, // default 115200 bps at 40MHz clk
-        parameter PERIOD_HS = 346
+        parameter DIV_LS = 346, // default: 115200 bps for 40MHz clk
+        parameter DIV_HS = 346
     )(
         input               clk,
         input               reset_n,
@@ -35,13 +35,13 @@ module cdbus
 localparam
     REG_VERSION       = 'h00,
     REG_SETTING       = 'h01,
-    REG_IDLE_LEN      = 'h02,
-    REG_TX_PERMIT_LEN = 'h03,
+    REG_IDLE_WAIT_LEN = 'h02,
+    REG_TX_WAIT_LEN   = 'h03,
     REG_FILTER        = 'h04,
-    REG_PERIOD_LS_L   = 'h05,
-    REG_PERIOD_LS_H   = 'h06,
-    REG_PERIOD_HS_L   = 'h07,
-    REG_PERIOD_HS_H   = 'h08,
+    REG_DIV_LS_L      = 'h05,
+    REG_DIV_LS_H      = 'h06,
+    REG_DIV_HS_L      = 'h07,
+    REG_DIV_HS_H      = 'h08,
     REG_INT_FLAG      = 'h09,
     REG_INT_MASK      = 'h0a,
     REG_RX            = 'h0b,
@@ -60,11 +60,11 @@ reg  user_crc;
 reg  tx_invert;
 reg  tx_push_pull;
 
-reg  [7:0] idle_len;
-reg  [7:0] tx_permit_len;
+reg  [7:0] idle_wait_len;
+reg  [7:0] tx_wait_len;
 reg  [7:0] filter;
-reg  [15:0] period_ls;    // low speed
-reg  [15:0] period_hs;    // high speed
+reg  [15:0] div_ls; // low speed
+reg  [15:0] div_hs; // high speed
 
 reg  cd_error_flag;
 reg  cd_flag;
@@ -114,20 +114,20 @@ always @(*)
         REG_SETTING:
             csr_readdata = {1'b0, !arbitrate, tx_en_delay,
                             not_drop, user_crc, tx_invert, tx_push_pull};
-        REG_IDLE_LEN:
-            csr_readdata = idle_len;
-        REG_TX_PERMIT_LEN:
-            csr_readdata = tx_permit_len;
+        REG_IDLE_WAIT_LEN:
+            csr_readdata = idle_wait_len;
+        REG_TX_WAIT_LEN:
+            csr_readdata = tx_wait_len;
         REG_FILTER:
             csr_readdata = filter;
-        REG_PERIOD_LS_L:
-            csr_readdata = period_ls[7:0];
-        REG_PERIOD_LS_H:
-            csr_readdata = period_ls[15:8];
-        REG_PERIOD_HS_L:
-            csr_readdata = period_hs[7:0];
-        REG_PERIOD_HS_H:
-            csr_readdata = period_hs[15:8];
+        REG_DIV_LS_L:
+            csr_readdata = div_ls[7:0];
+        REG_DIV_LS_H:
+            csr_readdata = div_ls[15:8];
+        REG_DIV_HS_L:
+            csr_readdata = div_hs[7:0];
+        REG_DIV_HS_H:
+            csr_readdata = div_hs[15:8];
         REG_INT_FLAG:
             csr_readdata = {1'd0, int_flag};
         REG_INT_MASK:
@@ -152,11 +152,11 @@ always @(posedge clk or negedge reset_n)
         tx_invert <= 0;
         tx_push_pull <= 0;
 
-        idle_len <= 10;         // 1 byte (10 bits per byte)
-        tx_permit_len <= 20;
+        idle_wait_len <= 10;    // 1 byte (10 bits per byte)
+        tx_wait_len <= 20;
         filter <= 8'hff;
-        period_ls <= PERIOD_LS; // div = period+1
-        period_hs <= PERIOD_HS;
+        div_ls <= DIV_LS;       // baud_rate = sys_freq / (div + 1)
+        div_hs <= DIV_HS;
 
         cd_error_flag <= 0;
         cd_flag <= 0;
@@ -199,20 +199,20 @@ always @(posedge clk or negedge reset_n)
                     tx_invert <= csr_writedata[1];
                     tx_push_pull <= csr_writedata[0];
                 end
-                REG_IDLE_LEN:
-                    idle_len <= csr_writedata;
-                REG_TX_PERMIT_LEN:
-                    tx_permit_len <= csr_writedata;
+                REG_IDLE_WAIT_LEN:
+                    idle_wait_len <= csr_writedata;
+                REG_TX_WAIT_LEN:
+                    tx_wait_len <= csr_writedata;
                 REG_FILTER:
                     filter <= csr_writedata;
-                REG_PERIOD_LS_L:
-                    period_ls[7:0] <= csr_writedata;
-                REG_PERIOD_LS_H:
-                    period_ls[15:8] <= csr_writedata;
-                REG_PERIOD_HS_L:
-                    period_hs[7:0] <= csr_writedata;
-                REG_PERIOD_HS_H:
-                    period_hs[15:8] <= csr_writedata;
+                REG_DIV_LS_L:
+                    div_ls[7:0] <= csr_writedata;
+                REG_DIV_LS_H:
+                    div_ls[15:8] <= csr_writedata;
+                REG_DIV_HS_L:
+                    div_hs[7:0] <= csr_writedata;
+                REG_DIV_HS_H:
+                    div_hs[15:8] <= csr_writedata;
                 REG_INT_MASK:
                     int_mask <= csr_writedata[6:0];
                 REG_TX:
@@ -337,10 +337,10 @@ rx_des rx_des_m(
     .clk(clk),
     .reset_n(reset_n),
 
-    .period_ls(period_ls),
-    .period_hs(period_hs),
-    .idle_len(idle_len),
-    .tx_permit_len(tx_permit_len),
+    .div_ls(div_ls),
+    .div_hs(div_hs),
+    .idle_wait_len(idle_wait_len),
+    .tx_wait_len(tx_wait_len),
 
     .bus_idle(bus_idle),
     .tx_permit(tx_permit),
@@ -358,8 +358,8 @@ tx_bytes_ser tx_bytes_ser_m(
     .clk(clk),
     .reset_n(reset_n),
 
-    .period_ls(period_ls),
-    .period_hs(period_hs),
+    .div_ls(div_ls),
+    .div_hs(div_hs),
     .user_crc(user_crc),
 
     .arbitrate(arbitrate),

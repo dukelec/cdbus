@@ -13,10 +13,10 @@ module rx_des(
         input               clk,
         input               reset_n,
 
-        input       [15:0]  period_ls, // low speed
-        input       [15:0]  period_hs, // high speed
-        input       [7:0]   idle_len,
-        input       [7:0]   tx_permit_len,
+        input       [15:0]  div_ls, // low speed
+        input       [15:0]  div_hs, // high speed
+        input       [7:0]   idle_wait_len,
+        input       [7:0]   tx_wait_len,
 
         output              bus_idle,
         output              tx_permit,
@@ -53,7 +53,7 @@ always @(posedge clk or negedge reset_n)
             WAIT: begin
                 if (rx == 0 && allow_data)
                     state <= DATA;
-                else if (idle_cnt == idle_len)
+                else if (idle_cnt == idle_wait_len)
                     state <= BUS_IDLE;
             end
 
@@ -80,7 +80,7 @@ always @(posedge clk or negedge reset_n)
     end
 
 
-// period_cnt
+// div_cnt
 
 reg bit_inc;
 reg bit_mid;
@@ -88,12 +88,12 @@ reg bit_mid;
 reg is_first_byte;
 reg hs_flag;
 
-wire [15:0] period_cur = hs_flag ? period_hs : period_ls;
-reg [15:0] period_cnt;
+wire [15:0] div_cur = hs_flag ? div_hs : div_ls;
+reg [15:0] div_cnt;
 
 always @(posedge clk or negedge reset_n)
     if (!reset_n) begin
-        period_cnt <= 0;
+        div_cnt <= 0;
         bit_inc <= 0;
         bit_mid <= 0;
     end
@@ -102,16 +102,16 @@ always @(posedge clk or negedge reset_n)
         bit_mid <= 0;
 
         if ((state != DATA && rx == 0) || bit_err) begin
-            period_cnt <= 0;
+            div_cnt <= 0;
         end
         else begin
-            period_cnt <= period_cnt + 1'd1;
+            div_cnt <= div_cnt + 1'd1;
 
-            if (period_cnt + 1'b1 == {1'd0, period_cur[15:1]})
+            if (div_cnt + 1'b1 == {1'd0, div_cur[15:1]})
                 bit_mid <= 1;
 
-            if (period_cnt >= period_cur) begin
-                period_cnt <= 0;
+            if (div_cnt >= div_cur) begin
+                div_cnt <= 0;
                 bit_inc <= 1;
             end
         end
@@ -138,23 +138,23 @@ always @(posedge clk or negedge reset_n)
 
 reg tx_permit_r;
 assign tx_permit = tx_permit_r & rx;
-reg [7:0] tx_permit_cnt;
+reg [7:0] tx_wait_cnt;
 
 always @(posedge clk or negedge reset_n)
     if (!reset_n) begin
-        tx_permit_cnt <= 0;
+        tx_wait_cnt <= 0;
         tx_permit_r <= 0;
     end
     else begin
-        if (tx_permit_cnt == tx_permit_len)
+        if (tx_wait_cnt == tx_wait_len)
             tx_permit_r <= 1;
 
         if (state != BUS_IDLE) begin
-            tx_permit_cnt <= 0;
+            tx_wait_cnt <= 0;
             tx_permit_r <= 0;
         end
         else if (bit_inc) begin
-            tx_permit_cnt <= tx_permit_cnt + 1'b1;
+            tx_wait_cnt <= tx_wait_cnt + 1'b1;
         end
     end
 

@@ -23,13 +23,13 @@ def modbus_crc(data):
 
 REG_VERSION         = 0x00
 REG_SETTING         = 0x01
-REG_IDLE_LEN        = 0x02
-REG_TX_PERMIT_LEN   = 0x03
+REG_IDLE_WAIT_LEN   = 0x02
+REG_TX_WAIT_LEN     = 0x03
 REG_FILTER          = 0x04
-REG_PERIOD_LS_L     = 0x05
-REG_PERIOD_LS_H     = 0x06
-REG_PERIOD_HS_L     = 0x07
-REG_PERIOD_HS_H     = 0x08
+REG_DIV_LS_L        = 0x05
+REG_DIV_LS_H        = 0x06
+REG_DIV_HS_L        = 0x07
+REG_DIV_HS_H        = 0x08
 REG_INT_FLAG        = 0x09
 REG_INT_MASK        = 0x0a
 REG_RX              = 0x0b
@@ -150,10 +150,10 @@ def test_cdbus(dut):
 
     yield csr_write(dut, REG_SETTING, BinaryValue("01010001"))
 
-    yield csr_write(dut, REG_PERIOD_LS_H, 0, True)
-    yield csr_write(dut, REG_PERIOD_LS_L, 3, True)
-    yield csr_write(dut, REG_PERIOD_HS_H, 0, True)
-    yield csr_write(dut, REG_PERIOD_HS_L, 3, True)
+    yield csr_write(dut, REG_DIV_LS_H, 0, True)
+    yield csr_write(dut, REG_DIV_LS_L, 3, True)
+    yield csr_write(dut, REG_DIV_HS_H, 0, True)
+    yield csr_write(dut, REG_DIV_HS_L, 3, True)
     yield csr_write(dut, REG_FILTER, 0x00, True)
     # TODO: reset rx...
 

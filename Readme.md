@@ -55,13 +55,13 @@ The idea of CDBUS was first designed and implemented by me in 2009.
 |---------------|---------|--------|-----------------|-------------------------------|-----------------|
 | VERSION       |  0x00   | RD     | 0x03            | Hardware version              |                 |
 | SETTING       |  0x01   | RD/WR  | 0x10            | Configs                       |                 |
-| IDLE_LEN      |  0x02   | RD/WR  | 0x0a (10 bit)   | How long to enter idle        |                 |
-| TX_PERMIT_LEN |  0x03   | RD/WR  | 0x14 (20 bit)   | How long to allow sending     |                 |
-| FILTER        |  0x04   | RD/WR  | 0xff            | Receiver filter               |                 |
-| PERIOD_LS_L   |  0x05   | RD/WR  | 0x5a            | Low-speed rate setting        |                 |
-| PERIOD_LS_H   |  0x06   | RD/WR  | 0x01            |                               |                 |
-| PERIOD_HS_L   |  0x07   | RD/WR  | 0x5a            | High-speed rate setting       |                 |
-| PERIOD_HS_H   |  0x08   | RD/WR  | 0x01            |                               |                 |
+| IDLE_WAIT_LEN |  0x02   | RD/WR  | 0x0a (10 bit)   | How long to enter idle        |                 |
+| TX_WAIT_LEN   |  0x03   | RD/WR  | 0x14 (20 bit)   | How long to allow sending     |                 |
+| FILTER        |  0x04   | RD/WR  | 0xff            | Receive filter                |                 |
+| DIV_LS_L      |  0x05   | RD/WR  | 0x5a            | Low-speed rate setting        |                 |
+| DIV_LS_H      |  0x06   | RD/WR  | 0x01            |                               |                 |
+| DIV_HS_L      |  0x07   | RD/WR  | 0x5a            | High-speed rate setting       |                 |
+| DIV_HS_H      |  0x08   | RD/WR  | 0x01            |                               |                 |
 | INT_FLAG      |  0x09   | RD     | n/a             | Status                        |                 |
 | INT_MASK      |  0x0a   | RD/WR  | 0x00            | Interrupt mask                |                 |
 | RX            |  0x0b   | RD     | n/a             | Read RX page                  |                 |
@@ -95,10 +95,10 @@ Match from top to bottom:
 | != FILTER | != 255   | = DST_ADDR   | Receive         |                  |
 | not care  | != 255   | != DST_ADDR  | Drop            |                  |
 
-**PERIOD_xx_x:**
+**DIV_xx_x:**
 
 Baud rate divider value:
-PERIOD_xx[15:0] = sysclock ÷ baud_rate − 1
+DIV_xx[15:0] = sys_freq ÷ baud_rate − 1
 
 **INT_FLAG:**
 
@@ -144,8 +144,8 @@ Non-zero indicate the pointer of last received byte of the disturbed frame, incl
 ## Interface
 
 ```verilog
-    parameter PERIOD_LS = 346, // default 115200 bps at 40MHz clk
-    parameter PERIOD_HS = 346
+    parameter DIV_LS = 346,         // default: 115200 bps for 40MHz clk
+    parameter DIV_HS = 346
 
 
     input           clk,            // core clock
