@@ -19,6 +19,7 @@ module tx_bytes_ser (
         input               user_crc,
         input               arbitrate,
         input       [1:0]   tx_en_delay,
+        input               abort,
         output reg          cd,     // collision detect
         output reg          cd_err,
 
@@ -75,6 +76,9 @@ always @(posedge clk or negedge reset_n)
 
         default: state <= WAIT;
         endcase
+
+        if (abort)
+            state <= WAIT;
     end
 
 
@@ -196,6 +200,9 @@ always @(posedge clk or negedge reset_n)
                         bit_finished <= 1;
                 end
             end
+
+            if (abort)
+                cd <= 0;
         end
     end
 
@@ -272,6 +279,12 @@ always @(posedge clk or negedge reset_n)
             end
         end
         else if (is_last_byte && byte_inc) begin
+            read_done <= 1;
+            retry_cnt <= 0;
+        end
+
+        if (abort) begin
+            cd_err <= 0;
             read_done <= 1;
             retry_cnt <= 0;
         end

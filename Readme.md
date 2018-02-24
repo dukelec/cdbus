@@ -53,7 +53,7 @@ The idea of CDBUS was first designed and implemented by me in 2009.
  
 | Register Name |Addr[7:0]| Access | Default         | Description                   | Remarks         |
 |---------------|---------|--------|-----------------|-------------------------------|-----------------|
-| VERSION       |  0x00   | RD     | 0x03            | Hardware version              |                 |
+| VERSION       |  0x00   | RD     | 0x04            | Hardware version              |                 |
 | SETTING       |  0x01   | RD/WR  | 0x10            | Configs                       |                 |
 | IDLE_WAIT_LEN |  0x02   | RD/WR  | 0x0a (10 bit)   | How long to enter idle        |                 |
 | TX_WAIT_LEN   |  0x03   | RD/WR  | 0x14 (20 bit)   | How long to allow sending     |                 |
@@ -134,6 +134,7 @@ Output of irq = ((INT_FLAG & INT_MASK) != 0).
 | [1]     | Switch TX page              |
 | [2]     | Clear TX collision flag     |
 | [3]     | Clear TX error flag         |
+| [4]     | Abort TX                    |
 
 **RX_PAGE_FLAG:**
 

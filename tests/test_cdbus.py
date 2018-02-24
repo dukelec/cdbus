@@ -64,6 +64,7 @@ BIT_TX_RST_POINTER          = 1 << 0
 BIT_TX_START                = 1 << 1
 BIT_TX_CLR_CD               = 1 << 2
 BIT_TX_CLR_ERROR            = 1 << 3
+BIT_TX_ABORT                = 1 << 4
 
 
 CLK_FREQ = 40000000

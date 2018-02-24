@@ -53,7 +53,7 @@ always @(posedge clk or negedge reset_n)
             WAIT: begin
                 if (rx == 0 && allow_data)
                     state <= DATA;
-                else if (idle_cnt == idle_wait_len)
+                else if (idle_cnt >= idle_wait_len)
                     state <= BUS_IDLE;
             end
 
@@ -146,7 +146,7 @@ always @(posedge clk or negedge reset_n)
         tx_permit_r <= 0;
     end
     else begin
-        if (tx_wait_cnt == tx_wait_len)
+        if (tx_wait_cnt >= tx_wait_len)
             tx_permit_r <= 1;
 
         if (state != BUS_IDLE) begin

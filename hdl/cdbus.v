@@ -51,7 +51,7 @@ localparam
     REG_RX_ADDR       = 'h0f,
     REG_RX_PAGE_FLAG  = 'h10;
 
-localparam VERSION   = 8'h03;
+localparam VERSION   = 8'h04;
 
 reg  arbitrate;
 reg  [1:0] tx_en_delay;
@@ -82,12 +82,13 @@ wire [7:0] rx_ram_rd_data;
 reg  [7:0] rx_ram_rd_addr;
 wire [7:0] rx_ram_rd_flags;
 reg  rx_ram_rd_done;
-reg  rx_ram_rd_done_all;
+reg  rx_clean_all;
 
 wire [7:0] tx_ram_wr_data = csr_writedata;
 reg  [7:0] tx_ram_wr_addr;
 wire tx_ram_wr_clk = (csr_address == REG_TX) ? csr_write : 1'b0;
 reg  tx_ram_switch;
+reg  tx_abort;
 
 
 assign irq = (int_flag & int_mask) != 0;
@@ -167,15 +168,17 @@ always @(posedge clk or negedge reset_n)
 
         rx_ram_rd_addr <= 0;
         rx_ram_rd_done <= 0;
-        rx_ram_rd_done_all <= 0;
+        rx_clean_all <= 0;
 
         tx_ram_wr_addr <= 0;
         tx_ram_switch <= 0;
+        tx_abort <= 0;
     end
     else begin
         rx_ram_rd_done <= 0;
-        rx_ram_rd_done_all <= 0;
+        rx_clean_all <= 0;
         tx_ram_switch <= 0;
+        tx_abort <= 0;
 
         if (rx_error)
             rx_error_flag <= 1;
@@ -228,12 +231,11 @@ always @(posedge clk or negedge reset_n)
                         rx_lost_flag <= 0;
                     if (csr_writedata[3])
                         rx_error_flag <= 0;
-
                     if (csr_writedata[4]) begin
                         rx_ram_rd_addr <= 0;
-                        rx_ram_rd_done_all <= 1;
-                        rx_error_flag <= 0;
+                        rx_clean_all <= 1;
                         rx_lost_flag <= 0;
+                        rx_error_flag <= 0;
                     end
                 end
                 REG_TX_CTRL: begin
@@ -247,6 +249,11 @@ always @(posedge clk or negedge reset_n)
                         cd_flag <= 0;
                     if (csr_writedata[3])
                         cd_error_flag <= 0;
+                    if (csr_writedata[4]) begin
+                        tx_abort <= 1;
+                        cd_flag <= 0;
+                        cd_error_flag <= 0;
+                    end
                 end
                 REG_RX_ADDR: begin
                     rx_ram_rd_addr <= csr_writedata;
@@ -268,7 +275,7 @@ pp_ram #(.N_WIDTH(3)) pp_ram_rx_m(
     .rd_byte(rx_ram_rd_data),
     .rd_addr(rx_ram_rd_addr),
     .rd_done(rx_ram_rd_done),
-    .rd_done_all(rx_ram_rd_done_all),
+    .rd_done_all(rx_clean_all),
     .unread(rx_pending),
 
     .wr_byte(rx_ram_wr_data),
@@ -315,7 +322,7 @@ rx_bytes rx_bytes_m(
     .filter(filter),
     .user_crc(user_crc),
     .not_drop(not_drop),
-    .abort(rx_ram_rd_done_all),
+    .abort(rx_clean_all),
     .error(rx_error),
 
     .des_bus_idle(bus_idle),
@@ -364,6 +371,7 @@ tx_bytes_ser tx_bytes_ser_m(
 
     .arbitrate(arbitrate),
     .tx_en_delay(tx_en_delay),
+    .abort(tx_abort),
     .cd(cd),
     .cd_err(cd_err),
 
