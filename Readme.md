@@ -16,7 +16,7 @@ CDBUS IP Core
 ## CDBUS Protocol
 
 CDBUS is a protocol for Asynchronous Serial Communication,
-it has a 3-byte header: `[src_addr, dst_addr, data_len]`, then user data, and finally 2 bytes of checksum.
+it has a 3-byte header: `[src_addr, dst_addr, data_len]`, then user data, and finally 2 bytes of CRC.
 
 It's suitable for one-to-one communication, e.g. UART or RS232.
 In this case, the address for each side are usually carefully selected and fixed,
@@ -27,15 +27,18 @@ In this case:
 
 * It introduces an arbitration mechanism that automatically avoids conflicts like the CAN bus.
 * Support dual baud rate, provide high speed communication, maximum rate ≥ 10 Mbps.
-* Support broadcast. (set `dst_addr` to `255`)
-* Max payload data size is 253 byte. (you can increase it to 255 byte, but not recommended)
+* Support broadcast (by set `dst_addr` to `255`).
+* Max payload data size is 253 byte (you can increase it to 255 byte, but not recommended).
 * Hardware packing, unpacking, verification and filtering, save your time and CPU usage.
-* Backward compatible with traditional RS485 hardware. (still retains arbitration function)
+* Backward compatible with traditional RS485 hardware (still retains arbitration function).
 
 The protocol example timing, include only one byte user data:  
 (How long to enter idle and how long to allow sending can be set.)
 
 ![protocol](docs/img/protocol.svg)
+
+Tips:
+ - When high-priority node send unimportant data, the transmission wait time (TX_WAIT_LEN) can be dynamically increased.
 
 Arbitration example:
 

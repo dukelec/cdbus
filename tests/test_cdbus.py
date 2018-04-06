@@ -14,7 +14,7 @@ from cocotb.triggers import RisingEdge, ReadOnly, Timer
 from cocotb.clock import Clock
 from cocotb.result import ReturnValue, TestFailure
 
-# pip3.6 install pycrc --user
+# pip3 install pycrc --user
 from PyCRC.CRC16 import CRC16
 
 def modbus_crc(data):
@@ -149,30 +149,37 @@ def test_cdbus(dut):
     value = yield csr_read(dut, REG_SETTING)
     dut._log.info("REG_SETTING: 0x%02x" % int(value))
 
-    yield csr_write(dut, REG_SETTING, BinaryValue("01010001"))
+    yield csr_write(dut, REG_SETTING, BinaryValue("00000001"))
 
     yield csr_write(dut, REG_DIV_LS_H, 0, True)
-    yield csr_write(dut, REG_DIV_LS_L, 3, True)
+    yield csr_write(dut, REG_DIV_LS_L, 39, True) # 1Mbps
     yield csr_write(dut, REG_DIV_HS_H, 0, True)
-    yield csr_write(dut, REG_DIV_HS_L, 3, True)
-    yield csr_write(dut, REG_FILTER, 0x00, True)
+    yield csr_write(dut, REG_DIV_HS_L, 3, True)  # 10Mbps
+    yield csr_write(dut, REG_FILTER, 0x00, True) # set local filter to 0x00
     # TODO: reset rx...
 
-    yield csr_write(dut, REG_TX, 0x01, True)
+    yield csr_write(dut, REG_TX, 0x01, True) # disguise as node 0x01 to send data
     yield csr_write(dut, REG_TX, 0x00, True)
     yield csr_write(dut, REG_TX, 0x01, True)
     yield csr_write(dut, REG_TX, 0xcd, True)
-
     yield csr_write(dut, REG_TX_CTRL, BIT_TX_START)
 
+    yield Timer(40000000)
+    yield csr_write(dut, REG_TX_CTRL, BIT_TX_ABORT)
+
+    yield csr_write(dut, REG_TX, 0x0f, True) # disguise as node 0x0f to send data
+    yield csr_write(dut, REG_TX, 0x00, True)
+    yield csr_write(dut, REG_TX, 0x01, True)
+    yield csr_write(dut, REG_TX, 0xcd, True)
+    yield csr_write(dut, REG_TX_CTRL, BIT_TX_START)
 
     #yield RisingEdge(dut.cdbus_m.rx_pending)
-    yield RisingEdge(dut.cdbus_m.bus_idle)
+    #yield RisingEdge(dut.cdbus_m.bus_idle)
     yield RisingEdge(dut.cdbus_m.bus_idle)
     yield Timer(5000000)
 
-    yield send_frame(dut, b'\x05\x00\x01\xcd', 3, 3)
-    yield Timer(50000000)
+    yield send_frame(dut, b'\x05\x00\x01\xcd', 39, 3) # receive before previous packet send out
+    yield Timer(100000000)
 
     dut._log.info("test_cdbus done.")
 
