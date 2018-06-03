@@ -51,7 +51,7 @@ localparam
     REG_RX_ADDR       = 'h0f,
     REG_RX_PAGE_FLAG  = 'h10;
 
-localparam VERSION   = 8'h04;
+localparam VERSION   = 8'h05;
 
 reg  arbitrate;
 reg  [1:0] tx_en_delay;

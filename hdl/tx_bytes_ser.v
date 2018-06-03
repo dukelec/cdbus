@@ -258,7 +258,7 @@ always @(posedge clk or negedge reset_n)
 
 // cd_err and read_done
 
-reg [1:0] retry_cnt;
+reg [3:0] retry_cnt;
 
 always @(posedge clk or negedge reset_n)
     if (!reset_n) begin
@@ -272,7 +272,7 @@ always @(posedge clk or negedge reset_n)
 
         if (cd) begin
             retry_cnt <= retry_cnt + 1'd1;
-            if (retry_cnt == 2'b11) begin
+            if (retry_cnt == 4'b1111) begin
                 read_done <= 1;
                 cd_err <= 1;
                 // retry_cnt becomes 0 at next time
