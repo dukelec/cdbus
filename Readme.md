@@ -51,6 +51,10 @@ The idea of CDBUS was first designed and implemented by me in 2009.
 
 <img alt="block_diagram" src="docs/img/block_diagram.svg" width="100%">
 
+#### Operation
+
+<img alt="operation" src="docs/img/operation.gif" width="100%">
+
 
 ## Registers
  
@@ -133,7 +137,7 @@ Output of irq = ((INT_FLAG & INT_MASK) != 0).
 
 | FIELD   | DESCRIPTION                 |
 |-------- |-----------------------------| 
-| [0]     | Reset TX page Write pointer |
+| [0]     | Reset TX page write pointer |
 | [1]     | Switch TX page              |
 | [2]     | Clear TX collision flag     |
 | [3]     | Clear TX error flag         |
@@ -183,18 +187,18 @@ Non-zero indicate the pointer of last received byte of the disturbed frame, incl
     # TX
     
     write(REG_TX, [0x0c, 0x0d, 0x01, 0xcd])     # Write frame without CRC
-    while (read(REG_INT_FLAG)[0] & 0x10) == 0:  # Make sure we can successfully switch to the next page
+    while (read(REG_INT_FLAG) & 0x10) == 0:     # Make sure we can successfully switch to the next page
         pass
-    write(dut, REG_TX_CTRL, [0x02])             # Trigger send by switching TX page
+    write(REG_TX_CTRL, [0x02])                  # Trigger send by switching TX page
     
     
     # RX
     
-    while (read(REG_INT_FLAG)[0] & 0x02) == 0:  # Wait for RX page ready
+    while (read(REG_INT_FLAG) & 0x02) == 0:     # Wait for RX page ready
         pass
-    header = read(REG_TX, len = 3)
-    data = read(REG_TX, len = header[2])
-    write(dut, REG_RX_CTRL, [0x02])             # Ack read by switching RX page
+    header = read(REG_TX, len=3)
+    data = read(REG_TX, len=header[2])
+    write(REG_RX_CTRL, [0x02])                  # Finish read by switching RX page
 
 ```
 
