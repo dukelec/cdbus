@@ -45,8 +45,14 @@ assign unread = (dirty != 0);
 
 always @(posedge clk) begin
 
-    rd_byte <= ram[rd_sel][rd_addr];
-    rd_flags <= flags[rd_sel];
+    if (wr_sel != rd_sel) begin
+        rd_byte <= ram[rd_sel][rd_addr];
+        rd_flags <= flags[rd_sel];
+    end
+    else begin // no need to read when writing data
+        rd_byte <= 0;
+        rd_flags <= 0;
+    end
 
     if (wr_clk) begin
         ram[wr_sel][wr_addr] <= wr_byte;
