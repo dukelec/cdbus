@@ -40,10 +40,10 @@ assign wr_byte = des_data;
 
 // FSM
 
-reg [1:0] state;
+reg state;
 localparam
-    INIT    = 2'b01,
-    DATA    = 2'b10;
+    INIT    = 1'b0,
+    DATA    = 1'b1;
 
 always @(posedge clk or negedge reset_n)
     if (!reset_n) begin
@@ -112,10 +112,10 @@ always @(posedge clk or negedge reset_n)
 
             if (des_bus_idle) begin
                 if (byte_cnt != 0) begin
-                    if ((byte_cnt != 1 && !drop_flag) || is_promiscuous) begin
+                    if (byte_cnt != 1 && !drop_flag) begin
                         error <= 1;
                         if (not_drop) begin
-                            wr_flags <= byte_cnt[8] ? 8'hff : byte_cnt[7:0];
+                            wr_flags <= wr_addr;
                             switch <= 1;
                         end
                     end
@@ -127,18 +127,19 @@ always @(posedge clk or negedge reset_n)
             // frame format: src_addr, dst_addr, data_len, [data], crc_l, crc_h
             else if (des_data_clk == 1) begin
 
-                wr_addr <= byte_cnt[7:0];
-                if (!byte_cnt[8])
+                if (!byte_cnt[8]) begin
+                    wr_addr <= byte_cnt[7:0];
                     wr_clk <= 1;
+                end
 
                 if (byte_cnt == 0) begin
-                    if (des_data == filter && !is_promiscuous)
-                        drop_flag <= 1;
+                    if (des_data == filter)
+                        drop_flag <= ~is_promiscuous;
                 end
 
                 if (byte_cnt == 1) begin
-                    if (des_data != filter && des_data != 8'hff && !is_promiscuous)
-                        drop_flag <= 1;
+                    if (des_data != filter && des_data != 8'hff)
+                        drop_flag <= ~is_promiscuous;
                 end
 
                 if (byte_cnt == 2) begin
