@@ -16,10 +16,9 @@ module rx_des(
         input       [15:0]  div_ls, // low speed
         input       [15:0]  div_hs, // high speed
         input       [7:0]   idle_wait_len,
-        input       [7:0]   tx_wait_len,
 
         output              bus_idle,
-        output              tx_permit,
+        output reg          bit_inc,
 
         input               force_wait_idle,
 
@@ -82,7 +81,6 @@ always @(posedge clk or negedge reset_n)
 
 // div_cnt
 
-reg bit_inc;
 reg bit_mid;
 
 reg is_first_byte;
@@ -131,31 +129,6 @@ always @(posedge clk or negedge reset_n)
             idle_cnt <= 0;
         else if (bit_inc)
             idle_cnt <= idle_cnt + 1'b1;
-    end
-
-
-// tx_permit
-
-reg tx_permit_r;
-assign tx_permit = tx_permit_r & rx;
-reg [7:0] tx_wait_cnt;
-
-always @(posedge clk or negedge reset_n)
-    if (!reset_n) begin
-        tx_wait_cnt <= 0;
-        tx_permit_r <= 0;
-    end
-    else begin
-        if (tx_wait_cnt >= tx_wait_len)
-            tx_permit_r <= 1;
-
-        if (state != BUS_IDLE) begin
-            tx_wait_cnt <= 0;
-            tx_permit_r <= 0;
-        end
-        else if (bit_inc) begin
-            tx_wait_cnt <= tx_wait_cnt + 1'b1;
-        end
     end
 
 

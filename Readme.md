@@ -60,7 +60,7 @@ The idea of CDBUS was first designed and implemented by me in 2009.
  
 | Register Name |Addr[7:0]| Access | Default         | Description                   | Remarks         |
 |---------------|---------|--------|-----------------|-------------------------------|-----------------|
-| VERSION       |  0x00   | RD     | 0x05            | Hardware version              |                 |
+| VERSION       |  0x00   | RD     | 0x06            | Hardware version              |                 |
 | SETTING       |  0x01   | RD/WR  | 0x10            | Configs                       |                 |
 | IDLE_WAIT_LEN |  0x02   | RD/WR  | 0x0a (10 bit)   | How long to enter idle        |                 |
 | TX_WAIT_LEN   |  0x03   | RD/WR  | 0x14 (20 bit)   | How long to allow sending     |                 |
@@ -89,6 +89,7 @@ The idea of CDBUS was first designed and implemented by me in 2009.
 | [3]     | Save broken frame                                 |
 | [5:4]   | tx_en delay before tx output in traditional mode  |
 | [6]     | Disable arbitration for traditional mode          |
+| [7]     | Full duplex mode, depend on traditional mode      |
 
 **FILTER:**
 

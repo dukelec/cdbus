@@ -51,8 +51,9 @@ localparam
     REG_RX_ADDR       = 'h0f,
     REG_RX_PAGE_FLAG  = 'h10;
 
-localparam VERSION   = 8'h05;
+localparam VERSION   = 8'h06;
 
+reg  full_duplex;
 reg  arbitrate;
 reg  [1:0] tx_en_delay;
 reg  not_drop;
@@ -113,7 +114,7 @@ always @(*)
         REG_VERSION:
             csr_readdata = VERSION;
         REG_SETTING:
-            csr_readdata = {1'b0, !arbitrate, tx_en_delay,
+            csr_readdata = {full_duplex, !arbitrate, tx_en_delay,
                             not_drop, user_crc, tx_invert, tx_push_pull};
         REG_IDLE_WAIT_LEN:
             csr_readdata = idle_wait_len;
@@ -146,6 +147,7 @@ always @(*)
 
 always @(posedge clk or negedge reset_n)
     if (!reset_n) begin
+        full_duplex <= 0;
         arbitrate <= 1;
         tx_en_delay <= 1;
         not_drop <= 0;
@@ -195,6 +197,7 @@ always @(posedge clk or negedge reset_n)
         if (csr_write)
             case (csr_address)
                 REG_SETTING: begin
+                    full_duplex <= csr_writedata[7];
                     arbitrate <= !csr_writedata[6];
                     tx_en_delay <= csr_writedata[5:4];
                     not_drop <= csr_writedata[3];
@@ -348,7 +351,7 @@ rx_bytes rx_bytes_m(
     .switch(rx_ram_switch)
 );
 
-wire tx_permit;
+wire rx_bit_inc;
 
 rx_des rx_des_m(
     .clk(clk),
@@ -357,10 +360,9 @@ rx_des rx_des_m(
     .div_ls(div_ls),
     .div_hs(div_hs),
     .idle_wait_len(idle_wait_len),
-    .tx_wait_len(tx_wait_len),
 
     .bus_idle(bus_idle),
-    .tx_permit(tx_permit),
+    .bit_inc(rx_bit_inc),
 
     .force_wait_idle(force_wait_idle),
 
@@ -377,8 +379,10 @@ tx_bytes_ser tx_bytes_ser_m(
 
     .div_ls(div_ls),
     .div_hs(div_hs),
+    .tx_wait_len(tx_wait_len),
     .user_crc(user_crc),
 
+    .full_duplex(full_duplex),
     .arbitrate(arbitrate),
     .tx_en_delay(tx_en_delay),
     .abort(tx_abort),
@@ -393,7 +397,8 @@ tx_bytes_ser tx_bytes_ser_m(
     .addr(tx_addr),
     .read_done(tx_read_done),
 
-    .tx_permit(tx_permit),
+    .bus_idle(bus_idle),
+    .rx_bit_inc(rx_bit_inc),
     .rx(rx_d)
 );
 

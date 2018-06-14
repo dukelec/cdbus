@@ -16,7 +16,9 @@ module tx_bytes_ser (
         // control center
         input       [15:0]  div_ls, // low speed
         input       [15:0]  div_hs, // high speed
+        input       [7:0]   tx_wait_len,
         input               user_crc,
+        input               full_duplex,
         input               arbitrate,
         input       [1:0]   tx_en_delay,
         input               abort,
@@ -33,7 +35,8 @@ module tx_bytes_ser (
         output reg          read_done,
 
         // rx_des
-        input               tx_permit,
+        input               bus_idle,
+        input               rx_bit_inc,
 
         input               rx
     );
@@ -48,6 +51,8 @@ localparam
     DELAY_HEAD_END  = 5'b00100,
     DATA            = 5'b01000,
     DATA_END        = 5'b10000;
+
+wire tx_busy = (state != WAIT);
 
 always @(posedge clk or negedge reset_n)
     if (!reset_n) begin
@@ -107,7 +112,7 @@ always @(posedge clk or negedge reset_n)
         bit_inc <= 0;
         bit_mid <= 0;
 
-        if (state == WAIT || state == DELAY_HEAD_END) begin
+        if ((state == WAIT && !full_duplex) || state == DELAY_HEAD_END) begin
             div_cnt <= 1;
         end
         else begin
@@ -120,6 +125,31 @@ always @(posedge clk or negedge reset_n)
                 div_cnt <= 0;
                 bit_inc <= 1;
             end
+        end
+    end
+
+
+// tx_permit
+
+reg tx_permit_r;
+assign tx_permit = tx_permit_r & (rx | full_duplex);
+reg [7:0] tx_wait_cnt;
+
+always @(posedge clk or negedge reset_n)
+    if (!reset_n) begin
+        tx_wait_cnt <= 0;
+        tx_permit_r <= 0;
+    end
+    else begin
+        if (tx_wait_cnt >= tx_wait_len)
+            tx_permit_r <= 1;
+
+        if ((!bus_idle && !full_duplex) || tx_busy) begin
+            tx_wait_cnt <= 0;
+            tx_permit_r <= 0;
+        end
+        else if (full_duplex ? bit_inc : rx_bit_inc) begin
+            tx_wait_cnt <= tx_wait_cnt + 1'b1;
         end
     end
 
