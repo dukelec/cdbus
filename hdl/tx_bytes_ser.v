@@ -41,12 +41,13 @@ module tx_bytes_ser (
 
 // FSM
 
-reg [3:0] state;
+reg [4:0] state;
 localparam
-    WAIT            = 4'b0001,
-    DELAY_HEAD      = 4'b0010,
-    DELAY_HEAD_END  = 4'b0100,
-    DATA            = 4'b1000;
+    WAIT            = 5'b00001,
+    DELAY_HEAD      = 5'b00010,
+    DELAY_HEAD_END  = 5'b00100,
+    DATA            = 5'b01000,
+    DATA_END        = 5'b10000;
 
 always @(posedge clk or negedge reset_n)
     if (!reset_n) begin
@@ -71,7 +72,11 @@ always @(posedge clk or negedge reset_n)
 
         DATA: begin
             if (cd || (is_last_byte && byte_inc))
-                state <= WAIT;
+                state <= DATA_END;
+        end
+
+        DATA_END: begin // avoid send empty frame even when tx_permit is always true
+            state <= WAIT;
         end
 
         default: state <= WAIT;
@@ -171,7 +176,7 @@ always @(posedge clk or negedge reset_n)
             hs_flag <= 0;
             bit_cnt <= 0;
             tx <= 1;
-            tx_en <= (state != WAIT && state != DATA);
+            tx_en <= (state == DELAY_HEAD || state == DELAY_HEAD_END);
             bit_finished <= 0;
             tx_en_dynamic <= 1;
         end
