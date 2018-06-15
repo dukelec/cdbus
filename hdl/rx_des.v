@@ -125,7 +125,7 @@ always @(posedge clk or negedge reset_n)
         idle_cnt <= 0;
     end
     else begin
-        if (state != WAIT || rx == 0)
+        if (state != WAIT || rx == 0 || hs_flag)
             idle_cnt <= 0;
         else if (bit_inc)
             idle_cnt <= idle_cnt + 1'b1;
