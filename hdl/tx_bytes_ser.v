@@ -41,9 +41,6 @@ module tx_bytes_ser (
         input               rx
     );
 
-
-// FSM
-
 reg [4:0] state;
 localparam
     WAIT            = 5'b00001,
@@ -53,6 +50,43 @@ localparam
     DATA_END        = 5'b10000;
 
 wire tx_busy = (state != WAIT);
+
+reg hs_flag;
+
+reg bit_inc;
+reg bit_mid;
+
+wire [15:0] div_cur = hs_flag ? div_hs : div_ls;
+reg [15:0] div_cnt;
+
+reg tx_permit_r;
+wire tx_permit = tx_permit_r & (rx | full_duplex);
+reg [7:0] tx_wait_cnt;
+
+reg [1:0] delay_cnt;
+
+reg is_crc_byte;
+reg is_last_byte;
+reg bit_finished;
+reg crc_data_clk;
+reg [7:0] tx_byte;
+wire [9:0] tx_data = {1'b1, tx_byte, 1'b0};
+
+reg byte_inc;
+
+reg [3:0] bit_cnt; // range: [0, 9]
+reg tx_en_dynamic;
+
+wire [15:0] crc_data;
+
+reg [8:0] byte_cnt;
+assign addr = byte_cnt[7:0];
+reg [7:0] data_len; // backup 3rd byte
+
+reg [3:0] retry_cnt;
+
+
+// FSM
 
 always @(posedge clk or negedge reset_n)
     if (!reset_n) begin
@@ -94,14 +128,6 @@ always @(posedge clk or negedge reset_n)
 
 // div_cnt
 
-reg hs_flag;
-
-reg bit_inc;
-reg bit_mid;
-
-wire [15:0] div_cur = hs_flag ? div_hs : div_ls;
-reg [15:0] div_cnt;
-
 always @(posedge clk or negedge reset_n)
     if (!reset_n) begin
         div_cnt <= 1;
@@ -131,10 +157,6 @@ always @(posedge clk or negedge reset_n)
 
 // tx_permit
 
-reg tx_permit_r;
-assign tx_permit = tx_permit_r & (rx | full_duplex);
-reg [7:0] tx_wait_cnt;
-
 always @(posedge clk or negedge reset_n)
     if (!reset_n) begin
         tx_wait_cnt <= 0;
@@ -156,8 +178,6 @@ always @(posedge clk or negedge reset_n)
 
 // delay_cnt
 
-reg [1:0] delay_cnt;
-
 always @(posedge clk or negedge reset_n)
     if (!reset_n) begin
         delay_cnt <= 0;
@@ -171,18 +191,6 @@ always @(posedge clk or negedge reset_n)
 
 
 // bits_ctrl
-
-reg is_crc_byte;
-reg is_last_byte;
-reg bit_finished;
-reg crc_data_clk;
-reg [7:0] tx_byte;
-wire [9:0] tx_data = {1'b1, tx_byte, 1'b0};
-
-reg byte_inc;
-
-reg [3:0] bit_cnt; // range: [0, 9]
-reg tx_en_dynamic;
 
 always @(posedge clk or negedge reset_n)
     if (!reset_n) begin
@@ -244,12 +252,6 @@ always @(posedge clk or negedge reset_n)
 
 // bytes_ctrl
 
-wire [15:0] crc_data;
-
-reg [8:0] byte_cnt;
-assign addr = byte_cnt[7:0];
-reg [7:0] data_len; // backup 3rd byte
-
 always @(posedge clk or negedge reset_n)
     if (!reset_n) begin
         byte_cnt <= 0;
@@ -292,8 +294,6 @@ always @(posedge clk or negedge reset_n)
 
 
 // cd_err and read_done
-
-reg [3:0] retry_cnt;
 
 always @(posedge clk or negedge reset_n)
     if (!reset_n) begin

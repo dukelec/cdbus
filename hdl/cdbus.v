@@ -84,6 +84,8 @@ reg  [7:0] rx_ram_rd_addr;
 wire [7:0] rx_ram_rd_flags;
 reg  rx_ram_rd_done;
 reg  rx_clean_all;
+wire rx_error;
+wire rx_ram_lost;
 
 wire [7:0] tx_ram_wr_data = csr_writedata;
 reg  [7:0] tx_ram_wr_addr;
@@ -107,6 +109,23 @@ wire tx_may_invert = tx_invert ? ~tx_d : tx_d;
 
 assign tx_en = (reset_n && tx_push_pull) ? tx_en_d : 1'bz;
 assign tx = (reset_n && (tx_push_pull || !tx_may_invert)) ? tx_may_invert : 1'bz;
+
+wire [7:0] rx_ram_wr_data;
+wire [7:0] rx_ram_wr_addr;
+wire rx_ram_wr_clk;
+wire rx_ram_switch;
+wire [7:0] rx_ram_wr_flags;
+
+wire [7:0] tx_data;
+wire [7:0] tx_addr;
+wire tx_read_done;
+
+wire [7:0] des_data;
+wire [15:0] des_crc_data;
+wire des_data_clk;
+wire force_wait_idle;
+
+wire rx_bit_inc;
 
 
 always @(*)
@@ -275,12 +294,6 @@ always @(posedge clk or negedge reset_n)
     end
 
 
-wire [7:0] rx_ram_wr_data;
-wire [7:0] rx_ram_wr_addr;
-wire rx_ram_wr_clk;
-wire rx_ram_switch;
-wire [7:0] rx_ram_wr_flags;
-
 pp_ram #(.N_WIDTH(3)) pp_ram_rx_m(
     .clk(clk),
     .reset_n(reset_n),
@@ -301,10 +314,6 @@ pp_ram #(.N_WIDTH(3)) pp_ram_rx_m(
     .switch_fail(rx_ram_lost)
 );
 
-wire [7:0] tx_data;
-wire [7:0] tx_addr;
-wire tx_read_done;
-
 pp_ram #(.N_WIDTH(1)) pp_ram_tx_m(
     .clk(clk),
     .reset_n(reset_n),
@@ -320,13 +329,10 @@ pp_ram #(.N_WIDTH(1)) pp_ram_tx_m(
     .wr_clk(tx_ram_wr_clk),
 
     .wr_flags(8'd0),
-    .switch(tx_ram_switch)
+    .rd_flags(),
+    .switch(tx_ram_switch),
+    .switch_fail()
 );
-
-wire [7:0] des_data;
-wire [15:0] des_crc_data;
-wire des_data_clk;
-wire force_wait_idle;
 
 rx_bytes rx_bytes_m(
     .clk(clk),
@@ -350,8 +356,6 @@ rx_bytes rx_bytes_m(
     .wr_flags(rx_ram_wr_flags),
     .switch(rx_ram_switch)
 );
-
-wire rx_bit_inc;
 
 rx_des rx_des_m(
     .clk(clk),

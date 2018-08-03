@@ -29,9 +29,6 @@ module rx_des(
         output reg          data_clk
     );
 
-
-// FSM
-
 reg [2:0] state;
 localparam
     WAIT        = 3'b001,
@@ -40,6 +37,31 @@ localparam
 
 reg allow_data;
 assign bus_idle = (state == BUS_IDLE);
+
+reg bit_mid;
+
+reg is_first_byte;
+reg hs_flag;
+
+wire [15:0] div_cur = hs_flag ? div_hs : div_ls;
+reg [15:0] div_cnt;
+
+reg [7:0] idle_cnt;
+
+reg bit_err;
+
+reg rx_d1;
+reg rx_d2;
+
+wire crc_rx = rx_d2;
+reg crc_data_clk;
+
+reg [3:0] bit_cnt; // range: [0, 9]
+
+reg byte_end;
+
+
+// FSM
 
 always @(posedge clk or negedge reset_n)
     if (!reset_n) begin
@@ -81,14 +103,6 @@ always @(posedge clk or negedge reset_n)
 
 // div_cnt
 
-reg bit_mid;
-
-reg is_first_byte;
-reg hs_flag;
-
-wire [15:0] div_cur = hs_flag ? div_hs : div_ls;
-reg [15:0] div_cnt;
-
 always @(posedge clk or negedge reset_n)
     if (!reset_n) begin
         div_cnt <= 0;
@@ -118,8 +132,6 @@ always @(posedge clk or negedge reset_n)
 
 // idle_cnt
 
-reg [7:0] idle_cnt;
-
 always @(posedge clk or negedge reset_n)
     if (!reset_n) begin
         idle_cnt <= 0;
@@ -133,16 +145,6 @@ always @(posedge clk or negedge reset_n)
 
 
 // bits_ctrl
-
-reg bit_err;
-
-reg rx_d1;
-reg rx_d2;
-
-wire crc_rx = rx_d2;
-reg crc_data_clk;
-
-reg [3:0] bit_cnt; // range: [0, 9]
 
 always @(posedge clk or negedge reset_n)
     if (!reset_n) begin
@@ -189,8 +191,6 @@ always @(posedge clk or negedge reset_n)
 
 
 // hs_flag
-
-reg byte_end;
 
 always @(posedge clk or negedge reset_n)
     if (!reset_n) begin

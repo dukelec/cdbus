@@ -37,13 +37,19 @@ module rx_bytes (
 
 assign wr_byte = des_data;
 
-
-// FSM
-
 reg state;
 localparam
     INIT    = 1'b0,
     DATA    = 1'b1;
+
+reg [8:0] byte_cnt;
+reg [7:0] data_len; // backup 3rd byte
+reg drop_flag;
+reg finish;
+reg is_promiscuous;
+
+
+// FSM
 
 always @(posedge clk or negedge reset_n)
     if (!reset_n) begin
@@ -74,12 +80,6 @@ always @(posedge clk or negedge reset_n)
 
 
 //
-
-reg [8:0] byte_cnt;
-reg [7:0] data_len; // backup 3rd byte
-reg drop_flag;
-reg finish;
-reg is_promiscuous;
 
 always @(posedge clk or negedge reset_n)
     if (!reset_n) begin
