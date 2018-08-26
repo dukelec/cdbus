@@ -27,7 +27,7 @@ In this case:
 
 * It introduces an arbitration mechanism that automatically avoids conflicts like the CAN bus.
 * Support dual baud rate, provide high speed communication, maximum rate ≥ 10 Mbps.
-* Support broadcast (by set `dst_addr` to `255`).
+* Supports unicast, multicast and broadcast.
 * Max payload data size is 253 byte (you can increase it to 255 byte, but not recommended).
 * Hardware packing, unpacking, verification and filtering, save your time and CPU usage.
 * Backward compatible with traditional RS485 hardware (still retains arbitration function).
@@ -60,11 +60,11 @@ The idea of CDBUS was first designed and implemented by me in 2009.
  
 | Register Name |Addr[7:0]| Access | Default         | Description                   | Remarks         |
 |---------------|---------|--------|-----------------|-------------------------------|-----------------|
-| VERSION       |  0x00   | RD     | 0x06            | Hardware version              |                 |
+| VERSION       |  0x00   | RD     | 0x07            | Hardware version              |                 |
 | SETTING       |  0x01   | RD/WR  | 0x10            | Configs                       |                 |
 | IDLE_WAIT_LEN |  0x02   | RD/WR  | 0x0a (10 bit)   | How long to enter idle        |                 |
 | TX_WAIT_LEN   |  0x03   | RD/WR  | 0x14 (20 bit)   | How long to allow sending     |                 |
-| FILTER        |  0x04   | RD/WR  | 0xff            | Receive filter                |                 |
+| FILTER        |  0x04   | RD/WR  | 0xff            | Set to local address          |                 |
 | DIV_LS_L      |  0x05   | RD/WR  | 0x5a            | Low-speed rate setting        |                 |
 | DIV_LS_H      |  0x06   | RD/WR  | 0x01            |                               |                 |
 | DIV_HS_L      |  0x07   | RD/WR  | 0x5a            | High-speed rate setting       |                 |
@@ -77,6 +77,7 @@ The idea of CDBUS was first designed and implemented by me in 2009.
 | TX_CTRL       |  0x0e   | WR     | n/a             | TX control                    |                 |
 | RX_ADDR       |  0x0f   | RD/WR  | 0x00            | RX page read pointer          | Uncommonly used |
 | RX_PAGE_FLAG  |  0x10   | RD     | n/a             | RX page flag                  | For debugging   |
+| FILTER1       |  0x11   | RD/WR  | 0xff            | Multicast filter1             |                 |
 
 
 **SETTING:**
@@ -91,17 +92,20 @@ The idea of CDBUS was first designed and implemented by me in 2009.
 | [6]     | Disable arbitration for traditional mode          |
 | [7]     | Full duplex mode, depend on traditional mode      |
 
-**FILTER:**
+**FILTERx:**
 
 Match from top to bottom:
 
-| SRC_ADDR  | DST_ADDR | FILTER       | Receive or drop | Remarks          |
-|---------- |----------|--------------|-----------------|------------------|
-| not care  | not care | 255          | Receive         | Promiscuous mode |
-| = FILTER  | not care | != 255       | Drop            | Avoid loopback   |
-| != FILTER | 255      | not care     | Receive         | Broadcast        |
-| != FILTER | != 255   | = DST_ADDR   | Receive         |                  |
-| not care  | != 255   | != DST_ADDR  | Drop            |                  |
+| SRC_ADDR  | DST_ADDR | FILTER       | FILTER1      | Receive or drop | Remarks          |
+|---------- |----------|--------------|--------------|-----------------|------------------|
+| not care  | not care | 255          | not care     | Receive         | Promiscuous mode |
+| = FILTER  | not care | != 255       | not care     | Drop            | Avoid loopback   |
+| != FILTER | 255      | not care     | not care     | Receive         | Broadcast        |
+| != FILTER | != 255   | not care     | = DST_ADDR   | Receive         | Multicast        |
+| != FILTER | != 255   | = DST_ADDR   | not care     | Receive         | Unicast          |
+| not care  | != 255   | != DST_ADDR  | != DST_ADDR  | Drop            |                  |
+
+It is recommended to reserve the address from `0xe0` to `0xfe` as the multicast address.
 
 **DIV_xx_x:**
 

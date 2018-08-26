@@ -49,9 +49,10 @@ localparam
     REG_RX_CTRL       = 'h0d,
     REG_TX_CTRL       = 'h0e,
     REG_RX_ADDR       = 'h0f,
-    REG_RX_PAGE_FLAG  = 'h10;
+    REG_RX_PAGE_FLAG  = 'h10,
+    REG_FILTER1       = 'h11;
 
-localparam VERSION   = 8'h06;
+localparam VERSION   = 8'h07;
 
 reg  full_duplex;
 reg  arbitrate;
@@ -64,6 +65,7 @@ reg  tx_push_pull;
 reg  [7:0] idle_wait_len;
 reg  [7:0] tx_wait_len;
 reg  [7:0] filter;
+reg  [7:0] filter1;
 reg  [15:0] div_ls; // low speed
 reg  [15:0] div_hs; // high speed
 
@@ -159,6 +161,8 @@ always @(*)
             csr_readdata = rx_ram_rd_addr;
         REG_RX_PAGE_FLAG:
             csr_readdata = rx_ram_rd_flags;
+        REG_FILTER1:
+            csr_readdata = filter1;
         default:
             csr_readdata = 0;
     endcase
@@ -177,6 +181,7 @@ always @(posedge clk or negedge reset_n)
         idle_wait_len <= 10;    // 1 byte (10 bits per byte)
         tx_wait_len <= 20;
         filter <= 8'hff;
+        filter1 <= 8'hff;
         div_ls <= DIV_LS;       // baud_rate = sys_freq / (div + 1)
         div_hs <= DIV_HS;
 
@@ -290,6 +295,8 @@ always @(posedge clk or negedge reset_n)
                 REG_RX_ADDR: begin
                     rx_ram_rd_addr <= csr_writedata;
                 end
+                REG_FILTER1:
+                    filter1 <= csr_writedata;
             endcase
     end
 
@@ -339,6 +346,7 @@ rx_bytes rx_bytes_m(
     .reset_n(reset_n),
 
     .filter(filter),
+    .filter1(filter1),
     .user_crc(user_crc),
     .not_drop(not_drop),
     .abort(rx_clean_all),

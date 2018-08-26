@@ -38,6 +38,7 @@ REG_RX_CTRL         = 0x0d
 REG_TX_CTRL         = 0x0e
 REG_RX_ADDR         = 0x0f
 REG_RX_PAGE_FLAG    = 0x10
+REG_FILTER1         = 0x11
 
 BIT_SETTING_TX_PUSH_PULL    = 1 << 0
 BIT_SETTING_TX_INVERT       = 1 << 1

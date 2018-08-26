@@ -15,6 +15,7 @@ module rx_bytes (
 
         // control center
         input       [7:0]   filter,
+        input       [7:0]   filter1,
         input               user_crc,
         input               not_drop,
         input               abort,
@@ -138,7 +139,8 @@ always @(posedge clk or negedge reset_n)
                 end
 
                 if (byte_cnt == 1) begin
-                    if (des_data != filter && des_data != 8'hff)
+                    if (des_data != filter && des_data != 8'hff
+                            && des_data != filter1)
                         drop_flag <= ~is_promiscuous;
                 end
 
