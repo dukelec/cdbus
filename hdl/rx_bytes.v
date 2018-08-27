@@ -16,6 +16,7 @@ module rx_bytes (
         // control center
         input       [7:0]   filter,
         input       [7:0]   filter1,
+        input       [7:0]   filter2,
         input               user_crc,
         input               not_drop,
         input               abort,
@@ -48,6 +49,7 @@ reg [7:0] data_len; // backup 3rd byte
 reg drop_flag;
 reg finish;
 reg is_promiscuous;
+reg is_multicast;
 
 
 // FSM
@@ -104,6 +106,11 @@ always @(posedge clk or negedge reset_n)
         finish <= 0;
         is_promiscuous <= (filter == 8'hff);
 
+        if (des_data == filter1 || des_data == filter2)
+            is_multicast <= 1;
+        else
+            is_multicast <= 0;
+
         if (state == INIT) begin
             byte_cnt <= 0;
             data_len <= 0;
@@ -139,8 +146,7 @@ always @(posedge clk or negedge reset_n)
                 end
 
                 if (byte_cnt == 1) begin
-                    if (des_data != filter && des_data != 8'hff
-                            && des_data != filter1)
+                    if (des_data != filter && des_data != 8'hff && !is_multicast)
                         drop_flag <= ~is_promiscuous;
                 end
 

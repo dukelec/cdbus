@@ -50,7 +50,8 @@ localparam
     REG_TX_CTRL       = 'h0e,
     REG_RX_ADDR       = 'h0f,
     REG_RX_PAGE_FLAG  = 'h10,
-    REG_FILTER1       = 'h11;
+    REG_FILTER1       = 'h11,
+    REG_FILTER2       = 'h12;
 
 localparam VERSION   = 8'h07;
 
@@ -66,6 +67,7 @@ reg  [7:0] idle_wait_len;
 reg  [7:0] tx_wait_len;
 reg  [7:0] filter;
 reg  [7:0] filter1;
+reg  [7:0] filter2;
 reg  [15:0] div_ls; // low speed
 reg  [15:0] div_hs; // high speed
 
@@ -163,6 +165,8 @@ always @(*)
             csr_readdata = rx_ram_rd_flags;
         REG_FILTER1:
             csr_readdata = filter1;
+        REG_FILTER2:
+            csr_readdata = filter2;
         default:
             csr_readdata = 0;
     endcase
@@ -182,6 +186,7 @@ always @(posedge clk or negedge reset_n)
         tx_wait_len <= 20;
         filter <= 8'hff;
         filter1 <= 8'hff;
+        filter2 <= 8'hff;
         div_ls <= DIV_LS;       // baud_rate = sys_freq / (div + 1)
         div_hs <= DIV_HS;
 
@@ -297,6 +302,8 @@ always @(posedge clk or negedge reset_n)
                 end
                 REG_FILTER1:
                     filter1 <= csr_writedata;
+                REG_FILTER2:
+                    filter2 <= csr_writedata;
             endcase
     end
 
@@ -347,6 +354,7 @@ rx_bytes rx_bytes_m(
 
     .filter(filter),
     .filter1(filter1),
+    .filter2(filter2),
     .user_crc(user_crc),
     .not_drop(not_drop),
     .abort(rx_clean_all),

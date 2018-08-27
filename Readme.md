@@ -78,6 +78,7 @@ The idea of CDBUS was first designed and implemented by me in 2009.
 | RX_ADDR       |  0x0f   | RD/WR  | 0x00            | RX page read pointer          | Uncommonly used |
 | RX_PAGE_FLAG  |  0x10   | RD     | n/a             | RX page flag                  | For debugging   |
 | FILTER1       |  0x11   | RD/WR  | 0xff            | Multicast filter1             |                 |
+| FILTER2       |  0x11   | RD/WR  | 0xff            | Multicast filter2             |                 |
 
 
 **SETTING:**
@@ -92,20 +93,22 @@ The idea of CDBUS was first designed and implemented by me in 2009.
 | [6]     | Disable arbitration for traditional mode          |
 | [7]     | Full duplex mode, depend on traditional mode      |
 
-**FILTERx:**
+**FILTERS:**
 
 Match from top to bottom:
 
-| SRC_ADDR  | DST_ADDR | FILTER       | FILTER1      | Receive or drop | Remarks          |
-|---------- |----------|--------------|--------------|-----------------|------------------|
-| not care  | not care | 255          | not care     | Receive         | Promiscuous mode |
-| = FILTER  | not care | != 255       | not care     | Drop            | Avoid loopback   |
-| != FILTER | 255      | not care     | not care     | Receive         | Broadcast        |
-| != FILTER | != 255   | not care     | = DST_ADDR   | Receive         | Multicast        |
-| != FILTER | != 255   | = DST_ADDR   | not care     | Receive         | Unicast          |
-| not care  | != 255   | != DST_ADDR  | != DST_ADDR  | Drop            |                  |
+| SRC_ADDR  | DST_ADDR | FILTER       | FILTERn          | Receive or drop | Remarks          |
+|---------- |----------|--------------|------------------|-----------------|------------------|
+| not care  | not care | 255          | not care         | Receive         | Promiscuous mode |
+| = FILTER  | not care | != 255       | not care         | Drop            | Avoid loopback   |
+| != FILTER | 255      | not care     | not care         | Receive         | Broadcast        |
+| != FILTER | != 255   | not care     | any = DST_ADDR   | Receive         | Multicast        |
+| != FILTER | != 255   | = DST_ADDR   | not care         | Receive         | Unicast          |
+| not care  | != 255   | != DST_ADDR  | all != DST_ADDR  | Drop            |                  |
 
 It is recommended to reserve the address from `0xe0` to `0xfe` as the multicast address.
+
+The default value 0xff of FILTERn means not enabled.
 
 **DIV_xx_x:**
 
