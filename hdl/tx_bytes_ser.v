@@ -23,7 +23,7 @@ module tx_bytes_ser (
         input       [1:0]   tx_en_delay,
         input               abort,
         output reg          cd,     // collision detect
-        output reg          cd_err,
+        output reg          err,
 
         output reg          tx,
         output reg          tx_en,
@@ -83,8 +83,6 @@ reg [8:0] byte_cnt;
 assign addr = byte_cnt[7:0];
 reg [7:0] data_len; // backup 3rd byte
 
-reg [3:0] retry_cnt;
-
 
 // FSM
 
@@ -110,7 +108,7 @@ always @(posedge clk or negedge reset_n)
         end
 
         DATA: begin
-            if (cd || (is_last_byte && byte_inc))
+            if (cd || err || (is_last_byte && byte_inc))
                 state <= DATA_END;
         end
 
@@ -197,6 +195,7 @@ always @(posedge clk or negedge reset_n)
         hs_flag <= 0;
         crc_data_clk <= 0;
         cd <= 0;
+        err <= 0;
         byte_inc <= 0;
         bit_cnt <= 0;
         bit_finished <= 0;
@@ -208,6 +207,7 @@ always @(posedge clk or negedge reset_n)
     else begin
         crc_data_clk <= 0;
         cd <= 0;
+        err <= 0;
         byte_inc <= 0;
 
         if (state != DATA) begin
@@ -224,9 +224,9 @@ always @(posedge clk or negedge reset_n)
             tx_en <= (tx_en_dynamic && tx_data[bit_cnt] && arbitrate) ? 0 : 1;
 
             if (tx_en_dynamic && arbitrate && bit_mid) begin
-                if (tx && !rx)
-                    cd <= 1;
-                else if (bit_cnt == 9) begin
+                cd <= tx && !rx;  // tx: 1, rx: 0
+                err <= !tx && rx; // tx: 0, rx: 1
+                if (rx == rx && bit_cnt == 9) begin
                     tx_en <= 1; // active tx_en
                     tx_en_dynamic <= 0;
                 end
@@ -244,8 +244,10 @@ always @(posedge clk or negedge reset_n)
                 end
             end
 
-            if (abort)
+            if (abort) begin
                 cd <= 0;
+                err <= 0;
+            end
         end
     end
 
@@ -297,32 +299,12 @@ always @(posedge clk or negedge reset_n)
 
 always @(posedge clk or negedge reset_n)
     if (!reset_n) begin
-        retry_cnt <= 0;
         read_done <= 0;
-        cd_err <= 0;
     end
     else begin
         read_done <= 0;
-        cd_err <= 0;
-
-        if (cd) begin
-            retry_cnt <= retry_cnt + 1'd1;
-            if (retry_cnt == 4'b1111) begin
-                read_done <= 1;
-                cd_err <= 1;
-                // retry_cnt becomes 0 at next time
-            end
-        end
-        else if (is_last_byte && byte_inc) begin
+        if (err || abort || (is_last_byte && byte_inc))
             read_done <= 1;
-            retry_cnt <= 0;
-        end
-
-        if (abort) begin
-            cd_err <= 0;
-            read_done <= 1;
-            retry_cnt <= 0;
-        end
     end
 
 

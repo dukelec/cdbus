@@ -53,7 +53,7 @@ localparam
     REG_FILTER1       = 'h11,
     REG_FILTER2       = 'h12;
 
-localparam VERSION   = 8'h07;
+localparam VERSION   = 8'h08;
 
 reg  full_duplex;
 reg  arbitrate;
@@ -71,7 +71,7 @@ reg  [7:0] filter2;
 reg  [15:0] div_ls; // low speed
 reg  [15:0] div_hs; // high speed
 
-reg  cd_error_flag;
+reg  tx_error_flag;
 reg  cd_flag;
 wire tx_pending;
 reg  rx_error_flag;
@@ -79,7 +79,7 @@ reg  rx_lost_flag;
 wire rx_pending;
 wire bus_idle;
 
-wire [6:0] int_flag = {cd_error_flag, cd_flag, ~tx_pending,
+wire [6:0] int_flag = {tx_error_flag, cd_flag, ~tx_pending,
                        rx_error_flag, rx_lost_flag, rx_pending, bus_idle};
 reg  [6:0] int_mask;
 
@@ -106,7 +106,7 @@ always @(posedge clk)
     {rx_d, rx_pipe} <= {rx_pipe, rx};
 
 wire cd;
-wire cd_err;
+wire tx_err;
 wire tx_d;
 wire tx_en_d;
 wire tx_may_invert = tx_invert ? ~tx_d : tx_d;
@@ -190,7 +190,7 @@ always @(posedge clk or negedge reset_n)
         div_ls <= DIV_LS;       // baud_rate = sys_freq / (div + 1)
         div_hs <= DIV_HS;
 
-        cd_error_flag <= 0;
+        tx_error_flag <= 0;
         cd_flag <= 0;
         rx_error_flag <= 0;
         rx_lost_flag <= 0;
@@ -217,8 +217,8 @@ always @(posedge clk or negedge reset_n)
             rx_lost_flag <= 1;
         if (cd)
             cd_flag <= 1;
-        if (cd_err)
-            cd_error_flag <= 1;
+        if (tx_err)
+            tx_error_flag <= 1;
 
         if (csr_read && csr_address == REG_RX)
             rx_ram_rd_addr <= rx_ram_rd_addr + 1'd1;
@@ -278,7 +278,7 @@ always @(posedge clk or negedge reset_n)
                     if (csr_writedata[4]) begin
                         tx_abort <= 1;
                         cd_flag <= 0;
-                        cd_error_flag <= 0;
+                        tx_error_flag <= 0;
                         if (csr_writedata[0])
                             tx_ram_wr_addr <= 0;
                     end
@@ -294,7 +294,7 @@ always @(posedge clk or negedge reset_n)
                         if (csr_writedata[2])
                             cd_flag <= 0;
                         if (csr_writedata[3])
-                            cd_error_flag <= 0;
+                            tx_error_flag <= 0;
                     end
                 end
                 REG_RX_ADDR: begin
@@ -407,7 +407,7 @@ tx_bytes_ser tx_bytes_ser_m(
     .tx_en_delay(tx_en_delay),
     .abort(tx_abort),
     .cd(cd),
-    .cd_err(cd_err),
+    .err(tx_err),
 
     .tx(tx_d),
     .tx_en(tx_en_d),

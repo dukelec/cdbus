@@ -60,7 +60,7 @@ The idea of CDBUS was first designed and implemented by me in 2009.
  
 | Register Name |Addr[7:0]| Access | Default         | Description                   | Remarks         |
 |---------------|---------|--------|-----------------|-------------------------------|-----------------|
-| VERSION       |  0x00   | RD     | 0x07            | Hardware version              |                 |
+| VERSION       |  0x00   | RD     | 0x08            | Hardware version              |                 |
 | SETTING       |  0x01   | RD/WR  | 0x10            | Configs                       |                 |
 | IDLE_WAIT_LEN |  0x02   | RD/WR  | 0x0a (10 bit)   | How long to enter idle        |                 |
 | TX_WAIT_LEN   |  0x03   | RD/WR  | 0x14 (20 bit)   | How long to allow sending     |                 |
@@ -125,7 +125,7 @@ DIV_xx[15:0] = sys_freq ÷ baud_rate − 1
 | [3]     | 1: RX error: frame broken                    |
 | [4]     | 1: TX page released by hardware              |
 | [5]     | 1: TX collision detected                     |
-| [6]     | 1: TX error: conflict continued for 16 times |
+| [6]     | 1: TX error: tx is 0, but rx is 1            |
 
 **INT_MASK:**
 
