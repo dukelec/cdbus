@@ -15,11 +15,26 @@ module cdbus_wrapper(
         input       clk,
         input       reset_n,
 
-        input       [4:0] csr_address,
-        input       csr_read,
-        output      [7:0] csr_readdata,
-        input       csr_write,
-        input       [7:0] csr_writedata,
+        input       [3:0]   csr_address,
+        input       [3:0]   csr_byteenable,
+        input               csr_read,
+        output      [31:0]  csr_readdata,
+        input               csr_write,
+        input       [31:0]  csr_writedata,
+        
+        input       [5:0]   rx_mm_address,
+        input       [3:0]   rx_mm_byteenable,
+        input               rx_mm_read,
+        output      [31:0]  rx_mm_readdata,
+        input               rx_mm_write,
+        input       [31:0]  rx_mm_writedata,
+        
+        input       [5:0]   tx_mm_address,
+        input       [3:0]   tx_mm_byteenable,
+        input               tx_mm_read,
+        output      [31:0]  tx_mm_readdata,
+        input               tx_mm_write,
+        input       [31:0]  tx_mm_writedata,
 
         output      irq,
 
@@ -36,10 +51,25 @@ cdbus cdbus_m(
           .reset_n(reset_n),
           
           .csr_address(csr_address),
+          .csr_byteenable(csr_byteenable),
           .csr_read(csr_read),
           .csr_readdata(csr_readdata),
           .csr_write(csr_write),
           .csr_writedata(csr_writedata),
+          
+          .rx_mm_address(rx_mm_address),
+          .rx_mm_byteenable(rx_mm_byteenable),
+          .rx_mm_read(rx_mm_read),
+          .rx_mm_readdata(rx_mm_readdata),
+          .rx_mm_write(rx_mm_write),
+          .rx_mm_writedata(rx_mm_writedata),
+          
+          .tx_mm_address(tx_mm_address),
+          .tx_mm_byteenable(tx_mm_byteenable),
+          .tx_mm_read(tx_mm_read),
+          .tx_mm_readdata(tx_mm_readdata),
+          .tx_mm_write(tx_mm_write),
+          .tx_mm_writedata(tx_mm_writedata),
           
           .irq(irq),
           
