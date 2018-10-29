@@ -25,14 +25,14 @@ module cdbus
         output reg  [31:0]  csr_readdata,
         input               csr_write,
         input       [31:0]  csr_writedata,
-        
+
         input       [5:0]   rx_mm_address,
         input       [3:0]   rx_mm_byteenable,
         input               rx_mm_read,
         output      [31:0]  rx_mm_readdata,
         input               rx_mm_write,
         input       [31:0]  rx_mm_writedata,
-        
+
         input       [5:0]   tx_mm_address,
         input       [3:0]   tx_mm_byteenable,
         input               tx_mm_read,
@@ -288,7 +288,7 @@ always @(posedge clk or negedge reset_n)
 pp_ram #(.N_WIDTH(3), .MM4RD(1)) pp_ram_rx_m(
     .clk(clk),
     .reset_n(reset_n),
-    
+
     .mm_address(rx_mm_address),
     .mm_byteenable(rx_mm_byteenable),
     .mm_read(rx_mm_read),
@@ -315,7 +315,7 @@ pp_ram #(.N_WIDTH(3), .MM4RD(1)) pp_ram_rx_m(
 pp_ram #(.N_WIDTH(1), .MM4RD(0)) pp_ram_tx_m(
     .clk(clk),
     .reset_n(reset_n),
-    
+
     .mm_address(tx_mm_address),
     .mm_byteenable(tx_mm_byteenable),
     .mm_read(tx_mm_read),

@@ -1,6 +1,6 @@
 [//]: # (IP Core for CDBUS Protocol)
 
-CDBUS IP Core (32 bits version)
+CDBUS IP Core (32-bit version)
 =======================================
 
 This document only shows the modifications. For the protocol and original documentation, please refer to the master branch.
