@@ -2,6 +2,7 @@
 
 CDBUS IP Core
 =======================================
+(This is an 8-bit version, please switch to the corresponding branch for the 32-bit version.)
 
 1. [CDBUS Protocol](#cdbus-protocol)
 2. [Block Diagram](#block-diagram)
@@ -58,7 +59,7 @@ The idea of CDBUS was first designed and implemented by me in 2009.
 
 ## Registers
  
-| Register Name |Addr[7:0]| Access | Default         | Description                   | Remarks         |
+| Register Name |  Addr   | Access | Default         | Description                   | Remarks         |
 |---------------|---------|--------|-----------------|-------------------------------|-----------------|
 | VERSION       |  0x00   | RD     | 0x08            | Hardware version              |                 |
 | SETTING       |  0x01   | RD/WR  | 0x10            | Configs                       |                 |

@@ -30,14 +30,14 @@ module rx_bytes (
         output reg          des_force_wait_idle,
 
         // pp_ram
-        output wire [7:0]   wr_byte,
-        output reg  [7:0]   wr_addr,
-        output reg          wr_clk,
-        output reg  [7:0]   wr_flags,
-        output reg          switch
+        output wire [7:0]   ram_wr_byte,
+        output reg  [7:0]   ram_wr_addr,
+        output reg          ram_wr_en,
+        output reg  [7:0]   ram_wr_flags,
+        output reg          ram_switch
     );
 
-assign wr_byte = des_data;
+assign ram_wr_byte = des_data;
 
 reg state;
 localparam
@@ -88,10 +88,10 @@ always @(posedge clk or negedge reset_n)
     if (!reset_n) begin
         error <= 0;
 
-        wr_addr <= 0;
-        wr_clk <= 0;
-        wr_flags <= 0;
-        switch <= 0;
+        ram_wr_addr <= 0;
+        ram_wr_en <= 0;
+        ram_wr_flags <= 0;
+        ram_switch <= 0;
 
         byte_cnt <= 0;
         data_len <= 0;
@@ -101,8 +101,8 @@ always @(posedge clk or negedge reset_n)
     end
     else begin
         error <= 0;
-        wr_clk <= 0;
-        switch <= 0;
+        ram_wr_en <= 0;
+        ram_switch <= 0;
         finish <= 0;
         is_promiscuous <= (filter == 8'hff);
 
@@ -123,12 +123,12 @@ always @(posedge clk or negedge reset_n)
                     if (byte_cnt != 1 && !drop_flag) begin
                         error <= 1;
                         if (not_drop) begin
-                            wr_flags <= wr_addr;
-                            switch <= 1;
+                            ram_wr_flags <= ram_wr_addr;
+                            ram_switch <= 1;
                         end
                     end
                     finish <= 1;
-                    drop_flag <= 1; // avoid multi-clock switch signal
+                    drop_flag <= 1; // avoid multi-clock ram_switch signal
                 end
             end
 
@@ -136,8 +136,8 @@ always @(posedge clk or negedge reset_n)
             else if (des_data_clk == 1) begin
 
                 if (!byte_cnt[8]) begin
-                    wr_addr <= byte_cnt[7:0];
-                    wr_clk <= 1;
+                    ram_wr_addr <= byte_cnt[7:0];
+                    ram_wr_en <= 1;
                 end
 
                 if (byte_cnt == 0) begin
@@ -157,14 +157,14 @@ always @(posedge clk or negedge reset_n)
                 if (byte_cnt == data_len + 5 - 1) begin // last byte
                     if (!drop_flag) begin
                         if (des_crc_data == 0 || user_crc) begin
-                            wr_flags <= 0; // 0: no error; else: rx length
-                            switch <= 1;
+                            ram_wr_flags <= 0; // 0: no error; else: rx length
+                            ram_switch <= 1;
                         end
                         else begin
                             error <= 1;
                             if (not_drop) begin
-                                wr_flags <= byte_cnt[8] ? 8'hff : byte_cnt[7:0];
-                                switch <= 1;
+                                ram_wr_flags <= byte_cnt[8] ? 8'hff : byte_cnt[7:0];
+                                ram_switch <= 1;
                             end
                         end
                     end
@@ -177,7 +177,7 @@ always @(posedge clk or negedge reset_n)
 
             if (abort) begin
                 error <= 0;
-                switch <= 0;
+                ram_switch <= 0;
             end
         end
     end

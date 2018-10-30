@@ -29,10 +29,10 @@ module tx_bytes_ser (
         output reg          tx_en,
 
         // pp_ram
-        input               unread,
-        input       [7:0]   data,
-        output wire [7:0]   addr,
-        output reg          read_done,
+        input               ram_unread,
+        input       [7:0]   ram_rd_byte,
+        output wire [7:0]   ram_rd_addr,
+        output reg          ram_rd_done,
 
         // rx_des
         input               bus_idle,
@@ -80,7 +80,7 @@ reg tx_en_dynamic;
 wire [15:0] crc_data;
 
 reg [8:0] byte_cnt;
-assign addr = byte_cnt[7:0];
+assign ram_rd_addr = byte_cnt[7:0];
 reg [7:0] data_len; // backup 3rd byte
 
 
@@ -94,7 +94,7 @@ always @(posedge clk or negedge reset_n)
 
         case (state)
         WAIT: begin
-            if (tx_permit && unread)
+            if (tx_permit && ram_unread)
                 state <= arbitrate ? DATA : DELAY_HEAD;
         end
 
@@ -272,10 +272,10 @@ always @(posedge clk or negedge reset_n)
         end
         else begin
 
-            tx_byte <= data;
+            tx_byte <= ram_rd_byte;
 
             if (byte_cnt == 2)
-                data_len <= data;
+                data_len <= ram_rd_byte;
 
             // we have enough time to change the byte which send at second bit
             else if (byte_cnt == data_len + 3) begin
@@ -295,16 +295,16 @@ always @(posedge clk or negedge reset_n)
     end
 
 
-// cd_err and read_done
+// cd_err and ram_rd_done
 
 always @(posedge clk or negedge reset_n)
     if (!reset_n) begin
-        read_done <= 0;
+        ram_rd_done <= 0;
     end
     else begin
-        read_done <= 0;
+        ram_rd_done <= 0;
         if (err || abort || (is_last_byte && byte_inc))
-            read_done <= 1;
+            ram_rd_done <= 1;
     end
 
 

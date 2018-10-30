@@ -25,7 +25,7 @@ module pp_ram
 
            input        [7:0]    wr_byte,
            input [(A_WIDTH-1):0] wr_addr,
-           input                 wr_clk,
+           input                 wr_en,
 
            input                 switch,
            input        [7:0]    wr_flags,
@@ -54,7 +54,7 @@ always @(posedge clk) begin
         rd_flags <= 0;
     end
 
-    if (wr_clk) begin
+    if (wr_en) begin
         ram[wr_sel][wr_addr] <= wr_byte;
     end
 end
