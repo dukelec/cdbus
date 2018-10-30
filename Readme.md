@@ -34,12 +34,13 @@ This document only shows the modifications. For the protocol and original docume
     input           clk,            // core clock
     input           reset_n,        // asynch active low reset
 
-    // avalon-mm slave interface, read and write without latency
-    input   [4:0]   csr_address,
+    // avalon-mm slave interface, read with 1 clock latency, write without latency
+    input   [3:0]   csr_address,
+    input   [3:0]   csr_byteenable,
     input           csr_read,
-    output  [7:0]   csr_readdata,
+    output  [31:0]  csr_readdata,
     input           csr_write,
-    input   [7:0]   csr_writedata,
+    input   [31:0]  csr_writedata,
  
     // avalon-mm slave interface, read with 1 clock latency, write without latency
     input   [5:0]   rx_mm_address,

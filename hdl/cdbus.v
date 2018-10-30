@@ -116,15 +116,16 @@ wire tx_may_invert = tx_invert ? ~tx_d : tx_d;
 assign tx_en = (reset_n && tx_push_pull) ? tx_en_d : 1'bz;
 assign tx = (reset_n && (tx_push_pull || !tx_may_invert)) ? tx_may_invert : 1'bz;
 
-wire [7:0] rx_ram_wr_data;
+wire [7:0] rx_ram_wr_byte;
 wire [7:0] rx_ram_wr_addr;
-wire rx_ram_wr_clk;
+wire rx_ram_wr_en;
 wire rx_ram_switch;
 wire [7:0] rx_ram_wr_flags;
 
-wire [7:0] tx_data;
-wire [7:0] tx_addr;
-wire tx_read_done;
+wire [7:0] tx_ram_rd_byte;
+wire [7:0] tx_ram_rd_addr;
+wire tx_ram_rd_en;
+wire tx_ram_rd_done;
 
 wire [7:0] des_data;
 wire [15:0] des_crc_data;
@@ -134,30 +135,34 @@ wire force_wait_idle;
 wire rx_bit_inc;
 
 
-always @(*)
-    case (csr_address)
-        REG_VERSION:
-            csr_readdata = {24'd0, VERSION};
-        REG_SETTING:
-            csr_readdata = {24'd0, full_duplex, !arbitrate, tx_en_delay,
-                            not_drop, user_crc, tx_invert, tx_push_pull};
-        REG_WAIT_LEN:
-            csr_readdata = {8'd0, tx_wait_len, 8'd0, idle_wait_len};
-        REG_FILTER:
-            csr_readdata = {24'd0, filter};
-        REG_DIV:
-            csr_readdata = {div_hs, div_ls};
-        REG_INT_FLAG:
-            csr_readdata = {25'd0, int_flag};
-        REG_INT_MASK:
-            csr_readdata = {25'd0, int_mask};
-        REG_RX_PAGE_FLAG:
-            csr_readdata = {24'd0, rx_ram_rd_flags};
-        REG_FILTER_M:
-            csr_readdata = {16'd0, filter2, filter1};
-        default:
-            csr_readdata = 0;
-    endcase
+always @(posedge clk or negedge reset_n)
+    if (!reset_n)
+        csr_readdata <= 0;
+    else if (csr_read) begin
+        case (csr_address)
+            REG_VERSION:
+                csr_readdata <= {24'd0, VERSION};
+            REG_SETTING:
+                csr_readdata <= {24'd0, full_duplex, !arbitrate, tx_en_delay,
+                                not_drop, user_crc, tx_invert, tx_push_pull};
+            REG_WAIT_LEN:
+                csr_readdata <= {8'd0, tx_wait_len, 8'd0, idle_wait_len};
+            REG_FILTER:
+                csr_readdata <= {24'd0, filter};
+            REG_DIV:
+                csr_readdata <= {div_hs, div_ls};
+            REG_INT_FLAG:
+                csr_readdata <= {25'd0, int_flag};
+            REG_INT_MASK:
+                csr_readdata <= {25'd0, int_mask};
+            REG_RX_PAGE_FLAG:
+                csr_readdata <= {24'd0, rx_ram_rd_flags};
+            REG_FILTER_M:
+                csr_readdata <= {16'd0, filter2, filter1};
+            default:
+                csr_readdata <= 0;
+        endcase
+    end
 
 
 always @(posedge clk or negedge reset_n)
@@ -298,13 +303,14 @@ pp_ram #(.N_WIDTH(3), .MM4RD(1)) pp_ram_rx_m(
 
     .rd_byte(),
     .rd_addr(8'd0),
+    .rd_en(1'b0),
     .rd_done(rx_ram_rd_done),
     .rd_done_all(rx_clean_all),
     .unread(rx_pending),
 
-    .wr_byte(rx_ram_wr_data),
+    .wr_byte(rx_ram_wr_byte),
     .wr_addr(rx_ram_wr_addr),
-    .wr_clk(rx_ram_wr_clk),
+    .wr_en(rx_ram_wr_en),
 
     .switch(rx_ram_switch),
     .wr_flags(rx_ram_wr_flags),
@@ -323,15 +329,16 @@ pp_ram #(.N_WIDTH(1), .MM4RD(0)) pp_ram_tx_m(
     .mm_write(tx_mm_write),
     .mm_writedata(tx_mm_writedata),
 
-    .rd_byte(tx_data),
-    .rd_addr(tx_addr),
-    .rd_done(tx_read_done),
+    .rd_byte(tx_ram_rd_byte),
+    .rd_addr(tx_ram_rd_addr),
+    .rd_en(tx_ram_rd_en),
+    .rd_done(tx_ram_rd_done),
     .rd_done_all(1'b0),
     .unread(tx_pending),
 
     .wr_byte(8'd0),
     .wr_addr(8'd0),
-    .wr_clk(1'b0),
+    .wr_en(1'b0),
 
     .switch(tx_ram_switch),
     .wr_flags(8'd0),
@@ -357,11 +364,11 @@ rx_bytes rx_bytes_m(
     .des_data_clk(des_data_clk),
     .des_force_wait_idle(force_wait_idle),
 
-    .wr_byte(rx_ram_wr_data),
-    .wr_addr(rx_ram_wr_addr),
-    .wr_clk(rx_ram_wr_clk),
-    .wr_flags(rx_ram_wr_flags),
-    .switch(rx_ram_switch)
+    .ram_wr_byte(rx_ram_wr_byte),
+    .ram_wr_addr(rx_ram_wr_addr),
+    .ram_wr_en(rx_ram_wr_en),
+    .ram_wr_flags(rx_ram_wr_flags),
+    .ram_switch(rx_ram_switch)
 );
 
 rx_des rx_des_m(
@@ -403,10 +410,11 @@ tx_bytes_ser tx_bytes_ser_m(
     .tx(tx_d),
     .tx_en(tx_en_d),
 
-    .unread(tx_pending),
-    .data(tx_data),
-    .addr(tx_addr),
-    .read_done(tx_read_done),
+    .ram_unread(tx_pending),
+    .ram_rd_byte(tx_ram_rd_byte),
+    .ram_rd_addr(tx_ram_rd_addr),
+    .ram_rd_en(tx_ram_rd_en),
+    .ram_rd_done(tx_ram_rd_done),
 
     .bus_idle(bus_idle),
     .rx_bit_inc(rx_bit_inc),

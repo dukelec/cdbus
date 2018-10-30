@@ -27,13 +27,14 @@ module pp_ram
 
            output reg   [7:0]    rd_byte,
            input [(A_WIDTH+1):0] rd_addr,
+           input                 rd_en,
            input                 rd_done,
            input                 rd_done_all,
            output                unread,
 
            input        [7:0]    wr_byte,
            input [(A_WIDTH+1):0] wr_addr,
-           input                 wr_clk,
+           input                 wr_en,
 
            input                 switch,
            input        [7:0]    wr_flags,
@@ -59,14 +60,16 @@ always @(posedge clk) begin
 
     rd_flags <= flags[rd_sel];
 
-    if (rd_addr[1:0] == 2'b00)
-        rd_byte <= ram0[rd_sel][rd_addr[(A_WIDTH+1):2]];
-    else if (rd_addr[1:0] == 2'b01)
-        rd_byte <= ram1[rd_sel][rd_addr[(A_WIDTH+1):2]];
-    else if (rd_addr[1:0] == 2'b10)
-        rd_byte <= ram2[rd_sel][rd_addr[(A_WIDTH+1):2]];
-    else if (rd_addr[1:0] == 2'b11)
-        rd_byte <= ram3[rd_sel][rd_addr[(A_WIDTH+1):2]];
+    if (rd_en) begin
+        if (rd_addr[1:0] == 2'b00)
+            rd_byte <= ram0[rd_sel][rd_addr[(A_WIDTH+1):2]];
+        else if (rd_addr[1:0] == 2'b01)
+            rd_byte <= ram1[rd_sel][rd_addr[(A_WIDTH+1):2]];
+        else if (rd_addr[1:0] == 2'b10)
+            rd_byte <= ram2[rd_sel][rd_addr[(A_WIDTH+1):2]];
+        else if (rd_addr[1:0] == 2'b11)
+            rd_byte <= ram3[rd_sel][rd_addr[(A_WIDTH+1):2]];
+    end
 
     if (mm_read)
         mm_readdata <= {ram3[mm_sel][mm_address],
@@ -75,7 +78,7 @@ always @(posedge clk) begin
                         ram0[mm_sel][mm_address]};
 
     if (MM4RD) begin
-        if (wr_clk) begin
+        if (wr_en) begin
             if (wr_addr[1:0] == 2'b00)
                 ram0[wr_sel][wr_addr[(A_WIDTH+1):2]] <= wr_byte;
             else if (wr_addr[1:0] == 2'b01)

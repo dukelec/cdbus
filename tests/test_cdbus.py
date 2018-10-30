@@ -98,17 +98,16 @@ def reset(dut, duration = 10000):
     dut._log.debug("Out of reset")
 
 @cocotb.coroutine
-def csr_read(dut, address, burst = False):
+def csr_read(dut, address):
     yield RisingEdge(dut.clk)
     dut.csr_address = address
     dut.csr_read = 1
+
+    yield RisingEdge(dut.clk)
+    dut.csr_read = 0
+    dut.csr_address = BinaryValue("x" * len(dut.csr_address))
     yield ReadOnly()
     data = dut.csr_readdata.value
-
-    if not burst:
-        yield RisingEdge(dut.clk)
-        dut.csr_read = 0
-        dut.csr_address = BinaryValue("x" * len(dut.csr_address))
 
     raise ReturnValue(data)
 
@@ -166,7 +165,7 @@ def test_cdbus(dut):
     cocotb.fork(Clock(dut.clk, CLK_PERIOD).start())
     yield reset(dut)
 
-    value = yield csr_read(dut, REG_VERSION, True)
+    value = yield csr_read(dut, REG_VERSION)
     dut._log.info("REG_VERSION: 0x%02x" % int(value))
     value = yield csr_read(dut, REG_SETTING)
     dut._log.info("REG_SETTING: 0x%02x" % int(value))
