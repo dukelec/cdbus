@@ -29,14 +29,14 @@ end
 always #(`cycle/2.0) clk = ~clk;
 
 
-baud_rate_gen baud_rate_gen_m(
+baud_rate_gen #(.FOR_TX(1)) baud_rate_gen_m(
     .clk(clk),
     .sync(sync),
     .div_ls(16'b00101),
     .div_hs(16'b10100),
     .sel(sel),
-    .cnt(cnt),
-    .inc(inc)
+    .inc(inc),
+    .cap(cap)
 );
 
 initial begin

@@ -9,7 +9,10 @@
  * Author: Duke Fong <duke@dukelec.com>
  */
 
-module baud_rate_gen(
+module baud_rate_gen
+   #(
+        parameter FOR_TX = 0
+   )(
         input               clk,
         input               sync,   // reset counters to zero
 
@@ -17,8 +20,8 @@ module baud_rate_gen(
         input       [15:0]  div_hs, // high speed, same range
         input               sel,
         
-        output reg  [1:0]   cnt,
-        output reg          inc
+        output reg          inc,
+        output reg          cap
     );
 
 wire [13:0] mantissa_ori = sel ? div_hs[15:2] : div_ls[15:2];
@@ -26,8 +29,8 @@ wire [13:0] mantissa_add1 = mantissa_ori + 1;
 wire [1:0] fraction = sel ? div_hs[1:0] : div_ls[1:0];
 
 reg [3:0] interpolation;
-reg [13:0] mantissa_cnt;
-
+reg [13:0] mantissa_cnt = 0;
+reg [1:0] cnt = 0;
 wire [13:0] mantissa = interpolation[cnt] ? mantissa_add1 : mantissa_ori;
 
 
@@ -44,22 +47,27 @@ always @(fraction)
     endcase
 
 
-always @(posedge clk)
+always @(posedge clk) begin
+    inc <= 0;
+    cap <= 0;
+    
     if (sync) begin
         cnt <= 0;
-        inc <= 0;
         mantissa_cnt <= 0;
     end
     else begin
-        inc <= 0;
         mantissa_cnt <= mantissa_cnt + 1'b1;
         
         if (mantissa_cnt >= mantissa) begin
             mantissa_cnt <= 0;
             cnt <= cnt + 1'b1;
-            inc <= 1;
+            if (cnt == 2'b11)
+                inc <= 1;
+            if (cnt == (FOR_TX ? 2'b10 : 2'b01))
+                cap <= 1;
         end
     end
+end
 
 endmodule
 
