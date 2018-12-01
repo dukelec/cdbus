@@ -4,7 +4,7 @@
 `define cycle (1000000000.0/`frequency) //clock period (nS)
 
 
-module baud_rate_gen_tb;
+module baud_rate_tb;
 
 reg clk;
 reg sync;
@@ -29,7 +29,7 @@ end
 always #(`cycle/2.0) clk = ~clk;
 
 
-baud_rate_gen #(.FOR_TX(1)) baud_rate_gen_m(
+baud_rate #(.FOR_TX(1)) baud_rate_m(
     .clk(clk),
     .sync(sync),
     .div_ls(16'b00101),
@@ -40,7 +40,7 @@ baud_rate_gen #(.FOR_TX(1)) baud_rate_gen_m(
 );
 
 initial begin
-    $dumpfile("baud_rate_gen.vcd");
+    $dumpfile("baud_rate.vcd");
     $dumpvars();
 end
 

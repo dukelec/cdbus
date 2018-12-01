@@ -14,7 +14,6 @@
 
 module serial_crc (
     input               clk,
-    input               reset_n,
     input               clean,
     input               data_clk,
     input               data_in,
@@ -24,32 +23,27 @@ module serial_crc (
 reg [0:15] lfsr; // reverse bits
 assign crc_out = lfsr;
 
-always @ (posedge clk or negedge reset_n)
-    if (!reset_n) begin
+always @ (posedge clk)
+    if (clean) begin
         lfsr <= 16'hFFFF;
     end
-    else begin
-        if (clean) begin
-            lfsr <= 16'hFFFF;
-        end
-        else if (data_clk) begin
-            lfsr[0]  <= data_in ^ lfsr[15];
-            lfsr[1]  <= lfsr[0];
-            lfsr[2]  <= lfsr[1] ^ data_in ^ lfsr[15];
-            lfsr[3]  <= lfsr[2];
-            lfsr[4]  <= lfsr[3];
-            lfsr[5]  <= lfsr[4];
-            lfsr[6]  <= lfsr[5];
-            lfsr[7]  <= lfsr[6];
-            lfsr[8]  <= lfsr[7];
-            lfsr[9]  <= lfsr[8];
-            lfsr[10] <= lfsr[9];
-            lfsr[11] <= lfsr[10];
-            lfsr[12] <= lfsr[11];
-            lfsr[13] <= lfsr[12];
-            lfsr[14] <= lfsr[13];
-            lfsr[15] <= lfsr[14] ^ data_in ^ lfsr[15];
-        end
+    else if (data_clk) begin
+        lfsr[0]  <= data_in ^ lfsr[15];
+        lfsr[1]  <= lfsr[0];
+        lfsr[2]  <= lfsr[1] ^ data_in ^ lfsr[15];
+        lfsr[3]  <= lfsr[2];
+        lfsr[4]  <= lfsr[3];
+        lfsr[5]  <= lfsr[4];
+        lfsr[6]  <= lfsr[5];
+        lfsr[7]  <= lfsr[6];
+        lfsr[8]  <= lfsr[7];
+        lfsr[9]  <= lfsr[8];
+        lfsr[10] <= lfsr[9];
+        lfsr[11] <= lfsr[10];
+        lfsr[12] <= lfsr[11];
+        lfsr[13] <= lfsr[12];
+        lfsr[14] <= lfsr[13];
+        lfsr[15] <= lfsr[14] ^ data_in ^ lfsr[15];
     end
 
 endmodule

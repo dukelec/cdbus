@@ -19,6 +19,7 @@ module pp_ram
 
            output reg   [7:0]    rd_byte,
            input [(A_WIDTH-1):0] rd_addr,
+           input                 rd_en,
            input                 rd_done,
            input                 rd_done_all,
            output                unread,
@@ -45,13 +46,9 @@ assign unread = (dirty != 0);
 
 always @(posedge clk) begin
 
-    if (wr_sel != rd_sel) begin
+    if (rd_en) begin
         rd_byte <= ram[rd_sel][rd_addr];
         rd_flags <= flags[rd_sel];
-    end
-    else begin // no need to read when writing data
-        rd_byte <= 0;
-        rd_flags <= 0;
     end
 
     if (wr_en) begin

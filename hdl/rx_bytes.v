@@ -13,7 +13,7 @@ module rx_bytes (
         input               clk,
         input               reset_n,
 
-        // control center
+        // cd_csr
         input       [7:0]   filter,
         input       [7:0]   filter1,
         input       [7:0]   filter2,
@@ -81,8 +81,6 @@ always @(posedge clk or negedge reset_n)
             state <= INIT;
     end
 
-
-//
 
 always @(posedge clk or negedge reset_n)
     if (!reset_n) begin

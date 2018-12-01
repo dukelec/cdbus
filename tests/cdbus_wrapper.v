@@ -34,14 +34,14 @@ assign bus_a = tx_en ? tx : 1'bz;
 cdbus cdbus_m(
           .clk(clk),
           .reset_n(reset_n),
+          .chip_select(1'b1),
+          .irq(irq),
           
           .csr_address(csr_address),
           .csr_read(csr_read),
           .csr_readdata(csr_readdata),
           .csr_write(csr_write),
           .csr_writedata(csr_writedata),
-          
-          .irq(irq),
           
           .rx(rx),
           .tx(tx),

@@ -13,120 +13,100 @@ module rx_des(
         input               clk,
         input               reset_n,
 
-        input       [15:0]  div_ls, // low speed
-        input       [15:0]  div_hs, // high speed
+        input       [15:0]  div_ls,
+        input       [15:0]  div_hs,
         input       [7:0]   idle_wait_len,
-
         output              bus_idle,
-        output reg          bit_inc,
+        output reg          rx_break,
 
         input               force_wait_idle,
 
-        input               rx, // sync already
+        input               rx, // already sync
 
         output reg  [7:0]   data,
         output      [15:0]  crc_data,
         output reg          data_clk
     );
 
-reg [2:0] state;
 localparam
-    WAIT        = 3'b001,
-    BUS_IDLE    = 3'b010,
-    DATA        = 3'b100;
+    WAIT_IDLE   = 4'b0001,
+    WAIT_DATA   = 4'b0010,
+    BUS_IDLE    = 4'b0100,
+    DATA        = 4'b1000;
 
-reg allow_data;
+reg [3:0] state;
 assign bus_idle = (state == BUS_IDLE);
 
-reg bit_mid;
-
-reg is_first_byte;
-reg hs_flag;
-
-wire [15:0] div_cur = hs_flag ? div_hs : div_ls;
-reg [15:0] div_cnt;
-
 reg [7:0] idle_cnt;
-
+reg [3:0] bit_cnt; // range: [0, 9]
 reg bit_err;
 
-reg rx_d1;
-reg rx_d2;
+reg [1:0] rx_d;
+always @(posedge clk) rx_d <= {rx_d[0], rx};
 
-wire crc_rx = rx_d2;
-reg crc_data_clk;
+reg crc_clk;
 
-reg [3:0] bit_cnt; // range: [0, 9]
-
-reg byte_end;
+reg is_first_byte;
+reg baud_sync;
+reg baud_sel;
+wire bit_inc;
+wire bit_cap;
 
 
 // FSM
 
 always @(posedge clk or negedge reset_n)
     if (!reset_n) begin
-        state <= WAIT;
-        allow_data <= 0;
+        state <= WAIT_IDLE;
     end
     else begin
+        baud_sync <= 0;
 
         case (state)
-            WAIT: begin
-                if (rx == 0 && allow_data)
-                    state <= DATA;
-                else if (idle_cnt >= idle_wait_len)
+            WAIT_IDLE: begin
+                baud_sel <= 0;
+                is_first_byte <= 1;
+                if (idle_cnt >= idle_wait_len) begin
                     state <= BUS_IDLE;
+                    baud_sync <= 1;
+                end
+            end
+
+            WAIT_DATA: begin
+                if (rx == 0) begin
+                    state <= DATA;
+                    baud_sel <= !is_first_byte;
+                end
+                else if (idle_cnt >= idle_wait_len) begin
+                    state <= BUS_IDLE;
+                    baud_sync <= 1;
+                end
             end
 
             BUS_IDLE: begin
+                baud_sel <= 0;
+                is_first_byte <= 1;
+
                 if (rx == 0)
                     state <= DATA;
+                else
+                    baud_sync <= 1;
             end
 
             DATA: begin
                 if (data_clk) begin
-                    state <= WAIT;
-                    allow_data <= 1;
+                    state <= WAIT_DATA;
+                    baud_sync <= 1;
+                    baud_sel <= 0;
+                    is_first_byte <= 0;
                 end
             end
-            
-            default: state <= WAIT;
+
+            default: state <= WAIT_IDLE;
         endcase
 
-        if (force_wait_idle || bit_err) begin
-            state <= WAIT;
-            allow_data <= 0;
-        end
-
-    end
-
-
-// div_cnt
-
-always @(posedge clk or negedge reset_n)
-    if (!reset_n) begin
-        div_cnt <= 0;
-        bit_inc <= 0;
-        bit_mid <= 0;
-    end
-    else begin
-        bit_inc <= 0;
-        bit_mid <= 0;
-
-        if ((state != DATA && rx == 0) || bit_err) begin
-            div_cnt <= 0;
-        end
-        else begin
-            div_cnt <= div_cnt + 1'd1;
-
-            if (div_cnt + 1'b1 == {1'd0, div_cur[15:1]})
-                bit_mid <= 1;
-
-            if (div_cnt >= div_cur) begin
-                div_cnt <= 0;
-                bit_inc <= 1;
-            end
-        end
+        if (force_wait_idle || bit_err)
+            state <= WAIT_IDLE;
     end
 
 
@@ -137,7 +117,7 @@ always @(posedge clk or negedge reset_n)
         idle_cnt <= 0;
     end
     else begin
-        if (state != WAIT || rx == 0 || hs_flag)
+        if (state == DATA || rx == 0)
             idle_cnt <= 0;
         else if (bit_inc)
             idle_cnt <= idle_cnt + 1'b1;
@@ -148,84 +128,60 @@ always @(posedge clk or negedge reset_n)
 
 always @(posedge clk or negedge reset_n)
     if (!reset_n) begin
-        crc_data_clk <= 0;
+        crc_clk <= 0;
         bit_err <= 0;
+        rx_break <= 0;
         data_clk <= 0;
         bit_cnt <= 0;
-        rx_d1 <= 1;
-        rx_d2 <= 1;
-        data <= 0;
     end
     else begin
-        crc_data_clk <= 0;
+        crc_clk <= 0;
         bit_err <= 0;
+        rx_break <= 0;
         data_clk <= 0;
-        rx_d1 <= rx;
-        rx_d2 <= rx_d1;
 
         if (state != DATA) begin
             bit_cnt <= 0;
         end
-        else if (bit_mid) begin
+        else if (bit_cap) begin
 
             bit_cnt <= bit_cnt + 1'd1;
 
             if (bit_cnt == 0) begin
-                if (rx_d1 == 1)
+                if (rx_d[0] == 1)
                     bit_err <= 1;
             end
             else if (bit_cnt == 9) begin
                 bit_cnt <= 0;
 
-                if (rx_d1 == 0)
-                    bit_err <= 1;
+                if (rx_d[0] == 0)
+                    rx_break <= 1;
                 else
                     data_clk <= 1;
             end
             else begin
-                data <= {rx_d1, data[7:1]};
-                crc_data_clk <= 1'd1;
+                data <= {rx_d[0], data[7:1]};
+                crc_clk <= 1'd1;
             end
         end
     end
 
 
-// hs_flag
-
-always @(posedge clk or negedge reset_n)
-    if (!reset_n) begin
-        is_first_byte <= 1;
-        hs_flag <= 0;
-        byte_end <= 1;
-    end
-    else begin
-        if (state == DATA)
-            byte_end <= 0;
-
-        if (data_clk) begin
-            is_first_byte <= 0;
-            byte_end <= 1;
-        end
-
-        if (force_wait_idle || bit_err) begin
-            is_first_byte <= 1;
-        end
-
-        if (byte_end && bit_inc)
-            hs_flag <= 0;
-        if (state == WAIT && allow_data && rx == 0 && !is_first_byte)
-            hs_flag <= 1;
-        if (bit_err)
-            hs_flag <= 0;
-    end
-
+baud_rate baud_rate_rx_m(
+    .clk(clk),
+    .sync(baud_sync),
+    .div_ls(div_ls),
+    .div_hs(div_hs),
+    .sel(baud_sel),
+    .inc(bit_inc),
+    .cap(bit_cap)
+);
 
 serial_crc rx_crc_m(
     .clk(clk),
-    .reset_n(reset_n),
     .clean(state == BUS_IDLE),
-    .data_clk(crc_data_clk),
-    .data_in(crc_rx),
+    .data_clk(crc_clk),
+    .data_in(rx_d[1]),
     .crc_out(crc_data)
 );
 
