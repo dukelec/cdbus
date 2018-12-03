@@ -41,12 +41,11 @@ module tx_ser(
         output reg          tx_en
     );
 
-reg [3:0] state;
+reg [2:0] state;
 localparam
-    WAIT            = 4'b0001,
-    TX_PRE          = 4'b0010,
-    DATA            = 4'b0100,
-    DATA_END        = 4'b1000;
+    WAIT            = 3'b001,
+    TX_PRE          = 3'b010,
+    DATA            = 3'b100;
 
 reg [1:0] tx_permit_d;
 always @(posedge clk) tx_permit_d[1] <= tx_permit_d[0];
@@ -104,7 +103,7 @@ always @(posedge clk or negedge reset_n)
         end
 
         DATA: begin
-            if (cd || err || !has_data)
+            if (cd || err || (!has_data && !is_break))
                 state <= WAIT;
 
             if (ack_data)

@@ -65,10 +65,10 @@ always @(posedge clk or negedge reset_n)
         case (state)
             WAIT_IDLE: begin
                 baud_sel <= 0;
+                baud_sync <= 0;
                 is_first_byte <= 1;
                 if (idle_cnt >= idle_wait_len) begin
                     state <= BUS_IDLE;
-                    baud_sync <= 1;
                 end
             end
 
@@ -79,24 +79,23 @@ always @(posedge clk or negedge reset_n)
                 end
                 else if (idle_cnt >= idle_wait_len) begin
                     state <= BUS_IDLE;
-                    baud_sync <= 1;
                 end
             end
 
             BUS_IDLE: begin
                 baud_sel <= 0;
                 is_first_byte <= 1;
+                baud_sync <= 1;
 
-                if (rx == 0)
+                if (rx == 0) begin
                     state <= DATA;
-                else
-                    baud_sync <= 1;
+                    baud_sync <= 0;
+                end
             end
 
             DATA: begin
                 if (data_clk) begin
                     state <= WAIT_DATA;
-                    baud_sync <= 1;
                     baud_sel <= 0;
                     is_first_byte <= 0;
                 end
@@ -154,10 +153,15 @@ always @(posedge clk or negedge reset_n)
             else if (bit_cnt == 9) begin
                 bit_cnt <= 0;
 
-                if (rx_d[0] == 0)
-                    rx_break <= 1;
-                else
+                if (rx_d[0] == 0) begin
+                    if (data == 0)
+                        rx_break <= 1;
+                    else
+                        bit_err <= 1;
+                end
+                else begin
                     data_clk <= 1;
+                end
             end
             else begin
                 data <= {rx_d[0], data[7:1]};
@@ -167,9 +171,11 @@ always @(posedge clk or negedge reset_n)
     end
 
 
-baud_rate baud_rate_rx_m(
+baud_rate #(
+    .INIT_VAL(1)
+) baud_rate_rx_m(
     .clk(clk),
-    .sync(baud_sync),
+    .sync(baud_sync || (state == WAIT_DATA && rx == 0)),
     .div_ls(div_ls),
     .div_hs(div_hs),
     .sel(baud_sel),

@@ -42,8 +42,8 @@ always @(posedge clk) begin
             if (cnt == div - div[15:2])
                 cap <= 1;
         end
-        else begin // at 2/4 position
-            if (cnt + 1'b1 == {1'd0, div[15:1]})
+        else begin // at 1/2 position
+            if (cnt == {1'd0, div[15:1]})
                 cap <= 1;
         end
 
