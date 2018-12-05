@@ -11,11 +11,14 @@
 CDBUS_HDL = $(PWD)/../hdl
 VERILOG_SOURCES = $(PWD)/cdbus_wrapper.v \
                   $(CDBUS_HDL)/cdbus.v \
-                  $(CDBUS_HDL)/pp_ram.v \
-                  $(CDBUS_HDL)/rx_bytes.v \
-                  $(CDBUS_HDL)/rx_des.v \
-                  $(CDBUS_HDL)/serial_crc.v \
-                  $(CDBUS_HDL)/tx_bytes_ser.v
+                  $(CDBUS_HDL)/cd_csr.v \
+                  $(CDBUS_HDL)/cd_baud_rate.v \
+                  $(CDBUS_HDL)/cd_ram.v \
+                  $(CDBUS_HDL)/cd_rx_bytes.v \
+                  $(CDBUS_HDL)/cd_rx_des.v \
+                  $(CDBUS_HDL)/cd_crc.v \
+                  $(CDBUS_HDL)/cd_tx_bytes.v \
+                  $(CDBUS_HDL)/cd_tx_ser.v
 
 TOPLEVEL = cdbus_wrapper
 MODULE = test_cdbus

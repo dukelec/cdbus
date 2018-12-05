@@ -18,14 +18,28 @@ module cdbus
     )(
         input               clk,
         input               reset_n,
-        input               chip_select, // reduce ram_rx power consumption
         output              irq,
 
-        input       [4:0]   csr_address,
+        input       [3:0]   csr_address,
+        input       [3:0]   csr_byteenable,
         input               csr_read,
-        output      [7:0]   csr_readdata,
+        output      [31:0]  csr_readdata,
         input               csr_write,
-        input       [7:0]   csr_writedata,
+        input       [31:0]  csr_writedata,
+
+        input       [5:0]   rx_mm_address,
+        input       [3:0]   rx_mm_byteenable,
+        input               rx_mm_read,
+        output      [31:0]  rx_mm_readdata,
+        input               rx_mm_write,
+        input       [31:0]  rx_mm_writedata,
+
+        input       [5:0]   tx_mm_address,
+        input       [3:0]   tx_mm_byteenable,
+        input               tx_mm_read,
+        output      [31:0]  tx_mm_readdata,
+        input               tx_mm_write,
+        input       [31:0]  tx_mm_writedata,
 
         input               rx,
         output              tx,
@@ -62,10 +76,8 @@ wire [7:0] filter2;
 wire [15:0] div_ls;
 wire [15:0] div_hs;
 
-wire [7:0] rx_ram_rd_addr;
 wire rx_ram_rd_done;
 wire rx_clean_all;
-wire [7:0] rx_ram_rd_byte;
 wire [7:0] rx_ram_rd_flags;
 wire rx_error;
 wire rx_ram_lost;
@@ -73,8 +85,6 @@ wire rx_break;
 wire rx_pending;
 wire bus_idle;
 
-wire tx_ram_wr_en;
-wire [7:0] tx_ram_wr_addr;
 wire tx_ram_switch;
 wire tx_abort;
 wire has_break;
@@ -117,6 +127,7 @@ cd_csr #(
     .irq(irq),
 
     .csr_address(csr_address),
+    .csr_byteenable(csr_byteenable),
     .csr_read(csr_read),
     .csr_readdata(csr_readdata),
     .csr_write(csr_write),
@@ -140,10 +151,8 @@ cd_csr #(
     .div_ls(div_ls),
     .div_hs(div_hs),
 
-    .rx_ram_rd_addr(rx_ram_rd_addr),
     .rx_ram_rd_done(rx_ram_rd_done),
     .rx_clean_all(rx_clean_all),
-    .rx_ram_rd_byte(rx_ram_rd_byte),
     .rx_ram_rd_flags(rx_ram_rd_flags),
     .rx_error(rx_error),
     .rx_ram_lost(rx_ram_lost),
@@ -151,8 +160,6 @@ cd_csr #(
     .rx_pending(rx_pending),
     .bus_idle(bus_idle),
 
-    .tx_ram_wr_en(tx_ram_wr_en),
-    .tx_ram_wr_addr(tx_ram_wr_addr),
     .tx_ram_switch(tx_ram_switch),
     .tx_abort(tx_abort),
     .has_break(has_break),
@@ -163,13 +170,20 @@ cd_csr #(
 );
 
 
-cd_ram #(.N_WIDTH(3)) cd_ram_rx_m(
+cd_ram #(.N_WIDTH(3), .MM4RD(1)) cd_ram_rx_m(
     .clk(clk),
     .reset_n(reset_n),
 
-    .rd_byte(rx_ram_rd_byte),
-    .rd_addr(rx_ram_rd_addr),
-    .rd_en(chip_select),
+    .mm_address(rx_mm_address),
+    .mm_byteenable(rx_mm_byteenable),
+    .mm_read(rx_mm_read),
+    .mm_readdata(rx_mm_readdata),
+    .mm_write(rx_mm_write),
+    .mm_writedata(rx_mm_writedata),
+
+    .rd_byte(),
+    .rd_addr(8'd0),
+    .rd_en(csr_read),
     .rd_done(rx_ram_rd_done),
     .rd_done_all(rx_clean_all),
     .unread(rx_pending),
@@ -184,9 +198,16 @@ cd_ram #(.N_WIDTH(3)) cd_ram_rx_m(
     .switch_fail(rx_ram_lost)
 );
 
-cd_ram #(.N_WIDTH(1)) cd_ram_tx_m(
+cd_ram #(.N_WIDTH(1), .MM4RD(0)) cd_ram_tx_m(
     .clk(clk),
     .reset_n(reset_n),
+
+    .mm_address(tx_mm_address),
+    .mm_byteenable(tx_mm_byteenable),
+    .mm_read(tx_mm_read),
+    .mm_readdata(tx_mm_readdata),
+    .mm_write(tx_mm_write),
+    .mm_writedata(tx_mm_writedata),
 
     .rd_byte(tx_ram_rd_byte),
     .rd_addr(tx_ram_rd_addr),
@@ -195,9 +216,9 @@ cd_ram #(.N_WIDTH(1)) cd_ram_tx_m(
     .rd_done_all(1'b0),
     .unread(tx_pending),
 
-    .wr_byte(csr_writedata),
-    .wr_addr(tx_ram_wr_addr),
-    .wr_en(tx_ram_wr_en),
+    .wr_byte(8'd0),
+    .wr_addr(8'd0),
+    .wr_en(1'b0),
 
     .switch(tx_ram_switch),
     .wr_flags(8'd0),

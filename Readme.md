@@ -8,19 +8,23 @@ This document only shows the modifications. For the protocol and original docume
 
 ## Registers
  
-| Register Name |Addr     | Access | Default                    | Description                               | Remarks                       |
-|---------------|---------|--------|----------------------------|-------------------------------------------|-------------------------------|
-| VERSION       |  0x00   | RD     | 0x08                       | Hardware version                          |                               |
-| SETTING       |  0x01   | RD/WR  | 0x10                       | Configs                                   |                               |
-| IDLE_LEN      |  0x02   | RD/WR  | (0x14 << 16) \| 0x0a       | How long to enter idle and allow sending  | Low half word for idle        |
-| FILTER        |  0x03   | RD/WR  | 0xff                       | Set to local address                      |                               |
-| DIV           |  0x04   | RD/WR  | (0x015a << 16) \| 0x015a   | Low and high speed rate setting           | Low half word for low speed   |
-| INT_FLAG      |  0x05   | RD     | n/a                        | Status                                    |                               |
-| INT_MASK      |  0x06   | RD/WR  | 0x00                       | Interrupt mask                            |                               |
-| RX_CTRL       |  0x07   | WR     | n/a                        | RX control                                | Bit 0 has no effect           |
-| TX_CTRL       |  0x08   | WR     | n/a                        | TX control                                | Bit 0 has no effect           |
-| RX_PAGE_FLAG  |  0x09   | RD     | n/a                        | RX page flag                              | For debugging                 |
-| FILTER_M      |  0x0a   | RD/WR  | (0xff << 8) \| 0xff        | Multicast filters                         | Two filters at low bytes      |
+| Register Name |Addr     | Access | Default                | Description                               | Remarks                       |
+|---------------|---------|--------|------------------------|-------------------------------------------|-------------------------------|
+| VERSION       |  0x00   | RD     | 0x0a                   | Hardware version                          |                               |
+| SETTING       |  0x01   | RD/WR  | 0x10                   | Configs                                   |                               |
+| IDLE_WAIT_LEN |  0x02   | RD/WR  | 0x0a                   | How long to enter idle                    |                               |
+| TX_PERMIT_LEN |  0x03   | RD/WR  | 0x14                   | How long to allow sending                 |                               |
+| MAX_IDLE_LEN  |  0x04   | RD/WR  | 0xc8                   | Max idle for BS mode                      |                               |
+| TX_PRE_LEN    |  0x05   | RD/WR  | 0x01                   | Active TX_EN before TX                    |                               |
+| FILTER        |  0x06   | RD/WR  | 0xff                   | Set to local address                      |                               |
+| DIV_LS        |  0x07   | RD/WR  | 0x015a                 | Low-speed rate setting                    |                               |
+| DIV_HS        |  0x08   | RD/WR  | 0x015a                 | High-speed rate setting                   |                               |
+| INT_FLAG      |  0x09   | RD     | n/a                    | Status                                    |                               |
+| INT_MASK      |  0x0a   | RD/WR  | 0x00                   | Interrupt mask                            |                               |
+| RX_CTRL       |  0x0b   | WR     | n/a                    | RX control                                | Bit 0 has no effect           |
+| TX_CTRL       |  0x0c   | WR     | n/a                    | TX control                                | Bit 0 has no effect           |
+| RX_PAGE_FLAG  |  0x0d   | RD     | n/a                    | RX page flag                              |                               |
+| FILTER_M      |  0x0e   | RD/WR  | (0xff << 8) \| 0xff    | Multicast filters                         | Two filters at low bytes      |
 
 
 
@@ -33,6 +37,7 @@ This document only shows the modifications. For the protocol and original docume
 
     input           clk,            // core clock
     input           reset_n,        // asynch active low reset
+    output          irq,            // interrupt output
 
     // avalon-mm slave interface, read with 1 clock latency, write without latency
     input   [3:0]   csr_address,
@@ -57,8 +62,6 @@ This document only shows the modifications. For the protocol and original docume
     output  [31:0]  tx_mm_readdata,
     input           tx_mm_write,
     input   [31:0]  tx_mm_writedata,
-
-    output          irq,            // interrupt output
 
     // connect to external PHY chip, e.g. MAX3485
     input           rx,

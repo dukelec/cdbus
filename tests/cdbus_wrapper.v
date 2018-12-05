@@ -49,6 +49,7 @@ assign bus_a = tx_en ? tx : 1'bz;
 cdbus cdbus_m(
           .clk(clk),
           .reset_n(reset_n),
+          .irq(irq),
           
           .csr_address(csr_address),
           .csr_byteenable(csr_byteenable),
@@ -70,8 +71,6 @@ cdbus cdbus_m(
           .tx_mm_readdata(tx_mm_readdata),
           .tx_mm_write(tx_mm_write),
           .tx_mm_writedata(tx_mm_writedata),
-          
-          .irq(irq),
           
           .rx(rx),
           .tx(tx),
