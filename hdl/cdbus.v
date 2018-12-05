@@ -163,7 +163,7 @@ cd_csr #(
 );
 
 
-pp_ram #(.N_WIDTH(3)) pp_ram_rx_m(
+cd_ram #(.N_WIDTH(3)) cd_ram_rx_m(
     .clk(clk),
     .reset_n(reset_n),
 
@@ -184,7 +184,7 @@ pp_ram #(.N_WIDTH(3)) pp_ram_rx_m(
     .switch_fail(rx_ram_lost)
 );
 
-pp_ram #(.N_WIDTH(1)) pp_ram_tx_m(
+cd_ram #(.N_WIDTH(1)) cd_ram_tx_m(
     .clk(clk),
     .reset_n(reset_n),
 
@@ -205,7 +205,7 @@ pp_ram #(.N_WIDTH(1)) pp_ram_tx_m(
     .switch_fail()
 );
 
-rx_bytes rx_bytes_m(
+cd_rx_bytes cd_rx_bytes_m(
     .clk(clk),
     .reset_n(reset_n),
 
@@ -230,7 +230,7 @@ rx_bytes rx_bytes_m(
     .ram_switch(rx_ram_switch)
 );
 
-rx_des rx_des_m(
+cd_rx_des cd_rx_des_m(
     .clk(clk),
     .reset_n(reset_n),
 
@@ -249,7 +249,7 @@ rx_des rx_des_m(
     .data_clk(des_data_clk)
 );
 
-tx_bytes tx_bytes_m(
+cd_tx_bytes cd_tx_bytes_m(
     .clk(clk),
     .reset_n(reset_n),
 
@@ -270,7 +270,7 @@ tx_bytes tx_bytes_m(
     .ram_rd_done(tx_ram_rd_done)
 );
 
-tx_ser tx_ser_m(
+cd_tx_ser cd_tx_ser_m(
     .clk(clk),
     .reset_n(reset_n),
 

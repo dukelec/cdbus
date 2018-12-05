@@ -9,7 +9,7 @@
  * Author: Duke Fong <duke@dukelec.com>
  */
 
-module tx_bytes(
+module cd_tx_bytes(
         input               clk,
         input               reset_n,
 

@@ -9,7 +9,7 @@
  * Author: Duke Fong <duke@dukelec.com>
  */
 
-module pp_ram
+module cd_ram
        #(
            parameter A_WIDTH = 8,
            parameter N_WIDTH = 1

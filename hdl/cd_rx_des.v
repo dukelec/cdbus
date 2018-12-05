@@ -9,7 +9,7 @@
  * Author: Duke Fong <duke@dukelec.com>
  */
 
-module rx_des(
+module cd_rx_des(
         input               clk,
         input               reset_n,
 
@@ -171,9 +171,9 @@ always @(posedge clk or negedge reset_n)
     end
 
 
-baud_rate #(
+cd_baud_rate #(
     .INIT_VAL(1)
-) baud_rate_rx_m(
+) cd_baud_rate_rx_m(
     .clk(clk),
     .sync(baud_sync || (state == WAIT_DATA && rx == 0)),
     .div_ls(div_ls),
@@ -183,7 +183,7 @@ baud_rate #(
     .cap(bit_cap)
 );
 
-serial_crc rx_crc_m(
+cd_crc cd_crc_rx_m(
     .clk(clk),
     .clean(state == BUS_IDLE),
     .data_clk(crc_clk),

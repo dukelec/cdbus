@@ -16,8 +16,8 @@
    viewBox="0 0 255.59149 38.771107"
    version="1.1"
    id="svg8"
-   inkscape:version="0.92.2 5c3e80d, 2017-08-06"
-   sodipodi:docname="wave.svg">
+   inkscape:version="0.92.2 2405546, 2018-03-11"
+   sodipodi:docname="protocol.svg">
   <defs
      id="defs2">
     <linearGradient
@@ -307,17 +307,17 @@
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
      inkscape:zoom="1.062406"
-     inkscape:cx="370.60979"
-     inkscape:cy="-76.183901"
+     inkscape:cx="575.33378"
+     inkscape:cy="74.417658"
      inkscape:document-units="mm"
-     inkscape:current-layer="g1616"
+     inkscape:current-layer="g1479"
      showgrid="true"
      inkscape:snap-grids="true"
-     inkscape:window-width="1920"
-     inkscape:window-height="1039"
-     inkscape:window-x="0"
-     inkscape:window-y="22"
-     inkscape:window-maximized="1"
+     inkscape:window-width="1443"
+     inkscape:window-height="528"
+     inkscape:window-x="472"
+     inkscape:window-y="299"
+     inkscape:window-maximized="0"
      inkscape:snap-text-baseline="true"
      fit-margin-top="1"
      fit-margin-left="0"
@@ -1421,7 +1421,7 @@
            y="101.20831"
            x="160.07289"
            id="tspan5799-7"
-           sodipodi:role="line">Allow Transmit</tspan><tspan
+           sodipodi:role="line">Tx permit</tspan><tspan
            id="tspan1376"
            style="stroke-width:0.26458332"
            y="105.17706"

@@ -9,7 +9,7 @@
  * Author: Duke Fong <duke@dukelec.com>
  */
 
-module baud_rate
+module cd_baud_rate
    #(
         parameter INIT_VAL = 0,
         parameter FOR_TX = 0

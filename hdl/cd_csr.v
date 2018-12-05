@@ -110,7 +110,7 @@ always @(*)
         REG_VERSION:
             csr_readdata = VERSION;
         REG_SETTING:
-            csr_readdata = {1'b1, full_duplex, break_sync, arbitration,
+            csr_readdata = {1'd0, full_duplex, break_sync, arbitration,
                             not_drop, user_crc, tx_invert, tx_push_pull};
         REG_IDLE_WAIT_LEN:
             csr_readdata = idle_wait_len;
@@ -158,7 +158,6 @@ always @(posedge clk or negedge reset_n)
         full_duplex <= 0;
         break_sync <= 0;
         arbitration <= 1;
-        tx_pre_len <= 1;
         not_drop <= 0;
         user_crc <= 0;
         tx_invert <= 0;
@@ -167,6 +166,7 @@ always @(posedge clk or negedge reset_n)
         idle_wait_len <= 10;
         tx_permit_len <= 20;
         max_idle_len <= 200;
+        tx_pre_len <= 1;
         filter <= 8'hff;
         filter1 <= 8'hff;
         filter2 <= 8'hff;

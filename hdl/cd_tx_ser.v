@@ -9,7 +9,7 @@
  * Author: Duke Fong <duke@dukelec.com>
  */
 
-module tx_ser(
+module cd_tx_ser(
         input               clk,
         input               reset_n,
 
@@ -221,10 +221,10 @@ always @(posedge clk or negedge reset_n)
     end
 
 
-baud_rate #(
+cd_baud_rate #(
     .INIT_VAL(2),
     .FOR_TX(1)
-) baud_rate_tx_m(
+) cd_baud_rate_tx_m(
     .clk(clk),
     .sync(baud_sync),
     .div_ls(div_ls),
@@ -234,7 +234,7 @@ baud_rate #(
     .cap(bit_cap)
 );
 
-serial_crc tx_crc_m(
+cd_crc cd_crc_tx_m(
     .clk(clk),
     .clean(state == WAIT),
     .data_clk(!is_crc_byte && crc_clk),
