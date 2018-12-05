@@ -18,103 +18,71 @@ module cdbus
     )(
         input               clk,
         input               reset_n,
-
-        input       [3:0]   csr_address,
-        input       [3:0]   csr_byteenable,
-        input               csr_read,
-        output reg  [31:0]  csr_readdata,
-        input               csr_write,
-        input       [31:0]  csr_writedata,
-
-        input       [5:0]   rx_mm_address,
-        input       [3:0]   rx_mm_byteenable,
-        input               rx_mm_read,
-        output      [31:0]  rx_mm_readdata,
-        input               rx_mm_write,
-        input       [31:0]  rx_mm_writedata,
-
-        input       [5:0]   tx_mm_address,
-        input       [3:0]   tx_mm_byteenable,
-        input               tx_mm_read,
-        output      [31:0]  tx_mm_readdata,
-        input               tx_mm_write,
-        input       [31:0]  tx_mm_writedata,
-
+        input               chip_select, // reduce ram_rx power consumption
         output              irq,
+
+        input       [4:0]   csr_address,
+        input               csr_read,
+        output      [7:0]   csr_readdata,
+        input               csr_write,
+        input       [7:0]   csr_writedata,
 
         input               rx,
         output              tx,
         output              tx_en
     );
 
-localparam
-    REG_VERSION       = 'h00,
-    REG_SETTING       = 'h01,
-    REG_WAIT_LEN      = 'h02, // [23:16] TX_WAIT_LEN, [7:0] IDLE_WAIT_LEN
-    REG_FILTER        = 'h03,
-    REG_DIV           = 'h04, // [31:16] HS, [15:0] LS
-    REG_INT_FLAG      = 'h05,
-    REG_INT_MASK      = 'h06,
-    REG_RX_CTRL       = 'h07,
-    REG_TX_CTRL       = 'h08,
-    REG_RX_PAGE_FLAG  = 'h09,
-    REG_FILTER_M      = 'h0a;
-
-localparam VERSION   = 8'h08;
-
-reg  full_duplex;
-reg  arbitrate;
-reg  [1:0] tx_en_delay;
-reg  not_drop;
-reg  user_crc;
-reg  tx_invert;
-reg  tx_push_pull;
-
-reg  [7:0] idle_wait_len;
-reg  [7:0] tx_wait_len;
-reg  [7:0] filter;
-reg  [7:0] filter1;
-reg  [7:0] filter2;
-reg  [15:0] div_ls; // low speed
-reg  [15:0] div_hs; // high speed
-
-reg  tx_error_flag;
-reg  cd_flag;
-wire tx_pending;
-reg  rx_error_flag;
-reg  rx_lost_flag;
-wire rx_pending;
-wire bus_idle;
-
-wire [6:0] int_flag = {tx_error_flag, cd_flag, ~tx_pending,
-                       rx_error_flag, rx_lost_flag, rx_pending, bus_idle};
-reg  [6:0] int_mask;
-
-wire [7:0] rx_ram_rd_flags;
-reg  rx_ram_rd_done;
-reg  rx_clean_all;
-wire rx_error;
-wire rx_ram_lost;
-
-reg  tx_ram_switch;
-reg  tx_abort;
-
-
-assign irq = (int_flag & int_mask) != 0;
-
-reg  rx_d;
-reg  rx_pipe;
+reg [1:0] rx_d;
 always @(posedge clk)
-    {rx_d, rx_pipe} <= {rx_pipe, rx};
+    rx_d <= {rx_d[0], rx};
 
-wire cd;
-wire tx_err;
 wire tx_d;
 wire tx_en_d;
 wire tx_may_invert = tx_invert ? ~tx_d : tx_d;
 
 assign tx_en = (reset_n && tx_push_pull) ? tx_en_d : 1'bz;
 assign tx = (reset_n && (tx_push_pull || !tx_may_invert)) ? tx_may_invert : 1'bz;
+
+
+wire full_duplex;
+wire break_sync;
+wire arbitration;
+wire not_drop;
+wire user_crc;
+wire tx_invert;
+wire tx_push_pull;
+
+wire [7:0] idle_wait_len;
+wire [9:0] tx_permit_len;
+wire [9:0] max_idle_len;
+wire [1:0] tx_pre_len;
+wire [7:0] filter;
+wire [7:0] filter1;
+wire [7:0] filter2;
+wire [15:0] div_ls;
+wire [15:0] div_hs;
+
+wire [7:0] rx_ram_rd_addr;
+wire rx_ram_rd_done;
+wire rx_clean_all;
+wire [7:0] rx_ram_rd_byte;
+wire [7:0] rx_ram_rd_flags;
+wire rx_error;
+wire rx_ram_lost;
+wire rx_break;
+wire rx_pending;
+wire bus_idle;
+
+wire tx_ram_wr_en;
+wire [7:0] tx_ram_wr_addr;
+wire tx_ram_switch;
+wire tx_abort;
+wire has_break;
+wire ack_break;
+wire tx_pending;
+wire cd;
+wire tx_err;
+
 
 wire [7:0] rx_ram_wr_byte;
 wire [7:0] rx_ram_wr_addr;
@@ -132,178 +100,76 @@ wire [15:0] des_crc_data;
 wire des_data_clk;
 wire force_wait_idle;
 
-wire rx_bit_inc;
+wire [7:0] ser_data;
+wire ser_has_data;
+wire ser_ack_data;
+wire ser_is_crc_byte;
+wire ser_is_last_byte;
+wire [15:0] ser_crc_data;
 
 
-always @(posedge clk or negedge reset_n)
-    if (!reset_n)
-        csr_readdata <= 0;
-    else if (csr_read) begin
-        case (csr_address)
-            REG_VERSION:
-                csr_readdata <= {24'd0, VERSION};
-            REG_SETTING:
-                csr_readdata <= {24'd0, full_duplex, !arbitrate, tx_en_delay,
-                                not_drop, user_crc, tx_invert, tx_push_pull};
-            REG_WAIT_LEN:
-                csr_readdata <= {8'd0, tx_wait_len, 8'd0, idle_wait_len};
-            REG_FILTER:
-                csr_readdata <= {24'd0, filter};
-            REG_DIV:
-                csr_readdata <= {div_hs, div_ls};
-            REG_INT_FLAG:
-                csr_readdata <= {25'd0, int_flag};
-            REG_INT_MASK:
-                csr_readdata <= {25'd0, int_mask};
-            REG_RX_PAGE_FLAG:
-                csr_readdata <= {24'd0, rx_ram_rd_flags};
-            REG_FILTER_M:
-                csr_readdata <= {16'd0, filter2, filter1};
-            default:
-                csr_readdata <= 0;
-        endcase
-    end
+cd_csr #(
+    .DIV_LS(DIV_LS),
+    .DIV_HS(DIV_HS)
+) cd_csr_m(
+    .clk(clk),
+    .reset_n(reset_n),
+    .irq(irq),
+
+    .csr_address(csr_address),
+    .csr_read(csr_read),
+    .csr_readdata(csr_readdata),
+    .csr_write(csr_write),
+    .csr_writedata(csr_writedata),
+
+    .full_duplex(full_duplex),
+    .break_sync(break_sync),
+    .arbitration(arbitration),
+    .not_drop(not_drop),
+    .user_crc(user_crc),
+    .tx_invert(tx_invert),
+    .tx_push_pull(tx_push_pull),
+
+    .idle_wait_len(idle_wait_len),
+    .tx_permit_len(tx_permit_len),
+    .max_idle_len(max_idle_len),
+    .tx_pre_len(tx_pre_len),
+    .filter(filter),
+    .filter1(filter1),
+    .filter2(filter2),
+    .div_ls(div_ls),
+    .div_hs(div_hs),
+
+    .rx_ram_rd_addr(rx_ram_rd_addr),
+    .rx_ram_rd_done(rx_ram_rd_done),
+    .rx_clean_all(rx_clean_all),
+    .rx_ram_rd_byte(rx_ram_rd_byte),
+    .rx_ram_rd_flags(rx_ram_rd_flags),
+    .rx_error(rx_error),
+    .rx_ram_lost(rx_ram_lost),
+    .rx_break(rx_break),
+    .rx_pending(rx_pending),
+    .bus_idle(bus_idle),
+
+    .tx_ram_wr_en(tx_ram_wr_en),
+    .tx_ram_wr_addr(tx_ram_wr_addr),
+    .tx_ram_switch(tx_ram_switch),
+    .tx_abort(tx_abort),
+    .has_break(has_break),
+    .ack_break(ack_break),
+    .tx_pending(tx_pending),
+    .cd(cd),
+    .tx_err(tx_err)
+);
 
 
-always @(posedge clk or negedge reset_n)
-    if (!reset_n) begin
-        full_duplex <= 0;
-        arbitrate <= 1;
-        tx_en_delay <= 1;
-        not_drop <= 0;
-        user_crc <= 0;
-        tx_invert <= 0;
-        tx_push_pull <= 0;
-
-        idle_wait_len <= 10;    // 1 byte (10 bits per byte)
-        tx_wait_len <= 20;
-        filter <= 8'hff;
-        filter1 <= 8'hff;
-        filter2 <= 8'hff;
-        div_ls <= DIV_LS;       // baud_rate = sys_freq / (div + 1)
-        div_hs <= DIV_HS;
-
-        tx_error_flag <= 0;
-        cd_flag <= 0;
-        rx_error_flag <= 0;
-        rx_lost_flag <= 0;
-
-        int_mask <= 0;
-
-        rx_ram_rd_done <= 0;
-        rx_clean_all <= 0;
-
-        tx_ram_switch <= 0;
-        tx_abort <= 0;
-    end
-    else begin
-        rx_ram_rd_done <= 0;
-        rx_clean_all <= 0;
-        tx_ram_switch <= 0;
-        tx_abort <= 0;
-
-        if (rx_error)
-            rx_error_flag <= 1;
-        if (rx_ram_lost)
-            rx_lost_flag <= 1;
-        if (cd)
-            cd_flag <= 1;
-        if (tx_err)
-            tx_error_flag <= 1;
-
-        if (csr_write)
-            case (csr_address)
-                REG_SETTING: begin
-                    if (csr_byteenable[0]) begin
-                        full_duplex <= csr_writedata[7];
-                        arbitrate <= !csr_writedata[6];
-                        tx_en_delay <= csr_writedata[5:4];
-                        not_drop <= csr_writedata[3];
-                        user_crc <= csr_writedata[2];
-                        tx_invert <= csr_writedata[1];
-                        tx_push_pull <= csr_writedata[0];
-                    end
-                end
-                REG_WAIT_LEN: begin
-                    if (csr_byteenable[0])
-                        idle_wait_len <= csr_writedata[7:0];
-                    if (csr_byteenable[2])
-                        tx_wait_len <= csr_writedata[23:16];
-                end
-                REG_FILTER:
-                    if (csr_byteenable[0])
-                        filter <= csr_writedata[7:0];
-                REG_DIV: begin
-                    if (csr_byteenable[0])
-                        div_ls[7:0] <= csr_writedata[7:0];
-                    if (csr_byteenable[1])
-                        div_ls[15:8] <= csr_writedata[15:8];
-                    if (csr_byteenable[2])
-                        div_hs[7:0] <= csr_writedata[23:16];
-                    if (csr_byteenable[3])
-                        div_hs[15:8] <= csr_writedata[31:24];
-                end
-                REG_INT_MASK:
-                    if (csr_byteenable[0])
-                        int_mask <= csr_writedata[6:0];
-                REG_RX_CTRL: begin
-                    if (csr_byteenable[0]) begin
-                        if (csr_writedata[4]) begin
-                            rx_clean_all <= 1;
-                            rx_lost_flag <= 0;
-                            rx_error_flag <= 0;
-                        end
-                        else begin
-                            if (csr_writedata[1])
-                                rx_ram_rd_done <= 1;
-                            if (csr_writedata[2])
-                                rx_lost_flag <= 0;
-                            if (csr_writedata[3])
-                                rx_error_flag <= 0;
-                        end
-                    end
-                end
-                REG_TX_CTRL: begin
-                    if (csr_byteenable[0]) begin
-                        if (csr_writedata[4]) begin
-                            tx_abort <= 1;
-                            cd_flag <= 0;
-                            tx_error_flag <= 0;
-                        end
-                        else begin
-                            if (csr_writedata[1])
-                                tx_ram_switch <= 1;
-                            if (csr_writedata[2])
-                                cd_flag <= 0;
-                            if (csr_writedata[3])
-                                tx_error_flag <= 0;
-                        end
-                    end
-                end
-                REG_FILTER_M: begin
-                    if (csr_byteenable[0])
-                        filter1 <= csr_writedata[7:0];
-                    if (csr_byteenable[1])
-                        filter2 <= csr_writedata[15:8];
-                end
-            endcase
-    end
-
-
-pp_ram #(.N_WIDTH(3), .MM4RD(1)) pp_ram_rx_m(
+cd_ram #(.N_WIDTH(3)) cd_ram_rx_m(
     .clk(clk),
     .reset_n(reset_n),
 
-    .mm_address(rx_mm_address),
-    .mm_byteenable(rx_mm_byteenable),
-    .mm_read(rx_mm_read),
-    .mm_readdata(rx_mm_readdata),
-    .mm_write(rx_mm_write),
-    .mm_writedata(rx_mm_writedata),
-
-    .rd_byte(),
-    .rd_addr(8'd0),
-    .rd_en(1'b0),
+    .rd_byte(rx_ram_rd_byte),
+    .rd_addr(rx_ram_rd_addr),
+    .rd_en(chip_select),
     .rd_done(rx_ram_rd_done),
     .rd_done_all(rx_clean_all),
     .unread(rx_pending),
@@ -318,16 +184,9 @@ pp_ram #(.N_WIDTH(3), .MM4RD(1)) pp_ram_rx_m(
     .switch_fail(rx_ram_lost)
 );
 
-pp_ram #(.N_WIDTH(1), .MM4RD(0)) pp_ram_tx_m(
+cd_ram #(.N_WIDTH(1)) cd_ram_tx_m(
     .clk(clk),
     .reset_n(reset_n),
-
-    .mm_address(tx_mm_address),
-    .mm_byteenable(tx_mm_byteenable),
-    .mm_read(tx_mm_read),
-    .mm_readdata(tx_mm_readdata),
-    .mm_write(tx_mm_write),
-    .mm_writedata(tx_mm_writedata),
 
     .rd_byte(tx_ram_rd_byte),
     .rd_addr(tx_ram_rd_addr),
@@ -336,9 +195,9 @@ pp_ram #(.N_WIDTH(1), .MM4RD(0)) pp_ram_tx_m(
     .rd_done_all(1'b0),
     .unread(tx_pending),
 
-    .wr_byte(8'd0),
-    .wr_addr(8'd0),
-    .wr_en(1'b0),
+    .wr_byte(csr_writedata),
+    .wr_addr(tx_ram_wr_addr),
+    .wr_en(tx_ram_wr_en),
 
     .switch(tx_ram_switch),
     .wr_flags(8'd0),
@@ -346,7 +205,7 @@ pp_ram #(.N_WIDTH(1), .MM4RD(0)) pp_ram_tx_m(
     .switch_fail()
 );
 
-rx_bytes rx_bytes_m(
+cd_rx_bytes cd_rx_bytes_m(
     .clk(clk),
     .reset_n(reset_n),
 
@@ -371,54 +230,76 @@ rx_bytes rx_bytes_m(
     .ram_switch(rx_ram_switch)
 );
 
-rx_des rx_des_m(
+cd_rx_des cd_rx_des_m(
     .clk(clk),
     .reset_n(reset_n),
 
     .div_ls(div_ls),
     .div_hs(div_hs),
     .idle_wait_len(idle_wait_len),
-
     .bus_idle(bus_idle),
-    .bit_inc(rx_bit_inc),
+    .rx_break(rx_break),
 
     .force_wait_idle(force_wait_idle),
 
-    .rx(rx_d),
+    .rx(rx_d[1]),
 
     .data(des_data),
     .crc_data(des_crc_data),
     .data_clk(des_data_clk)
 );
 
-tx_bytes_ser tx_bytes_ser_m(
+cd_tx_bytes cd_tx_bytes_m(
     .clk(clk),
     .reset_n(reset_n),
 
-    .div_ls(div_ls),
-    .div_hs(div_hs),
-    .tx_wait_len(tx_wait_len),
     .user_crc(user_crc),
+    .abort(tx_abort || tx_err),
 
-    .full_duplex(full_duplex),
-    .arbitrate(arbitrate),
-    .tx_en_delay(tx_en_delay),
-    .abort(tx_abort),
-    .cd(cd),
-    .err(tx_err),
-
-    .tx(tx_d),
-    .tx_en(tx_en_d),
+    .data(ser_data),
+    .has_data(ser_has_data),
+    .ack_data(ser_ack_data),
+    .is_crc_byte(ser_is_crc_byte),
+    .is_last_byte(ser_is_last_byte),
+    .crc_data(ser_crc_data),
 
     .ram_unread(tx_pending),
     .ram_rd_byte(tx_ram_rd_byte),
     .ram_rd_addr(tx_ram_rd_addr),
     .ram_rd_en(tx_ram_rd_en),
-    .ram_rd_done(tx_ram_rd_done),
+    .ram_rd_done(tx_ram_rd_done)
+);
+
+cd_tx_ser cd_tx_ser_m(
+    .clk(clk),
+    .reset_n(reset_n),
+
+    .data(ser_data),
+    .has_data(ser_has_data),
+    .ack_data(ser_ack_data),
+    .is_crc_byte(ser_is_crc_byte),
+    .is_last_byte(ser_is_last_byte),
+    .crc_data(ser_crc_data),
+    .has_break(has_break),
+    .ack_break(ack_break),
 
     .bus_idle(bus_idle),
-    .rx_bit_inc(rx_bit_inc),
-    .rx(rx_d)
+
+    .div_ls(div_ls),
+    .div_hs(div_hs),
+    .tx_permit_len(tx_permit_len),
+    .max_idle_len(max_idle_len),
+    .tx_pre_len(tx_pre_len),
+    .full_duplex(full_duplex),
+    .break_sync(break_sync),
+    .arbitration(arbitration),
+    .abort(tx_abort),
+    .cd(cd),
+    .err(tx_err),
+
+    .rx(rx_d[1]),
+    .tx(tx_d),
+    .tx_en(tx_en_d)
 );
 
 endmodule
