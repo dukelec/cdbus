@@ -97,6 +97,7 @@ always @(posedge clk or negedge reset_n)
                 if (data_clk) begin
                     state <= WAIT_DATA;
                     baud_sel <= 0;
+                    baud_sync <= 1;
                     is_first_byte <= 0;
                 end
             end

@@ -21,16 +21,21 @@ module cd_baud_rate
         input       [15:0]  div_hs, // high speed
         input               sel,
 
-        output reg          inc,
-        output reg          cap
+        output              inc,
+        output              cap
     );
+
+reg inc_d;
+reg cap_d;
+assign inc = inc_d & !sync;
+assign cap = cap_d & !sync;
 
 wire [15:0] div = sel ? div_hs : div_ls;
 reg [15:0] cnt = 0;
 
 always @(posedge clk) begin
-    inc <= 0;
-    cap <= 0;
+    inc_d <= 0;
+    cap_d <= 0;
 
     if (sync) begin
         cnt <= INIT_VAL;
@@ -40,16 +45,16 @@ always @(posedge clk) begin
 
         if (FOR_TX) begin // at 3/4 position
             if (cnt == div - div[15:2])
-                cap <= 1;
+                cap_d <= 1;
         end
         else begin // at 1/2 position
             if (cnt == {1'd0, div[15:1]})
-                cap <= 1;
+                cap_d <= 1;
         end
 
         if (cnt >= div) begin
             cnt <= 0;
-            inc <= 1;
+            inc_d <= 1;
         end
     end
 end
