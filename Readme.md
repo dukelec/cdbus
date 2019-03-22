@@ -224,7 +224,7 @@ Non-zero indicate the pointer of last received byte of the disturbed frame, incl
     # TX
     
     write(REG_TX, [0x0c, 0x0d, 0x01, 0xcd])     # Write frame without CRC
-    while (read(REG_INT_FLAG) & 0x10) == 0:     # Make sure we can successfully switch to the next page
+    while (read(REG_INT_FLAG) & 0x20) == 0:     # Make sure we can successfully switch to the next page
         pass
     write(REG_TX_CTRL, [0x03])                  # Trigger send by switching TX page
     
