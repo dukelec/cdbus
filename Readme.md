@@ -233,8 +233,8 @@ Non-zero indicate the pointer of last received byte of the disturbed frame, incl
     
     while (read(REG_INT_FLAG) & 0x02) == 0:     # Wait for RX page ready
         pass
-    header = read(REG_TX, len=3)
-    data = read(REG_TX, len=header[2])
+    header = read(REG_RX, len=3)
+    data = read(REG_RX, len=header[2])
     write(REG_RX_CTRL, [0x03])                  # Finish read by switching RX page
 
 ```
