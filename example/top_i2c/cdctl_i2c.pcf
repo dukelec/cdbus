@@ -1,0 +1,19 @@
+# Family & Device:    iCE40UL1K
+# Package:            CM36A
+
+set_io clk_i F2 -io_std SB_LVCMOS -pullup no
+set_io clk_o F1 -io_std SB_LVCMOS -pullup no
+
+set_io addr_sel[0] F6 -io_std SB_LVCMOS -pullup yes -pullup_resistor 100K
+set_io addr_sel[1] E6 -io_std SB_LVCMOS -pullup yes -pullup_resistor 100K
+# set_io addr_sel[2] E5 -io_std SB_LVCMOS -pullup yes -pullup_resistor 100K
+
+set_io sda C6 -io_std SB_LVCMOS -pullup no
+set_io scl B5 -io_std SB_LVCMOS -pullup no
+
+set_io rx E1 -io_std SB_LVCMOS -pullup no
+set_io tx D1 -io_std SB_LVCMOS -pullup no
+set_io tx_en C1 -io_std SB_LVCMOS -pullup no
+
+set_io int_n B6 -io_std SB_LVCMOS -pullup no
+
