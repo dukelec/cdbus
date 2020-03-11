@@ -119,7 +119,10 @@ def spi_rw(dut, w_data = 0):
         yield Timer(SPI_PERIOD / 2)
         dut.sck_scl = 1
         yield ReadOnly()
-        r_data = (r_data << 1) | dut.sdo_sda.value.integer
+        if dut.sdo_sda.value.binstr != 'z':
+            r_data = (r_data << 1) | dut.sdo_sda.value.integer
+        else:
+            r_data = (r_data << 1) | 0
         yield Timer(SPI_PERIOD / 2)
         dut.sck_scl = 0
     raise ReturnValue(r_data)

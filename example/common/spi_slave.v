@@ -47,12 +47,13 @@ reg  is_first_byte;
 reg  is_write;
 reg  write_event;
 reg  read_event;
+reg  sdo_dat_en;
 
 `ifndef SHARING_IO_PIN
-    assign sdo = spi_reset_n ? treg[7] : 1'bz;
+    assign sdo = (spi_reset_n && sdo_dat_en) ? treg[7] : 1'bz;
 `else
     assign sdo = treg[7];
-    assign sdo_en = spi_reset_n;
+    assign sdo_en = spi_reset_n && sdo_dat_en;
 `endif
 
 // read from sdi
@@ -92,9 +93,13 @@ always @(posedge sck or negedge spi_reset_n)
 
 // write to sdo
 always @(negedge sck or negedge spi_reset_n)
-    if (!spi_reset_n)
+    if (!spi_reset_n) begin
         treg <= 0;
+        sdo_dat_en <= 0;
+    end
     else begin
+        if (!is_write && !is_first_byte)
+            sdo_dat_en <= 1;
         if (bit_cnt == 0)
             treg <= csr_readdata; // first time at last bit negedge of first byte
         else

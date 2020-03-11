@@ -75,7 +75,7 @@ The CDBUS-BS mode is suitable for high-speed applications with few nodes and is 
 
 | Register Name     |  Addr   | Access | Default         | Description                   | Remarks                                              |
 |-------------------|---------|--------|-----------------|-------------------------------|------------------------------------------------------|
-| VERSION           |  0x00   | RD     | 0x0a            | Hardware version              |                                                      |
+| VERSION           |  0x00   | RD     | 0x0b            | Hardware version              |                                                      |
 | SETTING           |  0x02   | RD/WR  | 0x10            | Configs                       |                                                      |
 | IDLE_WAIT_LEN     |  0x04   | RD/WR  | 0x0a            | How long to enter idle        | Bit 7~0                                              |
 | TX_PERMIT_LEN_L   |  0x05   | RD/WR  | 0x14            | How long to allow sending     | Bit 7~0                                              |
