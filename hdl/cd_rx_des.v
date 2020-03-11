@@ -105,7 +105,7 @@ always @(posedge clk or negedge reset_n)
             default: state <= WAIT_IDLE;
         endcase
 
-        if (force_wait_idle || bit_err)
+        if (force_wait_idle || bit_err || rx_break)
             state <= WAIT_IDLE;
     end
 
