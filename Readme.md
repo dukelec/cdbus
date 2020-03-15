@@ -29,7 +29,7 @@ In this case:
 ### Arbitration Mode (CDBUS-A)
 
 * It introduces an arbitration mechanism that automatically avoids conflicts like the CAN bus.
-* Support dual baud rate, provide high speed communication, maximum rate ≥ 10 Mbps.
+* Support dual baud rate, provide high speed communication, the baud rate in the data phase is up to: `sys_freq` ÷ 3.
 * Supports unicast, multicast and broadcast.
 * Max payload data size is 253 byte (you can increase it to 255 byte, but not recommended).
 * Hardware packing, unpacking, verification and filtering, save your time and CPU usage.
@@ -75,7 +75,7 @@ The CDBUS-BS mode is suitable for high-speed applications with few nodes and is 
 
 | Register Name     |  Addr   | Access | Default         | Description                   | Remarks                                              |
 |-------------------|---------|--------|-----------------|-------------------------------|------------------------------------------------------|
-| VERSION           |  0x00   | RD     | 0x0b            | Hardware version              |                                                      |
+| VERSION           |  0x00   | RD     | 0x0c            | Hardware version              |                                                      |
 | SETTING           |  0x02   | RD/WR  | 0x10            | Configs                       |                                                      |
 | IDLE_WAIT_LEN     |  0x04   | RD/WR  | 0x0a            | How long to enter idle        | Bit 7~0                                              |
 | TX_PERMIT_LEN_L   |  0x05   | RD/WR  | 0x14            | How long to allow sending     | Bit 7~0                                              |
@@ -140,6 +140,8 @@ The default value 0xff of FILTERn means not enabled.
 
 Baud rate divider value:
 DIV_xx[15:0] = sys_freq ÷ baud_rate − 1
+
+The minimum value is 2.
 
 **INT_FLAG:**
 
