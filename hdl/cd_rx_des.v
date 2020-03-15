@@ -65,7 +65,6 @@ always @(posedge clk or negedge reset_n)
         case (state)
             WAIT_IDLE: begin
                 baud_sel <= 0;
-                baud_sync <= 0;
                 is_first_byte <= 1;
                 if (idle_cnt >= idle_wait_len) begin
                     state <= BUS_IDLE;
@@ -94,7 +93,8 @@ always @(posedge clk or negedge reset_n)
             end
 
             DATA: begin
-                if (data_clk) begin
+                // triggered simultaneously with data_clk
+                if (bit_cap && bit_cnt == 9 && rx_d[0] == 1) begin
                     state <= WAIT_DATA;
                     baud_sel <= 0;
                     baud_sync <= 1;
