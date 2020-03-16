@@ -11,11 +11,12 @@
 
 module cd_baud_rate
    #(
-        parameter INIT_VAL = 0,
+        parameter INIT_VAL = 1,
         parameter FOR_TX = 0
    )(
         input               clk,
-        input               sync,   // reset counters to zero
+        input               sync,   // reset counters to INIT_VAL
+        input               sync_3x,
 
         input       [15:0]  div_ls, // low speed
         input       [15:0]  div_hs, // high speed
@@ -27,8 +28,8 @@ module cd_baud_rate
 
 reg inc_d;
 reg cap_d;
-assign inc = inc_d & !sync;
-assign cap = cap_d & !sync;
+assign inc = inc_d & !sync & !sync_3x;
+assign cap = cap_d & !sync & !sync_3x;
 
 wire [15:0] div = sel ? div_hs : div_ls;
 reg [15:0] cnt = 0;
@@ -39,6 +40,11 @@ always @(posedge clk) begin
 
     if (sync) begin
         cnt <= INIT_VAL;
+    end
+    else if (sync_3x) begin
+        cnt <= INIT_VAL + 1;
+        if (INIT_VAL == div[15:1])
+            cap_d <= 1;
     end
     else begin
         cnt <= cnt + 1'b1;
