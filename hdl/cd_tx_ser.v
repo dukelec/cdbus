@@ -227,6 +227,7 @@ cd_baud_rate #(
 ) cd_baud_rate_tx_m(
     .clk(clk),
     .sync(baud_sync),
+    .sync_3x(1'b0),
     .div_ls(div_ls),
     .div_hs(div_hs),
     .sel(baud_sel),

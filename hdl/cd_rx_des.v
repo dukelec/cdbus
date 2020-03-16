@@ -48,6 +48,7 @@ reg crc_clk;
 
 reg is_first_byte;
 reg baud_sync;
+reg baud_sync_3x; // compensate for 3x oversampling
 reg baud_sel;
 wire bit_inc;
 wire bit_cap;
@@ -61,6 +62,7 @@ always @(posedge clk or negedge reset_n)
     end
     else begin
         baud_sync <= 0;
+        baud_sync_3x <= 0;
 
         case (state)
             WAIT_IDLE: begin
@@ -95,9 +97,15 @@ always @(posedge clk or negedge reset_n)
             DATA: begin
                 // triggered simultaneously with data_clk
                 if (bit_cap && bit_cnt == 9 && rx_d[0] == 1) begin
-                    state <= WAIT_DATA;
-                    baud_sel <= 0;
-                    baud_sync <= 1;
+                    if (rx == 1) begin
+                        state <= WAIT_DATA;
+                        baud_sel <= 0;
+                        baud_sync <= 1;
+                    end
+                    else begin // faster than expected
+                        baud_sel <= 1;
+                        baud_sync_3x <= 1;
+                    end
                     is_first_byte <= 0;
                 end
             end
@@ -177,6 +185,7 @@ cd_baud_rate #(
 ) cd_baud_rate_rx_m(
     .clk(clk),
     .sync(baud_sync || (state == WAIT_DATA && rx == 0)),
+    .sync_3x(baud_sync_3x),
     .div_ls(div_ls),
     .div_hs(div_hs),
     .sel(baud_sel),
