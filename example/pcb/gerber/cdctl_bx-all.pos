@@ -1,0 +1,19 @@
+### Module positions - created on Fri Dec 22 20:19:47 2017 ###
+### Printed by Pcbnew version kicad (2017-04-18 revision 68a7a52)-master
+## Unit = mm, Angle = deg.
+## Side : All
+# Ref     Val              Package                PosX       PosY       Rot  Side
+C1        1u               C0201                1.1750    -2.0000  180.0000  top
+C2        1u               C0201                3.0250    -7.1250    0.0000  top
+C3        10p              C0201                1.4750    -5.3000   90.0000  top
+C4        10p              C0201                3.5750    -3.8000    0.0000  top
+C5        100n             C0201                1.1750    -2.6000  180.0000  top
+C6        100n             C0201                0.9250    -7.4250  270.0000  top
+R1        2K               R0201                1.1750    -0.7750  180.0000  top
+R2        10K              R0201                4.4750    -7.3000   90.0000  top
+R3        220              R0201                1.4750    -4.1000  270.0000  top
+R4        1M               R0201                2.3750    -3.8000    0.0000  top
+U1        ICE40UL1K-CM36A  CM36                 3.3250    -1.9500    0.0000  top
+U2        TCR3DG12         WCSP4E               1.8250    -7.4250    0.0000  top
+Y1        16M              BT-XTAL_2016         3.1750    -5.3000   90.0000  top
+## End
