@@ -17,14 +17,14 @@ CDBUS IP Core
 ## CDBUS Protocol
 
 CDBUS is a protocol for Asynchronous Serial Communication,
-it has a 3-byte header: `[src_addr, dst_addr, data_len]`, then user data, and finally 2 bytes of CRC.
+it has a 3-byte header: `[src_addr, dst_addr, data_len]`, then user data, and finally 2 bytes of CRC. (Same as MODBUS CRC.)
 
 It's suitable for one-to-one communication, e.g. UART or RS-232.
 In this case, the address for each side are usually carefully selected and fixed,
 e.g: `[0x55, 0xaa, data_len, ...]`, and the backward is: `[0xaa, 0x55, data_len, ...]`. (`data_len` ≤ 255.)
 
 The CDBUS protocol is more valuable for bus communication, e.g. RS-485, M-LVDS or Single Line UART.
-In this case:
+In this case, it supports:
 
 ### Arbitration Mode (CDBUS-A)
 
@@ -255,7 +255,7 @@ Then you can checkout the waveform `cdbus.vcd` by GTKWave.
 The CDCTL controller family uses the CDBUS IP Core, which provide SPI, I<sup>2</sup>C and PCIe peripheral interfaces.  
 E.g. The tiny CDCTL-Bx module support SPI and I<sup>2</sup>C interfaces:  
 (This module is completely open source, including the source code project and Gerber files, in the `example/` directory.)  
-<img alt="cdctl_bx" src="docs/img/cdctl_bx.jpg" width="80%">
+<img alt="cdctl_bx" src="docs/img/cdctl_bx.jpg" width="600px">
 
 For more information, visit: https://dukelec.com or https://d-l.io
 
