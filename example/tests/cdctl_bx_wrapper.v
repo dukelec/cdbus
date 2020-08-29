@@ -6,7 +6,7 @@
  *
  * Copyright (c) 2017 DUKELEC, All rights reserved.
  *
- * Author: Duke Fong <duke@dukelec.com>
+ * Author: Duke Fong <d@d-l.io>
  */
 
 `timescale 1 ns / 1 ps

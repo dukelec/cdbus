@@ -6,7 +6,7 @@
  *
  * Copyright (c) 2017 DUKELEC, All rights reserved.
  *
- * Author: Duke Fong <duke@dukelec.com>
+ * Author: Duke Fong <d@d-l.io>
  */
 
 module cd_tx_bytes(
