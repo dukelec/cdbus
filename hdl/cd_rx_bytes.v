@@ -9,7 +9,7 @@
  * Author: Duke Fong <d@d-l.io>
  */
 
-module cd_rx_bytes (
+module cd_rx_bytes(
         input               clk,
         input               reset_n,
 

@@ -22,14 +22,18 @@ module cdctl_pll(
 wire clk = REFERENCECLK;
 assign PLLOUTGLOBAL = clk;
 
-reg reset_n = 0;
+reg reset_n = 1;
 assign LOCK = reset_n;
 
 reg [2:0] reset_cnt = 0;
 always @(posedge clk) begin
-    reset_cnt <= reset_cnt + 1;
-    if (reset_cnt == 3'b111)
+    if (reset_cnt == 3'b010)
+        reset_n <= 0;
+    else if (reset_cnt == 3'b111)
         reset_n <= 1;
+
+    if (reset_cnt < 3'b111)
+        reset_cnt <= reset_cnt + 1;
 end 
 
 endmodule

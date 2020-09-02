@@ -12,7 +12,7 @@
  *   https://en.wikipedia.org/wiki/Modbus
  */
 
-module cd_crc (
+module cd_crc(
     input               clk,
     input               clean,
     input               data_clk,
