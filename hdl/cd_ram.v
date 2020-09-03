@@ -9,6 +9,9 @@
  * Author: Duke Fong <d@d-l.io>
  */
 
+//`define SINGLE_ADDR
+`define HAS_RD_EN
+
 module cd_ram
        #(
            parameter A_WIDTH = 8,
@@ -34,27 +37,61 @@ module cd_ram
            output reg            switch_fail
        );
 
-reg [7:0] ram[2**N_WIDTH-1:0][2**A_WIDTH-1:0];
-reg [7:0] flags[2**N_WIDTH-1:0];
+reg             [7:0] flags[2**N_WIDTH-1:0];
 
-reg [N_WIDTH-1:0] wr_sel;
-reg [N_WIDTH-1:0] rd_sel;
-reg [2**N_WIDTH-1:0] dirty;
+wire            [7:0] rd_bytes[2**N_WIDTH-1:0];
+`ifdef HAS_RD_EN
+wire                  rd_ens[2**N_WIDTH-1:0];
+`endif
+wire                  wr_ens[2**N_WIDTH-1:0];
+`ifdef SINGLE_ADDR
+wire [2**A_WIDTH-1:0] rw_addr[2**N_WIDTH-1:0];
+`endif
+
+reg     [N_WIDTH-1:0] wr_sel;
+reg     [N_WIDTH-1:0] rd_sel;
+reg  [2**N_WIDTH-1:0] dirty;
 
 assign unread = (dirty != 0);
 
 
-always @(posedge clk) begin
+genvar i;
 
-    if (rd_en) begin
-        rd_byte <= ram[rd_sel][rd_addr];
-        rd_flags <= flags[rd_sel];
-    end
+generate
+    for (i = 0; i < 2**N_WIDTH; i = i + 1) begin : cd_sram_array
+`ifdef HAS_RD_EN
+        assign rd_ens[i] = rd_en & (rd_sel == i);
+`endif
+        assign wr_ens[i] = wr_en & (wr_sel == i);
+`ifdef SINGLE_ADDR
+        assign rw_addr[i] = wr_ens[i] ? wr_addr : rd_addr;
+`endif
 
-    if (wr_en) begin
-        ram[wr_sel][wr_addr] <= wr_byte;
+        cd_sram cd_sram_m(
+            .clk(clk),
+`ifdef SINGLE_ADDR
+            .addr(rw_addr[i]),
+`else
+            .ra(rd_addr),
+            .wa(wr_addr),
+`endif
+            .rd(rd_bytes[i]),
+`ifdef HAS_RD_EN
+            .re(rd_ens[i]),
+`endif
+            .wd(wr_byte),
+            .we(wr_ens[i])
+        );
     end
-end
+endgenerate
+
+
+`ifdef HAS_RD_EN
+always @(*)
+`else
+always @(posedge clk)
+`endif
+    rd_byte <= rd_bytes[rd_sel];
 
 
 always @(posedge clk or negedge reset_n)
@@ -66,6 +103,12 @@ always @(posedge clk or negedge reset_n)
     end
     else begin
         switch_fail <= 0;
+
+`ifdef HAS_RD_EN
+        rd_flags <= rd_en ? flags[rd_sel] : 8'dx;
+`else
+        rd_flags <= flags[rd_sel];
+`endif
 
         if (switch) begin
             if (dirty[wr_sel + 1'b1]) begin
