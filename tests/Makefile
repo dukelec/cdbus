@@ -22,6 +22,6 @@ VERILOG_SOURCES = $(PWD)/cdbus_wrapper.v \
 
 TOPLEVEL = cdbus_wrapper
 MODULE = test_cdbus
-include $(COCOTB)/makefiles/Makefile.inc
-include $(COCOTB)/makefiles/Makefile.sim
+
+include $(shell cocotb-config --makefiles)/Makefile.sim
 

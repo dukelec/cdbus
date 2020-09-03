@@ -245,7 +245,7 @@ Non-zero indicate the pointer of last received byte of the disturbed frame, incl
 ## Simulation
 Install `iverilog` (>= v10) and `cocotb`, goto `tests/` folder, then type the command:
 ```sh
-    $ COCOTB=/path/to/cocotb make
+    $ make
 ```
 Then you can checkout the waveform `cdbus.vcd` by GTKWave.
 

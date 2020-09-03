@@ -12,9 +12,8 @@ import cocotb
 from cocotb.binary import BinaryValue
 from cocotb.triggers import RisingEdge, ReadOnly, Timer
 from cocotb.clock import Clock
-from cocotb.result import ReturnValue, TestFailure
 
-# pip3.6 install pycrc --user
+# pip3 install pythoncrc
 from PyCRC.CRC16 import CRC16
 
 def modbus_crc(data):
@@ -84,80 +83,75 @@ SPI_FREQ = 20000000
 SPI_PERIOD = 1000000000000 / SPI_FREQ
 
 
-@cocotb.coroutine
-def send_bytes(dut, bytes, factor, is_z = True):
-    yield Timer(1000)
+async def send_bytes(dut, bytes, factor, is_z = True):
+    await Timer(1000)
     factor += 1
     for byte in bytes:
         dut.bus_a = 0
-        yield Timer(factor * CLK_PERIOD)
+        await Timer(factor * CLK_PERIOD)
         for i in range(0,8):
             if byte & 0x01 == 0:
                 dut.bus_a = 0
             else:
                 dut.bus_a = BinaryValue("z") if is_z else 1
-            yield Timer(factor * CLK_PERIOD)
+            await Timer(factor * CLK_PERIOD)
             byte = byte >> 1
         dut.bus_a = BinaryValue("z") if is_z else 1
-        yield Timer(factor * CLK_PERIOD)
+        await Timer(factor * CLK_PERIOD)
         dut.bus_a = BinaryValue("z")
 
-@cocotb.coroutine
-def send_frame(dut, bytes, factor_l, factor_h):
-    yield send_bytes(dut, bytes[0:1], factor_l)
-    yield send_bytes(dut, bytes[1:], factor_h, False)
-    yield send_bytes(dut, modbus_crc(bytes), factor_h, False)
+async def send_frame(dut, bytes, factor_l, factor_h):
+    await send_bytes(dut, bytes[0:1], factor_l)
+    await send_bytes(dut, bytes[1:], factor_h, False)
+    await send_bytes(dut, modbus_crc(bytes), factor_h, False)
 
 
-@cocotb.coroutine
-def spi_rw(dut, w_data = 0):
+async def spi_rw(dut, w_data = 0):
     r_data = 0
     for i in range(0,8):
         dut.sdi = 1 if (w_data & 0x80) else 0
         w_data = w_data << 1
         dut.sck_scl = 0
-        yield Timer(SPI_PERIOD / 2)
+        await Timer(SPI_PERIOD / 2)
         dut.sck_scl = 1
-        yield ReadOnly()
+        await ReadOnly()
         if dut.sdo_sda.value.binstr != 'z':
             r_data = (r_data << 1) | dut.sdo_sda.value.integer
         else:
             r_data = (r_data << 1) | 0
-        yield Timer(SPI_PERIOD / 2)
+        await Timer(SPI_PERIOD / 2)
         dut.sck_scl = 0
-    raise ReturnValue(r_data)
+    return r_data
 
-@cocotb.coroutine
-def spi_read(dut, address, len = 1):
+async def spi_read(dut, address, len = 1):
     datas = []
     dut.nss = 0
-    yield Timer(SPI_PERIOD / 2)
-    yield spi_rw(dut, address)
-    yield Timer(SPI_PERIOD / 2)
+    await Timer(SPI_PERIOD / 2)
+    await spi_rw(dut, address)
+    await Timer(SPI_PERIOD / 2)
     while len != 0:
-        ret_val = yield spi_rw(dut)
+        ret_val = await spi_rw(dut)
         datas.append(ret_val)
-        yield Timer(SPI_PERIOD / 2)
+        await Timer(SPI_PERIOD / 2)
         len -= 1
     dut.nss = 1
-    yield Timer(SPI_PERIOD / 2)
-    raise ReturnValue(datas)
+    await Timer(SPI_PERIOD / 2)
+    return datas
 
-@cocotb.coroutine
-def spi_write(dut, address, datas):
+async def spi_write(dut, address, datas):
     dut.nss = 0
-    yield Timer(SPI_PERIOD / 2)
-    yield spi_rw(dut, address | 0x80)
-    yield Timer(SPI_PERIOD / 2)
+    await Timer(SPI_PERIOD / 2)
+    await spi_rw(dut, address | 0x80)
+    await Timer(SPI_PERIOD / 2)
     for data in datas:
-        yield spi_rw(dut, data)
-        yield Timer(SPI_PERIOD / 2)
+        await spi_rw(dut, data)
+        await Timer(SPI_PERIOD / 2)
     dut.nss = 1
-    yield Timer(SPI_PERIOD / 2)
+    await Timer(SPI_PERIOD / 2)
 
 
 @cocotb.test()
-def test_cdctl_bx(dut):
+async def test_cdctl_bx(dut):
     """
     test_cdctl_bx
     """
@@ -167,44 +161,44 @@ def test_cdctl_bx(dut):
     dut.sck_scl = 0
 
     cocotb.fork(Clock(dut.clk, CLK_PERIOD).start())
-    yield Timer(500000) # wait reset
+    await Timer(500000) # wait reset
 
-    value = yield spi_read(dut, REG_VERSION)
+    value = await spi_read(dut, REG_VERSION)
     dut._log.info("REG_VERSION: 0x%02x" % int(value[0]))
-    value = yield spi_read(dut, REG_SETTING)
+    value = await spi_read(dut, REG_SETTING)
     dut._log.info("REG_SETTING: 0x%02x" % int(value[0]))
 
-    yield spi_write(dut, REG_SETTING, [BinaryValue("00010001").integer])
+    await spi_write(dut, REG_SETTING, [BinaryValue("00010001").integer])
 
-    yield spi_write(dut, REG_DIV_LS_H, [0])
-    yield spi_write(dut, REG_DIV_LS_L, [39])
-    yield spi_write(dut, REG_DIV_HS_H, [0])
-    yield spi_write(dut, REG_DIV_HS_L, [3])
-    yield spi_write(dut, REG_FILTER, [0x00])
+    await spi_write(dut, REG_DIV_LS_H, [0])
+    await spi_write(dut, REG_DIV_LS_L, [39])
+    await spi_write(dut, REG_DIV_HS_H, [0])
+    await spi_write(dut, REG_DIV_HS_L, [3])
+    await spi_write(dut, REG_FILTER, [0x00])
     # TODO: reset rx...
 
-    yield spi_write(dut, REG_TX, [0x01])
-    yield spi_write(dut, REG_TX, [0x00])
-    yield spi_write(dut, REG_TX, [0x01, 0xcd])
-    #yield spi_write(dut, REG_TX, [0xcd])
+    await spi_write(dut, REG_TX, [0x01])
+    await spi_write(dut, REG_TX, [0x00])
+    await spi_write(dut, REG_TX, [0x01, 0xcd])
+    #await spi_write(dut, REG_TX, [0xcd])
 
-    yield spi_write(dut, REG_TX_CTRL, [BIT_TX_START | BIT_TX_RST_POINTER])
+    await spi_write(dut, REG_TX_CTRL, [BIT_TX_START | BIT_TX_RST_POINTER])
 
     
-    yield RisingEdge(dut.cdctl_bx_m.cdbus_m.rx_pending)
-    value = yield spi_read(dut, REG_RX, 3)
+    await RisingEdge(dut.cdctl_bx_m.cdbus_m.rx_pending)
+    value = await spi_read(dut, REG_RX, 3)
     print(" ".join([("%02x" % x) for x in value]))
-    value = yield spi_read(dut, REG_RX, 3)
+    value = await spi_read(dut, REG_RX, 3)
     print(" ".join([("%02x" % x) for x in value]))
     
     
-    #yield RisingEdge(dut.cdctl_bx_m.cdbus_m.bus_idle)
-    #yield RisingEdge(dut.cdctl_bx_m.cdbus_m.bus_idle)
-    yield Timer(15000000)
+    #await RisingEdge(dut.cdctl_bx_m.cdbus_m.bus_idle)
+    #await RisingEdge(dut.cdctl_bx_m.cdbus_m.bus_idle)
+    await Timer(15000000)
 
-    yield send_frame(dut, b'\x05\x00\x01\xcd', 39, 3)
+    await send_frame(dut, b'\x05\x00\x01\xcd', 39, 3)
     
-    yield Timer(50000000)
+    await Timer(50000000)
 
     dut._log.info("test_cdctl_bx done.")
 
