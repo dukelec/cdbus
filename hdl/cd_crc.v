@@ -6,13 +6,13 @@
  *
  * Copyright (c) 2017 DUKELEC, All rights reserved.
  *
- * Author: Duke Fong <duke@dukelec.com>
+ * Author: Duke Fong <d@d-l.io>
  *
  * MODBUS CRC LSB first:
  *   https://en.wikipedia.org/wiki/Modbus
  */
 
-module cd_crc (
+module cd_crc(
     input               clk,
     input               clean,
     input               data_clk,

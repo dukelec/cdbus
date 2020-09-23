@@ -6,7 +6,7 @@
  *
  * Copyright (c) 2017 DUKELEC, All rights reserved.
  *
- * Author: Duke Fong <duke@dukelec.com>
+ * Author: Duke Fong <d@d-l.io>
  *
  * This file is the top module of CDBUS IP.
  */
@@ -170,7 +170,7 @@ cd_csr #(
 );
 
 
-cd_ram #(.N_WIDTH(3), .MM4RD(1)) cd_ram_rx_m(
+cd_ram #(.N_WIDTH(3), .MM4RX(1)) cd_ram_rx_m(
     .clk(clk),
     .reset_n(reset_n),
 
@@ -198,7 +198,7 @@ cd_ram #(.N_WIDTH(3), .MM4RD(1)) cd_ram_rx_m(
     .switch_fail(rx_ram_lost)
 );
 
-cd_ram #(.N_WIDTH(1), .MM4RD(0)) cd_ram_tx_m(
+cd_ram #(.N_WIDTH(1), .MM4RX(0)) cd_ram_tx_m(
     .clk(clk),
     .reset_n(reset_n),
 

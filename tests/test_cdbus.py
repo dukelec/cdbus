@@ -5,16 +5,15 @@
 #
 # Copyright (c) 2017 DUKELEC, All rights reserved.
 #
-# Author: Duke Fong <duke@dukelec.com>
+# Author: Duke Fong <d@d-l.io>
 #
 
 import cocotb
 from cocotb.binary import BinaryValue
 from cocotb.triggers import RisingEdge, ReadOnly, Timer
 from cocotb.clock import Clock
-from cocotb.result import ReturnValue, TestFailure
 
-# pip3 install pycrc --user
+# pip3 install pythoncrc
 from PyCRC.CRC16 import CRC16
 
 def modbus_crc(data):
@@ -73,143 +72,136 @@ CLK_FREQ = 40000000
 CLK_PERIOD = 1000000000000 / CLK_FREQ
 
 
-@cocotb.coroutine
-def send_bytes(dut, bytes, factor, is_z = True):
-    yield Timer(1000)
+async def send_bytes(dut, bytes, factor, is_z = True):
+    await Timer(1000)
     factor += 1
     for byte in bytes:
         dut.bus_a = 0
-        yield Timer(factor * CLK_PERIOD)
+        await Timer(factor * CLK_PERIOD)
         for i in range(0,8):
             if byte & 0x01 == 0:
                 dut.bus_a = 0
             else:
                 dut.bus_a = BinaryValue("z") if is_z else 1
-            yield Timer(factor * CLK_PERIOD)
+            await Timer(factor * CLK_PERIOD)
             byte = byte >> 1
         dut.bus_a = BinaryValue("z") if is_z else 1
-        yield Timer(factor * CLK_PERIOD)
+        await Timer(factor * CLK_PERIOD)
         dut.bus_a = BinaryValue("z")
 
-@cocotb.coroutine
-def send_frame(dut, bytes, factor_l, factor_h):
-    yield send_bytes(dut, bytes[0:1], factor_l)
-    yield send_bytes(dut, bytes[1:], factor_h, False)
-    yield send_bytes(dut, modbus_crc(bytes), factor_h, False)
+async def send_frame(dut, bytes, factor_l, factor_h):
+    await send_bytes(dut, bytes[0:1], factor_l)
+    await send_bytes(dut, bytes[1:], factor_h, False)
+    await send_bytes(dut, modbus_crc(bytes), factor_h, False)
 
 
-@cocotb.coroutine
-def reset(dut, duration = 10000):
+async def reset(dut, duration = 10000):
     dut._log.debug("Resetting DUT")
     dut.reset_n = 0
-    yield Timer(duration)
-    yield RisingEdge(dut.clk)
+    await Timer(duration)
+    await RisingEdge(dut.clk)
     dut.reset_n = 1
     dut._log.debug("Out of reset")
 
-@cocotb.coroutine
-def csr_read(dut, address):
-    yield RisingEdge(dut.clk)
+async def csr_read(dut, address):
+    await RisingEdge(dut.clk)
     dut.csr_address = address
     dut.csr_read = 1
 
-    yield RisingEdge(dut.clk)
+    await RisingEdge(dut.clk)
     data = dut.csr_readdata.value
     dut.csr_read = 0
     dut.csr_address = BinaryValue("x" * len(dut.csr_address))
-    yield ReadOnly()
+    await ReadOnly()
 
-    raise ReturnValue(data)
+    return data
 
-@cocotb.coroutine
-def csr_write(dut, address, data, burst = False):
-    yield RisingEdge(dut.clk)
+async def csr_write(dut, address, data, burst = False):
+    await RisingEdge(dut.clk)
     dut.csr_address = address
     dut.csr_byteenable = BinaryValue("1111")
     dut.csr_writedata = data
     dut.csr_write = 1
 
     if not burst:
-        yield RisingEdge(dut.clk)
+        await RisingEdge(dut.clk)
         dut.csr_write = 0
         dut.csr_address = BinaryValue("x" * len(dut.csr_address))
         dut.csr_writedata = BinaryValue("x" * len(dut.csr_writedata))
 
-@cocotb.coroutine
-def rx_mm_read(dut, address):
-    yield RisingEdge(dut.clk)
+async def rx_mm_read(dut, address):
+    await RisingEdge(dut.clk)
     dut.rx_mm_address = address
     dut.rx_mm_byteenable = BinaryValue("1111")
     dut.rx_mm_read = 1
 
-    yield RisingEdge(dut.clk)
+    await RisingEdge(dut.clk)
     dut.rx_mm_read = 0
     dut.rx_mm_address = BinaryValue("x" * len(dut.rx_mm_address))
-    yield ReadOnly()
+    await ReadOnly()
     data = dut.rx_mm_readdata.value
 
-    raise ReturnValue(data)
+    return data
 
-@cocotb.coroutine
-def tx_mm_write(dut, address, data, burst = False):
-    yield RisingEdge(dut.clk)
+async def tx_mm_write(dut, address, data, burst = False):
+    await RisingEdge(dut.clk)
     dut.tx_mm_address = address
     dut.tx_mm_byteenable = BinaryValue("1111")
     dut.tx_mm_writedata = data
     dut.tx_mm_write = 1
 
     if not burst:
-        yield RisingEdge(dut.clk)
+        await RisingEdge(dut.clk)
         dut.tx_mm_write = 0
         dut.tx_mm_address = BinaryValue("x" * len(dut.tx_mm_address))
         dut.tx_mm_writedata = BinaryValue("x" * len(dut.tx_mm_writedata))
 
 
 @cocotb.test()
-def test_cdbus(dut):
+async def test_cdbus(dut):
     """
     test_cdbus
     """
     dut._log.info("test_cdbus start.")
 
     cocotb.fork(Clock(dut.clk, CLK_PERIOD).start())
-    yield reset(dut)
+    await reset(dut)
 
-    value = yield csr_read(dut, REG_VERSION)
+    value = await csr_read(dut, REG_VERSION)
     dut._log.info("REG_VERSION: 0x%02x" % int(value))
-    value = yield csr_read(dut, REG_SETTING)
+    value = await csr_read(dut, REG_SETTING)
     dut._log.info("REG_SETTING: 0x%02x" % int(value))
 
-    yield csr_write(dut, REG_SETTING, BinaryValue("00010001"))
+    await csr_write(dut, REG_SETTING, BinaryValue("00010001"))
 
-    yield csr_write(dut, REG_DIV_LS, 39, True)
-    yield csr_write(dut, REG_DIV_HS, 3, True)
-    yield csr_write(dut, REG_FILTER, 0x00, True) # set local filter to 0x00
+    await csr_write(dut, REG_DIV_LS, 39, True)
+    await csr_write(dut, REG_DIV_HS, 3, True)
+    await csr_write(dut, REG_FILTER, 0x00, True) # set local filter to 0x00
     # TODO: reset rx...
 
     # disguise as node 0x01 to send data: 01 00 01 cd
-    yield tx_mm_write(dut, 0x00, 0xcd010001, False)
-    yield csr_write(dut, REG_TX_CTRL, BIT_TX_START | BIT_TX_RST_POINTER)
+    await tx_mm_write(dut, 0x00, 0xcd010001, False)
+    await csr_write(dut, REG_TX_CTRL, BIT_TX_START | BIT_TX_RST_POINTER)
 
-    yield Timer(40000000)
-    yield csr_write(dut, REG_TX_CTRL, BIT_TX_ABORT)
+    await Timer(40000000)
+    await csr_write(dut, REG_TX_CTRL, BIT_TX_ABORT)
 
     # disguise as node 0x01 to send data: 0f 08 02 cd dd
-    yield tx_mm_write(dut, 0x00, 0xcd02080f, True)
-    yield tx_mm_write(dut, 0x01, 0x000000dd, False)
-    yield csr_write(dut, REG_TX_CTRL, BIT_TX_START | BIT_TX_RST_POINTER)
+    await tx_mm_write(dut, 0x00, 0xcd02080f, True)
+    await tx_mm_write(dut, 0x01, 0x000000dd, False)
+    await csr_write(dut, REG_TX_CTRL, BIT_TX_START | BIT_TX_RST_POINTER)
 
-    #yield RisingEdge(dut.cdbus_m.rx_pending)
-    #yield RisingEdge(dut.cdbus_m.bus_idle)
-    yield RisingEdge(dut.cdbus_m.bus_idle)
-    yield Timer(5000000)
+    #await RisingEdge(dut.cdbus_m.rx_pending)
+    #await RisingEdge(dut.cdbus_m.bus_idle)
+    await RisingEdge(dut.cdbus_m.bus_idle)
+    await Timer(5000000)
 
-    yield send_frame(dut, b'\x05\x00\x01\xcd', 39, 3) # receive before previous packet send out
-    yield Timer(100000000)
+    await send_frame(dut, b'\x05\x00\x01\xcd', 39, 3) # receive before previous packet send out
+    await Timer(100000000)
 
-    value = yield rx_mm_read(dut, 0x00)
+    value = await rx_mm_read(dut, 0x00)
     dut._log.info("read: 0x%08x" % int(value))
-    yield Timer(100000000)
+    await Timer(100000000)
 
     dut._log.info("test_cdbus done.")
 

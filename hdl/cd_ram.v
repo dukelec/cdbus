@@ -6,14 +6,16 @@
  *
  * Copyright (c) 2017 DUKELEC, All rights reserved.
  *
- * Author: Duke Fong <duke@dukelec.com>
+ * Author: Duke Fong <d@d-l.io>
  */
+
+`define HAS_RD_EN
 
 module cd_ram
        #(
            parameter A_WIDTH = 6,
            parameter N_WIDTH = 1,
-           parameter MM4RD = 1
+           parameter MM4RX = 1
        )(
            input                 clk,
            input                 reset_n,
@@ -42,65 +44,76 @@ module cd_ram
            output reg            switch_fail
        );
 
-reg [7:0] ram0[2**N_WIDTH-1:0][2**A_WIDTH-1:0];
-reg [7:0] ram1[2**N_WIDTH-1:0][2**A_WIDTH-1:0];
-reg [7:0] ram2[2**N_WIDTH-1:0][2**A_WIDTH-1:0];
-reg [7:0] ram3[2**N_WIDTH-1:0][2**A_WIDTH-1:0];
-reg [7:0] flags[2**N_WIDTH-1:0];
+reg             [7:0] flags[2**N_WIDTH-1:0];
 
-reg [N_WIDTH-1:0] wr_sel;
-reg [N_WIDTH-1:0] rd_sel;
-reg [2**N_WIDTH-1:0] dirty;
-wire [N_WIDTH-1:0] mm_sel = MM4RD ? rd_sel : wr_sel;
+wire            [7:0] rd_bytes[2**N_WIDTH-1:0][3:0];
+`ifdef HAS_RD_EN
+wire                  rd_ens[2**N_WIDTH-1:0];
+`endif
+wire                  wr_ens[2**N_WIDTH-1:0][3:0];
+wire  [(A_WIDTH-1):0] rd_addrs[2**N_WIDTH-1:0];
+wire  [(A_WIDTH-1):0] wr_addrs[2**N_WIDTH-1:0];
+
+reg     [N_WIDTH-1:0] wr_sel;
+reg     [N_WIDTH-1:0] rd_sel;
+reg  [2**N_WIDTH-1:0] dirty;
 
 assign unread = (dirty != 0);
 
+genvar i, j;
 
+generate
+    for (i = 0; i < 2**N_WIDTH; i = i + 1) begin : cd_sram_array
+
+        if (MM4RX) begin
+`ifdef HAS_RD_EN
+            assign rd_ens[i] = mm_read & (rd_sel == i);
+`endif
+            assign rd_addrs[i] = mm_address;
+            assign wr_addrs[i] = wr_addr[(A_WIDTH+1):2];
+        end
+        else begin
+`ifdef HAS_RD_EN
+            assign rd_ens[i] = (mm_read & (wr_sel == i)) | (rd_en & (rd_sel == i));
+`endif
+            assign rd_addrs[i] = wr_sel == i ? mm_address : rd_addr[(A_WIDTH+1):2];
+            assign wr_addrs[i] = mm_address;
+        end
+
+        for (j = 0; j < 4; j = j + 1) begin : cd_sram_array_sub
+
+            if (MM4RX)
+                assign wr_ens[i][j] = wr_en & (wr_sel == i) & (wr_addr[1:0] == j);
+            else
+                assign wr_ens[i][j] = mm_write & (wr_sel == i) & mm_byteenable[j];
+
+            cd_sram #(.A_WIDTH(6)) cd_sram_m(
+                .clk(clk),
+                .ra(rd_addrs[i]),
+                .wa(wr_addrs[i]),
+                .rd(rd_bytes[i][j]),
+`ifdef HAS_RD_EN
+                .re(rd_ens[i]),
+`endif
+                .wd(MM4RX ? wr_byte : mm_writedata[7+8*j:8*j]),
+                .we(wr_ens[i][j])
+            );
+        end
+    end
+endgenerate
+
+
+`ifdef HAS_RD_EN
+always @(*) begin
+`else
 always @(posedge clk) begin
+`endif
+    rd_byte <= rd_bytes[rd_sel][rd_addr[1:0]];
 
-    if (rd_en) begin
-        if (rd_addr[1:0] == 2'b00)
-            rd_byte <= ram0[rd_sel][rd_addr[(A_WIDTH+1):2]];
-        else if (rd_addr[1:0] == 2'b01)
-            rd_byte <= ram1[rd_sel][rd_addr[(A_WIDTH+1):2]];
-        else if (rd_addr[1:0] == 2'b10)
-            rd_byte <= ram2[rd_sel][rd_addr[(A_WIDTH+1):2]];
-        else if (rd_addr[1:0] == 2'b11)
-            rd_byte <= ram3[rd_sel][rd_addr[(A_WIDTH+1):2]];
-        
-        rd_flags <= flags[rd_sel];
-    end
-
-    if (mm_read)
-        mm_readdata <= {ram3[mm_sel][mm_address],
-                        ram2[mm_sel][mm_address],
-                        ram1[mm_sel][mm_address],
-                        ram0[mm_sel][mm_address]};
-
-    if (MM4RD) begin
-        if (wr_en) begin
-            if (wr_addr[1:0] == 2'b00)
-                ram0[wr_sel][wr_addr[(A_WIDTH+1):2]] <= wr_byte;
-            else if (wr_addr[1:0] == 2'b01)
-                ram1[wr_sel][wr_addr[(A_WIDTH+1):2]] <= wr_byte;
-            else if (wr_addr[1:0] == 2'b10)
-                ram2[wr_sel][wr_addr[(A_WIDTH+1):2]] <= wr_byte;
-            else if (wr_addr[1:0] == 2'b11)
-                ram3[wr_sel][wr_addr[(A_WIDTH+1):2]] <= wr_byte;
-        end
-    end
-    else begin
-        if (mm_write) begin
-            if (mm_byteenable[0])
-                ram0[mm_sel][mm_address] <= mm_writedata[7:0];
-            if (mm_byteenable[1])
-                ram1[mm_sel][mm_address] <= mm_writedata[15:8];
-            if (mm_byteenable[2])
-                ram2[mm_sel][mm_address] <= mm_writedata[23:16];
-            if (mm_byteenable[3])
-                ram3[mm_sel][mm_address] <= mm_writedata[31:24];
-        end
-    end
+    if (MM4RX)
+        mm_readdata <= {rd_bytes[rd_sel][3], rd_bytes[rd_sel][2], rd_bytes[rd_sel][1], rd_bytes[rd_sel][0]};
+    else
+        mm_readdata <= {rd_bytes[wr_sel][3], rd_bytes[wr_sel][2], rd_bytes[wr_sel][1], rd_bytes[wr_sel][0]};
 end
 
 
@@ -113,6 +126,12 @@ always @(posedge clk or negedge reset_n)
     end
     else begin
         switch_fail <= 0;
+
+`ifdef HAS_RD_EN
+        rd_flags <= rd_en ? flags[rd_sel] : 8'dx;
+`else
+        rd_flags <= flags[rd_sel];
+`endif
 
         if (switch) begin
             if (dirty[wr_sel + 1'b1]) begin

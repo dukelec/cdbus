@@ -5,7 +5,7 @@
 #
 # Copyright (c) 2017 DUKELEC, All rights reserved.
 #
-# Author: Duke Fong <duke@dukelec.com>
+# Author: Duke Fong <d@d-l.io>
 #
 
 CDBUS_HDL = $(PWD)/../hdl
@@ -14,6 +14,7 @@ VERILOG_SOURCES = $(PWD)/cdbus_wrapper.v \
                   $(CDBUS_HDL)/cd_csr.v \
                   $(CDBUS_HDL)/cd_baud_rate.v \
                   $(CDBUS_HDL)/cd_ram.v \
+                  $(CDBUS_HDL)/cd_sram.v \
                   $(CDBUS_HDL)/cd_rx_bytes.v \
                   $(CDBUS_HDL)/cd_rx_des.v \
                   $(CDBUS_HDL)/cd_crc.v \
@@ -22,6 +23,6 @@ VERILOG_SOURCES = $(PWD)/cdbus_wrapper.v \
 
 TOPLEVEL = cdbus_wrapper
 MODULE = test_cdbus
-include $(COCOTB)/makefiles/Makefile.inc
-include $(COCOTB)/makefiles/Makefile.sim
+
+include $(shell cocotb-config --makefiles)/Makefile.sim
 

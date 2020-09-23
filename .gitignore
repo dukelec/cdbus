@@ -12,9 +12,10 @@
 .*
 *.pyc
 *.vvp
+*.vcd
 
-/tests/cdbus.vcd
-/tests/results.xml
+sim_build
+results.xml
 
 #
 # git files that we don't want to ignore even it they are dot-files

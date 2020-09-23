@@ -51,7 +51,7 @@ add_fileset_file tx_bytes_ser.v VERILOG PATH ../hdl/tx_bytes_ser.v
 # 
 # documentation links
 # 
-add_documentation_link Website http://dukelec.com
+add_documentation_link Website https://d-l.io
 
 
 # 
