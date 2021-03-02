@@ -126,12 +126,7 @@ always @(posedge clk or negedge reset_n)
     end
     else begin
         switch_fail <= 0;
-
-`ifdef HAS_RD_EN
-        rd_flags <= rd_en ? flags[rd_sel] : 8'dx;
-`else
         rd_flags <= flags[rd_sel];
-`endif
 
         if (switch) begin
             if (dirty[wr_sel + 1'b1]) begin
