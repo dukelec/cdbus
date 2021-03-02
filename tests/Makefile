@@ -8,8 +8,11 @@
 # Author: Duke Fong <d@d-l.io>
 #
 
+TOPLEVEL = $(TEST_WRAPPER)
+MODULE = $(TEST_CASE)
+
 CDBUS_HDL = $(PWD)/../hdl
-VERILOG_SOURCES = $(PWD)/cdbus_wrapper.v \
+VERILOG_SOURCES = $(PWD)/$(TOPLEVEL).v \
                   $(CDBUS_HDL)/cdbus.v \
                   $(CDBUS_HDL)/cd_csr.v \
                   $(CDBUS_HDL)/cd_baud_rate.v \
@@ -20,9 +23,6 @@ VERILOG_SOURCES = $(PWD)/cdbus_wrapper.v \
                   $(CDBUS_HDL)/cd_crc.v \
                   $(CDBUS_HDL)/cd_tx_bytes.v \
                   $(CDBUS_HDL)/cd_tx_ser.v
-
-TOPLEVEL = cdbus_wrapper
-MODULE = test_cdbus
 
 include $(shell cocotb-config --makefiles)/Makefile.sim
 
