@@ -242,12 +242,9 @@ Non-zero indicate the pointer of last received byte of the disturbed frame, incl
 ```
 
 
-## Simulation
-Install `iverilog` (>= v10) and `cocotb`, goto `tests/` folder, then type the command:
-```sh
-    $ make
-```
-Then you can checkout the waveform `cdbus.vcd` by GTKWave.
+## Test
+Install `iverilog` (>= v10) and `cocotb`, goto `tests/` folder, run `./test_all.sh` or `./test_all.sh test_xxx.py`.
+(You can checkout the waveform `cdbus.vcd` by GTKWave.)
 
 
 ## Ready To Use Devices
