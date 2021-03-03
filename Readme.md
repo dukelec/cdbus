@@ -75,7 +75,7 @@ The CDBUS-BS mode is suitable for high-speed applications with few nodes, and it
 
 | Register Name     |  Addr   | Access | Default         | Description                          | Remarks                                              |
 |-------------------|---------|--------|-----------------|--------------------------------------|------------------------------------------------------|
-| VERSION           |  0x00   | RD     | 0x0c            | Hardware version                     |                                                      |
+| VERSION           |  0x00   | RD     | 0x0d            | Hardware version                     |                                                      |
 | SETTING           |  0x02   | RD/WR  | 0x10            | Configs                              |                                                      |
 | IDLE_WAIT_LEN     |  0x04   | RD/WR  | 0x0a            | Idle wait time                       | Bit 7~0                                              |
 | TX_PERMIT_LEN_L   |  0x05   | RD/WR  | 0x14            | Allow send wait time                 | Bit 7~0                                              |
@@ -180,7 +180,7 @@ Output of irq = ((INT_FLAG & INT_MASK) != 0).
 | [2]     | Clear TX collision flag                                     |
 | [3]     | Clear TX error flag                                         |
 | [4]     | Abort TX                                                    |
-| [5]     | Send break character (for full-duplex and traditional mode) |
+| [5]     | Send break character                                        |
 
 **RX_PAGE_FLAG:**
 

@@ -11,7 +11,7 @@
 
 module cd_csr
     #(
-        parameter VERSION = 8'd12,
+        parameter VERSION = 8'd13,
         parameter DIV_LS = 346, // default: 115200 bps for 40MHz clk
         parameter DIV_HS = 346
     )(
