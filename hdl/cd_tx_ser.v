@@ -190,10 +190,8 @@ always @(posedge clk or negedge reset_n)
             if (arbitration_field && arbitration && bit_cap) begin
                 cd <= tx && !rx;  // tx: 1, rx: 0
                 err <= !tx && rx; // tx: 0, rx: 1
-                if (rx == rx && bit_cnt == 9) begin
-                    tx_en <= 1; // active tx_en
+                if (tx == rx && bit_cnt == 9)
                     arbitration_field <= 0;
-                end
             end
 
             if (bit_inc) begin
