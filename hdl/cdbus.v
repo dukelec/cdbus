@@ -32,18 +32,6 @@ module cdbus
         output              tx_en
     );
 
-reg [1:0] rx_d;
-always @(posedge clk)
-    rx_d <= {rx_d[0], rx};
-
-wire tx_d;
-wire tx_en_d;
-wire tx_may_invert = tx_invert ? ~tx_d : tx_d;
-
-assign tx_en = (reset_n && tx_push_pull) ? tx_en_d : 1'bz;
-assign tx = (reset_n && (tx_push_pull || !tx_may_invert)) ? tx_may_invert : 1'bz;
-
-
 wire full_duplex;
 wire break_sync;
 wire arbitration;
@@ -106,6 +94,18 @@ wire ser_ack_data;
 wire ser_is_crc_byte;
 wire ser_is_last_byte;
 wire [15:0] ser_crc_data;
+
+
+reg [1:0] rx_d;
+always @(posedge clk)
+    rx_d <= {rx_d[0], rx};
+
+wire tx_d;
+wire tx_en_d;
+wire tx_may_invert = tx_invert ? ~tx_d : tx_d;
+
+assign tx_en = (reset_n && tx_push_pull) ? tx_en_d : 1'bz;
+assign tx = (reset_n && (tx_push_pull || !tx_may_invert)) ? tx_may_invert : 1'bz;
 
 
 cd_csr #(
