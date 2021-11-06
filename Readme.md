@@ -77,13 +77,13 @@ The CDBUS-BS mode is suitable for high-speed applications with few nodes, and it
 |-------------------|---------|--------|-----------------|--------------------------------------|------------------------------------------------------|
 | VERSION           |  0x00   | RD     | 0x0d            | Hardware version                     |                                                      |
 | SETTING           |  0x02   | RD/WR  | 0x10            | Configs                              |                                                      |
-| IDLE_WAIT_LEN     |  0x04   | RD/WR  | 0x0a            | Idle wait time                       | Bit 7~0                                              |
-| TX_PERMIT_LEN_L   |  0x05   | RD/WR  | 0x14            | Allow send wait time                 | Bit 7~0                                              |
+| IDLE_WAIT_LEN     |  0x04   | RD/WR  | 0x0a            | Waiting time to enter idle           | Bit 7~0                                              |
+| TX_PERMIT_LEN_L   |  0x05   | RD/WR  | 0x14            | Waiting time to allows sending       | Bit 7~0                                              |
 | TX_PERMIT_LEN_H   |  0x06   | RD/WR  | 0x00            |                                      | Bit 9~8                                              |
-| MAX_IDLE_LEN_L    |  0x07   | RD/WR  | 0xc8            | Max idle wait time for BS mode       | Bit 7~0                                              |
+| MAX_IDLE_LEN_L    |  0x07   | RD/WR  | 0xc8            | Max idle waiting time in BS mode     | Bit 7~0                                              |
 | MAX_IDLE_LEN_H    |  0x08   | RD/WR  | 0x00            |                                      | Bit 9~8                                              |
-| TX_PRE_LEN        |  0x09   | RD/WR  | 0x01            | Active TX_EN before TX               | Bit 1~0, not used in arbitration mode                |
-| FILTER            |  0x0b   | RD/WR  | 0xff            | Set as local address                 |                                                      |
+| TX_PRE_LEN        |  0x09   | RD/WR  | 0x01            | How long to active TX_EN before TX   | Bit 1~0, not used in arbitration mode                |
+| FILTER            |  0x0b   | RD/WR  | 0xff            | Local address                        |                                                      |
 | DIV_LS_L          |  0x0c   | RD/WR  | 0x5a            | Low-speed rate setting               | Bit 7~0                                              |
 | DIV_LS_H          |  0x0d   | RD/WR  | 0x01            |                                      | Bit 15~8                                             |
 | DIV_HS_L          |  0x0e   | RD/WR  | 0x5a            | High-speed rate setting              | If not use dual rate, set the same value as DIV_LS   |
@@ -149,7 +149,7 @@ The minimum value is 2.
 |-------- |----------------------------------------------|
 | [0]     | 1: Bus in IDLE mode                          |
 | [1]     | 1: RX page ready for read                    |
-| [2]     | 1: Receive break character                   |
+| [2]     | 1: Break character received                  |
 | [3]     | 1: RX lost: no empty page for RX             |
 | [4]     | 1: RX error: frame broken                    |
 | [5]     | 1: TX page released by hardware              |
@@ -251,10 +251,13 @@ Install `iverilog` (>= v10) and `cocotb`, goto `tests/` folder, run `./test_all.
 
 The CDCTL controller family uses the CDBUS IP Core, which provide SPI, I<sup>2</sup>C and PCIe peripheral interfaces.  
 E.g. The tiny CDCTL-Bx module support SPI and I<sup>2</sup>C interfaces:  
-(This module is completely open source, including the source code project and Gerber files, in the `example/` directory.)  
+(This module is completely open source, including the source code and gerber files, in the `example/` directory.)  
 <img alt="cdctl_bx" src="docs/img/cdctl_bx.jpg" width="600px">
 
-For more information, visit: https://dukelec.com or https://d-l.io
+More relevant projects that may interest you:
+ - CDBUS GUI: https://github.com/dukelec/cdbus_gui
+ - CDNET: https://github.com/dukelec/cdnet
+
 
 ## License
 ```
