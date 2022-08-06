@@ -44,7 +44,10 @@ async def test_cdbus(dut):
     
     await csr_write(dut, 0, REG_FILTER, 0x01) # set local filter to 0x01
     await csr_write(dut, 1, REG_FILTER, 0x02) # set local filter to 0x02
-    await csr_write(dut, 1, REG_FILTER1, 0xe0) # set mcast filter
+    if 'REG_FILTER1' in globals():
+        await csr_write(dut, 1, REG_FILTER1, 0xe0) # set mcast filter
+    else:
+        await csr_write(dut, 1, REG_FILTER_M, 0xffe0) # for 23-bit branch
     
     await write_tx(dut, 0, b'\x01\xe0\x01\xcd')
     await csr_write(dut, 0, REG_TX_CTRL, BIT_TX_START | BIT_TX_RST_POINTER)
@@ -63,7 +66,10 @@ async def test_cdbus(dut):
     await FallingEdge(dut.irq1)
     
     # test another maddr
-    await csr_write(dut, 1, REG_FILTER2, 0xe1) # set mcast filter
+    if 'REG_FILTER2' in globals():
+        await csr_write(dut, 1, REG_FILTER2, 0xe1) # set mcast filter
+    else:
+        await csr_write(dut, 1, REG_FILTER_M, 0xe1e0) # for 23-bit branch
     
     await write_tx(dut, 0, b'\x01\xe1\x01\xcd')
     await csr_write(dut, 0, REG_TX_CTRL, BIT_TX_START | BIT_TX_RST_POINTER)
@@ -104,7 +110,7 @@ async def test_cdbus(dut):
     await csr_write(dut, 0, REG_TX_CTRL, BIT_TX_START | BIT_TX_RST_POINTER)
 
     await Timer(60, units='us')
-    dut.dbg0 = 1
+    dut.dbg0.value = 1
     if dut.irq1 != 0:
         dut._log.error(f'idx1: should not receive')
         await exit_err()

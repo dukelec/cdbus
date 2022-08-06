@@ -47,17 +47,17 @@ async def test_cdbus(dut):
     
     await write_tx(dut, 0, b'\x01\x02\x01\xcd') # node 0x01 send to 0x02
     await csr_write(dut, 0, REG_TX_CTRL, BIT_TX_START | BIT_TX_RST_POINTER)
-    dut.dbg0 = 0
+    dut.dbg0.value = 0
     
     await Timer(35, units='us')
-    dut.dbg0 = 1
+    dut.dbg0.value = 1
     await csr_write(dut, 0, REG_TX_CTRL, BIT_TX_ABORT)
     
     await write_tx(dut, 0, b'\x01\x02\x01\xc0') # node 0x01 send to 0x02
     await csr_write(dut, 0, REG_TX_CTRL, BIT_TX_START | BIT_TX_RST_POINTER)
 
     await Timer(50, units='us')
-    dut.dbg1 = 0
+    dut.dbg1.value = 0
     val = await csr_read(dut, 1, REG_INT_FLAG)
     dut._log.info(f'REG_INT_FLAG: 0x{int(val):02x}')
     

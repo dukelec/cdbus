@@ -10,19 +10,19 @@
  */
 
 module cdctl_spi(
-    input clk_i,
+    input       clk_i,
     output wire clk_o,
 
-    input sdi,
-    inout sdo,
-    input sck,
-    input nss,
+    input   sdi,
+    output  sdo,
+    input   sck,
+    input   nss,
 
-    input rx,
-    output tx,
-    output tx_en,
+    input   rx,
+    output  tx,
+    output  tx_en,
 
-    output int_n
+    output  int_n
 );
 
 assign clk_o = ~clk_i;

@@ -102,9 +102,9 @@ async def test_cdbus(dut):
     await write_tx(dut, 1, b'\xa5\x03\x01\xca') # node 0xa5 send to 0x03
     
     cocotb.fork(csr_write(dut, 1, REG_TX_CTRL, BIT_TX_START | BIT_TX_RST_POINTER))
-    dut.dbg0 = 0
+    dut.dbg0.value = 0
     await Timer(2700, units='ns') # wait frame pending after tx permit
-    dut.dbg0 = 1
+    dut.dbg0.value = 1
     cocotb.fork(csr_write(dut, 0, REG_TX_CTRL, BIT_TX_START | BIT_TX_RST_POINTER))
     
     await RisingEdge(dut.irq2)

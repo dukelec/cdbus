@@ -14,9 +14,6 @@
 module cdctl_bx_wrapper(
         input       clk,
 
-        input       intf_sel,
-        input [1:0] addr_sel,
-
         input       sdi,
         inout       sdo_sda,
         input       sck_scl,
@@ -34,9 +31,6 @@ assign bus_a = tx_en ? tx : 1'bz;
 
 cdctl_spi cdctl_bx_m(
           .clk_i(clk),
-          
-          //.intf_sel(intf_sel),
-          //.addr_sel(addr_sel),
           
           .sdi(sdi),
           .sdo(sdo_sda),

@@ -43,10 +43,10 @@ async def test_cdbus(dut):
         await Timer(50, units='ns')
         if int(val) > 50:
             break
-    dut.dbg0 = 0
+    dut.dbg0.value = 0
     await set_div(dut, 0, 39, 2)
     
-    dut.dbg0 = 1
+    dut.dbg0.value = 1
     val = dut.cdbus_m0.cd_rx_des_m.cd_baud_rate_rx_m.cnt
     dut._log.info(f'idx0 baud cnt after update: {int(val)}')
     if int(val) != 0:

@@ -50,7 +50,7 @@ async def test_cdbus(dut):
     await csr_write(dut, 1, REG_TX_CTRL, BIT_TX_START | BIT_TX_RST_POINTER)
     
     await Timer(4, units='us')
-    dut.dbg0 = 0
+    dut.dbg0.value = 0
     val = await csr_read(dut, 1, REG_INT_FLAG)
     dut._log.info(f'REG_INT_FLAG: 0x{int(val):02x}')
     
@@ -62,10 +62,10 @@ async def test_cdbus(dut):
     
     await csr_write(dut, 1, REG_RX_CTRL, BIT_RX_CLR_PENDING | BIT_RX_RST_POINTER)
     await FallingEdge(dut.irq1)
-    dut.dbg0 = 1
+    dut.dbg0.value = 1
     
     await Timer(1, units='us')
-    dut.dbg0 = 0
+    dut.dbg0.value = 0
     val = await csr_read(dut, 0, REG_INT_FLAG)
     dut._log.info(f'REG_INT_FLAG: 0x{int(val):02x}')
     
@@ -77,7 +77,7 @@ async def test_cdbus(dut):
     
     await csr_write(dut, 0, REG_RX_CTRL, BIT_RX_CLR_PENDING | BIT_RX_RST_POINTER)
     await FallingEdge(dut.irq0)
-    dut.dbg0 = 1
+    dut.dbg0.value = 1
     
     dut._log.info('test_cdbus done.')
     await exit_ok()

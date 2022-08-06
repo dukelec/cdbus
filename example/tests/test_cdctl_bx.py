@@ -87,18 +87,18 @@ async def send_bytes(dut, bytes, factor, is_z = True):
     await Timer(1000)
     factor += 1
     for byte in bytes:
-        dut.bus_a = 0
+        dut.bus_a.value = 0
         await Timer(factor * CLK_PERIOD)
         for i in range(0,8):
             if byte & 0x01 == 0:
-                dut.bus_a = 0
+                dut.bus_a.value = 0
             else:
-                dut.bus_a = BinaryValue("z") if is_z else 1
+                dut.bus_a.value = BinaryValue("z") if is_z else 1
             await Timer(factor * CLK_PERIOD)
             byte = byte >> 1
-        dut.bus_a = BinaryValue("z") if is_z else 1
+        dut.bus_a.value = BinaryValue("z") if is_z else 1
         await Timer(factor * CLK_PERIOD)
-        dut.bus_a = BinaryValue("z")
+        dut.bus_a.value = BinaryValue("z")
 
 async def send_frame(dut, bytes, factor_l, factor_h):
     await send_bytes(dut, bytes[0:1], factor_l)
@@ -109,23 +109,23 @@ async def send_frame(dut, bytes, factor_l, factor_h):
 async def spi_rw(dut, w_data = 0):
     r_data = 0
     for i in range(0,8):
-        dut.sdi = 1 if (w_data & 0x80) else 0
+        dut.sdi.value = 1 if (w_data & 0x80) else 0
         w_data = w_data << 1
-        dut.sck_scl = 0
+        dut.sck_scl.value = 0
         await Timer(SPI_PERIOD / 2)
-        dut.sck_scl = 1
+        dut.sck_scl.value = 1
         await ReadOnly()
         if dut.sdo_sda.value.binstr != 'z':
             r_data = (r_data << 1) | dut.sdo_sda.value.integer
         else:
             r_data = (r_data << 1) | 0
         await Timer(SPI_PERIOD / 2)
-        dut.sck_scl = 0
+        dut.sck_scl.value = 0
     return r_data
 
 async def spi_read(dut, address, len = 1):
     datas = []
-    dut.nss = 0
+    dut.nss.value = 0
     await Timer(SPI_PERIOD / 2)
     await spi_rw(dut, address)
     await Timer(SPI_PERIOD / 2)
@@ -134,19 +134,19 @@ async def spi_read(dut, address, len = 1):
         datas.append(ret_val)
         await Timer(SPI_PERIOD / 2)
         len -= 1
-    dut.nss = 1
+    dut.nss.value = 1
     await Timer(SPI_PERIOD / 2)
     return datas
 
 async def spi_write(dut, address, datas):
-    dut.nss = 0
+    dut.nss.value = 0
     await Timer(SPI_PERIOD / 2)
     await spi_rw(dut, address | 0x80)
     await Timer(SPI_PERIOD / 2)
     for data in datas:
         await spi_rw(dut, data)
         await Timer(SPI_PERIOD / 2)
-    dut.nss = 1
+    dut.nss.value = 1
     await Timer(SPI_PERIOD / 2)
 
 
@@ -156,9 +156,8 @@ async def test_cdctl_bx(dut):
     test_cdctl_bx
     """
     dut._log.info("test_cdctl_bx start.")
-    dut.intf_sel = 1
-    dut.nss = 1
-    dut.sck_scl = 0
+    dut.nss.value = 1
+    dut.sck_scl.value = 0
 
     cocotb.fork(Clock(dut.clk, CLK_PERIOD).start())
     await Timer(500000) # wait reset
