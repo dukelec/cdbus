@@ -9,6 +9,9 @@
  * Author: Duke Fong <d@d-l.io>
  */
 
+`define INT_FLAG_SNAPSHOT
+
+
 module cdctl_spi(
     input       clk_i,
     output wire clk_o,

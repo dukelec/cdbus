@@ -18,6 +18,9 @@ module cd_csr
         input               clk,
         input               reset_n,
         output              irq,
+`ifdef INT_FLAG_SNAPSHOT // avoid metastability due to int_flag
+        input               int_flag_update,
+`endif
 
         input       [4:0]   csr_address,
         input               csr_read,
@@ -99,6 +102,9 @@ reg rx_break_flag;
 reg [7:0] int_mask;
 wire [7:0] int_flag = {tx_error_flag, cd_flag, ~tx_pending, rx_error_flag,
                        rx_lost_flag, rx_break_flag, rx_pending, bus_idle};
+`ifdef INT_FLAG_SNAPSHOT
+reg [7:0] int_flag_snapshot;
+`endif
 
 assign tx_ram_wr_en = (csr_address == REG_TX) ? csr_write : 1'b0;
 
@@ -135,7 +141,11 @@ always @(*)
         REG_DIV_HS_H:
             csr_readdata = div_hs[15:8];
         REG_INT_FLAG:
+`ifdef INT_FLAG_SNAPSHOT
+            csr_readdata = int_flag_snapshot;
+`else
             csr_readdata = int_flag;
+`endif
         REG_INT_MASK:
             csr_readdata = int_mask;
         REG_RX:
@@ -180,6 +190,9 @@ always @(posedge clk or negedge reset_n)
         rx_break_flag <= 0;
 
         int_mask <= 0;
+`ifdef INT_FLAG_SNAPSHOT
+        int_flag_snapshot <= 0;
+`endif
 
         rx_ram_rd_addr <= 0;
         rx_ram_rd_done <= 0;
@@ -196,6 +209,10 @@ always @(posedge clk or negedge reset_n)
         tx_ram_switch <= 0;
         tx_abort <= 0;
 
+`ifdef INT_FLAG_SNAPSHOT
+        if (int_flag_update)
+            int_flag_snapshot <= int_flag;
+`endif
         if (rx_error)
             rx_error_flag <= 1;
         if (rx_ram_lost)
