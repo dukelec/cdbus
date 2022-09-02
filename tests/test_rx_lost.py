@@ -53,9 +53,12 @@ async def test_cdbus(dut):
         await RisingEdge(dut.irq0)
     
     last_i = 0
+    lost_detected = False
     for i in range(8):
         val = await csr_read(dut, 1, REG_INT_FLAG)
         dut._log.info(f'REG_INT_FLAG: 0x{int(val):02x}')
+        if val & 0x08:
+            lost_detected = True
         if not (val & 0x02):
             dut._log.info(f'no rx for read, break')
             break
@@ -67,8 +70,9 @@ async def test_cdbus(dut):
         await csr_write(dut, 1, REG_RX_CTRL, BIT_RX_CLR_PENDING | BIT_RX_RST_POINTER)
         last_i = i
     
-    await csr_write(dut, 1, REG_RX_CTRL, BIT_RX_CLR_LOST)
-    await FallingEdge(dut.irq1)
+    if not lost_detected:
+        dut._log.error(f'rx lost not detect')
+        await exit_err()
     
     if last_i != 6:
         dut._log.error(f'last_i != 6')

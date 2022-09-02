@@ -63,7 +63,6 @@ async def test_cdbus(dut):
     if not (val & BIT_FLAG_RX_BREAK):
         dut._log.error(f'idx2: not receive break')
         await exit_err()
-    await csr_write(dut, 2, REG_RX_CTRL, BIT_RX_CLR_BREAK)
     await FallingEdge(dut.irq2)
     
     await RisingEdge(dut.irq2)

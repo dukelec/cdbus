@@ -11,7 +11,7 @@
 
 module cd_csr
     #(
-        parameter VERSION = 8'd13,
+        parameter VERSION = 8'h0e,
         parameter DIV_LS = 346, // default: 115200 bps for 40MHz clk
         parameter DIV_HS = 346
     )(
@@ -213,6 +213,19 @@ always @(posedge clk or negedge reset_n)
         if (int_flag_update)
             int_flag_snapshot <= int_flag;
 `endif
+
+        if (csr_read) begin
+            if (csr_address == REG_INT_FLAG) begin
+                rx_error_flag <= 0;
+                rx_lost_flag <= 0;
+                rx_break_flag <= 0;
+                cd_flag <= 0;
+                tx_error_flag <= 0;
+            end
+            if (csr_address == REG_RX)
+                rx_ram_rd_addr <= rx_ram_rd_addr + 1'd1; 
+        end
+
         if (rx_error)
             rx_error_flag <= 1;
         if (rx_ram_lost)
@@ -225,9 +238,6 @@ always @(posedge clk or negedge reset_n)
             tx_error_flag <= 1;
         if (ack_break)
             has_break <= 0;
-
-        if (csr_read && csr_address == REG_RX)
-            rx_ram_rd_addr <= rx_ram_rd_addr + 1'd1;
 
         if (csr_write)
             case (csr_address)
@@ -267,32 +277,22 @@ always @(posedge clk or negedge reset_n)
                 REG_TX:
                     tx_ram_wr_addr <= tx_ram_wr_addr + 1'd1;
                 REG_RX_CTRL: begin
-                    if (csr_writedata[0])
-                        rx_ram_rd_addr <= 0;
-                    if (csr_writedata[1])
-                        rx_ram_rd_done <= 1;
-                    if (csr_writedata[2])
-                        rx_lost_flag <= 0;
-                    if (csr_writedata[3])
-                        rx_error_flag <= 0;
                     if (csr_writedata[4])
                         rx_clean_all <= 1;
-                    if (csr_writedata[5])
-                        rx_break_flag <= 0;
+                    if (csr_writedata[1])
+                        rx_ram_rd_done <= 1;
+                    if (csr_writedata[0])
+                        rx_ram_rd_addr <= 0;
                 end
                 REG_TX_CTRL: begin
-                    if (csr_writedata[0])
-                        tx_ram_wr_addr <= 0;
-                    if (csr_writedata[1])
-                        tx_ram_switch <= 1;
-                    if (csr_writedata[2])
-                        cd_flag <= 0;
-                    if (csr_writedata[3])
-                        tx_error_flag <= 0;
-                    if (csr_writedata[4])
-                        tx_abort <= 1;
                     if (csr_writedata[5])
                         has_break <= 1;
+                    if (csr_writedata[4])
+                        tx_abort <= 1;
+                    if (csr_writedata[1])
+                        tx_ram_switch <= 1;
+                    if (csr_writedata[0])
+                        tx_ram_wr_addr <= 0;
                 end
                 REG_RX_ADDR: begin
                     rx_ram_rd_addr <= csr_writedata;

@@ -59,7 +59,7 @@ async def test_cdbus(dut):
         dut._log.error(f'idx1: receive mismatch')
         await exit_err()
     
-    await csr_write(dut, 1, REG_RX_CTRL, BIT_RX_CLR_ERROR | BIT_RX_CLR_PENDING | BIT_RX_RST_POINTER)
+    await csr_write(dut, 1, REG_RX_CTRL, BIT_RX_CLR_PENDING | BIT_RX_RST_POINTER)
     await FallingEdge(dut.irq1)
     
     

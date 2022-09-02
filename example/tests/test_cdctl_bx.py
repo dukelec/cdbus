@@ -44,42 +44,37 @@ REG_RX_PAGE_FLAG    = 0x19
 REG_FILTER1         = 0x1a
 REG_FILTER2         = 0x1b
 
-BIT_SETTING_TX_PUSH_PULL    = 1 << 0
-BIT_SETTING_TX_INVERT       = 1 << 1
-BIT_SETTING_USER_CRC        = 1 << 2
-BIT_SETTING_NO_DROP         = 1 << 3
-BIT_SETTING_ARBITRATE       = 1 << 4
-BIT_SETTING_BREAK_SYNC      = 1 << 5
 BIT_SETTING_FULL_DUPLEX     = 1 << 6
+BIT_SETTING_BREAK_SYNC      = 1 << 5
+BIT_SETTING_ARBITRATE       = 1 << 4
+BIT_SETTING_NO_DROP         = 1 << 3
+BIT_SETTING_USER_CRC        = 1 << 2
+BIT_SETTING_TX_INVERT       = 1 << 1
+BIT_SETTING_TX_PUSH_PULL    = 1 << 0
 
-BIT_FLAG_BUS_IDLE           = 1 << 0
-BIT_FLAG_RX_PENDING         = 1 << 1
-BIT_FLAG_RX_BREAK           = 1 << 2
-BIT_FLAG_RX_LOST            = 1 << 3
-BIT_FLAG_RX_ERROR           = 1 << 4
-BIT_FLAG_TX_BUF_CLEAN       = 1 << 5
-BIT_FLAG_TX_CD              = 1 << 6
 BIT_FLAG_TX_ERROR           = 1 << 7
+BIT_FLAG_TX_CD              = 1 << 6
+BIT_FLAG_TX_BUF_CLEAN       = 1 << 5
+BIT_FLAG_RX_ERROR           = 1 << 4
+BIT_FLAG_RX_LOST            = 1 << 3
+BIT_FLAG_RX_BREAK           = 1 << 2
+BIT_FLAG_RX_PENDING         = 1 << 1
+BIT_FLAG_BUS_IDLE           = 1 << 0
 
-BIT_RX_RST_POINTER          = 1 << 0
-BIT_RX_CLR_PENDING          = 1 << 1
-BIT_RX_CLR_LOST             = 1 << 2
-BIT_RX_CLR_ERROR            = 1 << 3
 BIT_RX_RST                  = 1 << 4
-BIT_RX_CLR_BREAK            = 1 << 5
+BIT_RX_CLR_PENDING          = 1 << 1
+BIT_RX_RST_POINTER          = 1 << 0
 
-BIT_TX_RST_POINTER          = 1 << 0
-BIT_TX_START                = 1 << 1
-BIT_TX_CLR_CD               = 1 << 2
-BIT_TX_CLR_ERROR            = 1 << 3
-BIT_TX_ABORT                = 1 << 4
 BIT_TX_SEND_BREAK           = 1 << 5
+BIT_TX_ABORT                = 1 << 4
+BIT_TX_START                = 1 << 1
+BIT_TX_RST_POINTER          = 1 << 0
 
 
 CLK_FREQ = 40000000
 CLK_PERIOD = 1000000000000 / CLK_FREQ
 
-SPI_FREQ = 20000000
+SPI_FREQ = 32000000
 SPI_PERIOD = 1000000000000 / SPI_FREQ
 
 

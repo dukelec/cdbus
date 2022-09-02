@@ -75,7 +75,7 @@ The CDBUS-BS mode is suitable for high-speed applications with few nodes, and it
 
 | Register Name     |  Addr   | Access | Default         | Description                          | Remarks                                              |
 |-------------------|---------|--------|-----------------|--------------------------------------|------------------------------------------------------|
-| VERSION           |  0x00   | RD     | 0x0d            | Hardware version                     |                                                      |
+| VERSION           |  0x00   | RD     | 0x0e            | Hardware version                     |                                                      |
 | SETTING           |  0x02   | RD/WR  | 0x10            | Configs                              |                                                      |
 | IDLE_WAIT_LEN     |  0x04   | RD/WR  | 0x0a            | Waiting time to enter idle           | Bit 7~0                                              |
 | TX_PERMIT_LEN_L   |  0x05   | RD/WR  | 0x14            | Waiting time to allows sending       | Bit 7~0                                              |
@@ -104,19 +104,19 @@ The CDBUS-BS mode is suitable for high-speed applications with few nodes, and it
 
 | FIELD   | DESCRIPTION                                       |
 |-------- |---------------------------------------------------|
-| [0]     | Enable push-pull output for tx and tx_en pin      |
-| [1]     | Invert tx output                                  |
-| [2]     | CRC maintained by user                            |
-| [3]     | Save broken frame                                 |
-| [4]     | Enable arbitration                                |
-| [5]     | Break Sync mode                                   |
 | [6]     | Full duplex mode                                  |
+| [5]     | Break Sync mode                                   |
+| [4]     | Enable arbitration                                |
+| [3]     | Save broken frame                                 |
+| [2]     | CRC maintained by user                            |
+| [1]     | Invert tx output                                  |
+| [0]     | Enable push-pull output for tx and tx_en pin      |
 
-| [4] | [5] | [6] | DESCRIPTION                     |
+| [6] | [5] | [4] | DESCRIPTION                     |
 |-----|-----|-----|---------------------------------|
-| 1   | 0   | 0   | CDBUS-A mode (default)          |
+| 0   | 0   | 1   | CDBUS-A mode (default)          |
 | 0   | 1   | 0   | CDBUS-BS mode                   |
-| 0   | 0   | 1   | Full-duplex mode                |
+| 1   | 0   | 0   | Full-duplex mode                |
 | 0   | 0   | 0   | Traditional half-duplex mode    |
 
 **FILTERS:**
@@ -147,14 +147,16 @@ The minimum value is 2.
 
 | FIELD   | DESCRIPTION                                  |
 |-------- |----------------------------------------------|
-| [0]     | 1: Bus in IDLE mode                          |
-| [1]     | 1: RX page ready for read                    |
-| [2]     | 1: Break character received                  |
-| [3]     | 1: RX lost: no empty page for RX             |
-| [4]     | 1: RX error: frame broken                    |
-| [5]     | 1: TX page released by hardware              |
-| [6]     | 1: TX collision detected                     |
 | [7]     | 1: TX error: tx is 0, but rx is 1            |
+| [6]     | 1: TX collision detected                     |
+| [5]     | 1: TX page released by hardware              |
+| [4]     | 1: RX error: frame broken                    |
+| [3]     | 1: RX lost: no empty page for RX             |
+| [2]     | 1: Break character received                  |
+| [1]     | 1: RX page ready for read                    |
+| [0]     | 1: Bus in IDLE mode                          |
+
+Reading this register will automatically clear bit7, bit6, bit4, bit3 and bit2.
 
 **INT_MASK:**
 
@@ -164,23 +166,18 @@ Output of irq = ((INT_FLAG & INT_MASK) != 0).
 
 | FIELD   | DESCRIPTION                 |
 |-------- |-----------------------------|
-| [0]     | Reset RX page read pointer  |
-| [1]     | Switch RX page              |
-| [2]     | Clear RX lost flag          |
-| [3]     | Clear RX error flag         |
 | [4]     | Reset RX block              |
-| [5]     | Clear RX break flag         |
+| [1]     | Switch RX page              |
+| [0]     | Reset RX page read pointer  |
 
 **TX_CTRL:**
 
 | FIELD   | DESCRIPTION                                                 |
 |-------- |-------------------------------------------------------------|
-| [0]     | Reset TX page write pointer                                 |
-| [1]     | Switch TX page                                              |
-| [2]     | Clear TX collision flag                                     |
-| [3]     | Clear TX error flag                                         |
-| [4]     | Abort TX                                                    |
 | [5]     | Send break character                                        |
+| [4]     | Abort TX                                                    |
+| [1]     | Switch TX page                                              |
+| [0]     | Reset TX page write pointer                                 |
 
 **RX_PAGE_FLAG:**
 
