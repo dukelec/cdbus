@@ -20,7 +20,7 @@ from PyCRC.CRC16 import CRC16
 def modbus_crc(data):
     return CRC16(modbus_flag=True).calculate(data).to_bytes(2, byteorder='little')
 
-DFT_VERSION         = 0x0d
+DFT_VERSION         = 0x0e
 
 REG_VERSION         = 0x00
 REG_SETTING         = 0x01
@@ -38,36 +38,31 @@ REG_TX_CTRL         = 0x0c
 REG_RX_PAGE_FLAG    = 0x0d
 REG_FILTER_M        = 0x0e
 
-BIT_SETTING_TX_PUSH_PULL    = 1 << 0
-BIT_SETTING_TX_INVERT       = 1 << 1
-BIT_SETTING_USER_CRC        = 1 << 2
-BIT_SETTING_NO_DROP         = 1 << 3
-BIT_SETTING_ARBITRATE       = 1 << 4
-BIT_SETTING_BREAK_SYNC      = 1 << 5
 BIT_SETTING_FULL_DUPLEX     = 1 << 6
+BIT_SETTING_BREAK_SYNC      = 1 << 5
+BIT_SETTING_ARBITRATE       = 1 << 4
+BIT_SETTING_NO_DROP         = 1 << 3
+BIT_SETTING_USER_CRC        = 1 << 2
+BIT_SETTING_TX_INVERT       = 1 << 1
+BIT_SETTING_TX_PUSH_PULL    = 1 << 0
 
-BIT_FLAG_BUS_IDLE           = 1 << 0
-BIT_FLAG_RX_PENDING         = 1 << 1
-BIT_FLAG_RX_BREAK           = 1 << 2
-BIT_FLAG_RX_LOST            = 1 << 3
-BIT_FLAG_RX_ERROR           = 1 << 4
-BIT_FLAG_TX_BUF_CLEAN       = 1 << 5
-BIT_FLAG_TX_CD              = 1 << 6
 BIT_FLAG_TX_ERROR           = 1 << 7
+BIT_FLAG_TX_CD              = 1 << 6
+BIT_FLAG_TX_BUF_CLEAN       = 1 << 5
+BIT_FLAG_RX_ERROR           = 1 << 4
+BIT_FLAG_RX_LOST            = 1 << 3
+BIT_FLAG_RX_BREAK           = 1 << 2
+BIT_FLAG_RX_PENDING         = 1 << 1
+BIT_FLAG_BUS_IDLE           = 1 << 0
 
-BIT_RX_RST_POINTER          = 1 << 0
-BIT_RX_CLR_PENDING          = 1 << 1
-BIT_RX_CLR_LOST             = 1 << 2
-BIT_RX_CLR_ERROR            = 1 << 3
 BIT_RX_RST                  = 1 << 4
-BIT_RX_CLR_BREAK            = 1 << 5
+BIT_RX_CLR_PENDING          = 1 << 1
+BIT_RX_RST_POINTER          = 1 << 0
 
-BIT_TX_RST_POINTER          = 1 << 0
-BIT_TX_START                = 1 << 1
-BIT_TX_CLR_CD               = 1 << 2
-BIT_TX_CLR_ERROR            = 1 << 3
-BIT_TX_ABORT                = 1 << 4
 BIT_TX_SEND_BREAK           = 1 << 5
+BIT_TX_ABORT                = 1 << 4
+BIT_TX_START                = 1 << 1
+BIT_TX_RST_POINTER          = 1 << 0
 
 
 async def _send_bytes(dut, bytes_, sys_clk, factor, is_z=True):

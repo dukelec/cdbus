@@ -11,7 +11,7 @@
 
 module cd_csr
     #(
-        parameter VERSION = 8'd13,
+        parameter VERSION = 8'h0e,
         parameter DIV_LS = 346, // default: 115200 bps for 40MHz clk
         parameter DIV_HS = 346
     )(
@@ -167,6 +167,16 @@ always @(posedge clk or negedge reset_n)
         tx_ram_switch <= 0;
         tx_abort <= 0;
 
+        if (csr_read) begin
+            if (csr_address == REG_INT_FLAG) begin
+                rx_error_flag <= 0;
+                rx_lost_flag <= 0;
+                rx_break_flag <= 0;
+                cd_flag <= 0;
+                tx_error_flag <= 0;
+            end
+        end
+
         if (rx_error)
             rx_error_flag <= 1;
         if (rx_ram_lost)
@@ -230,29 +240,19 @@ always @(posedge clk or negedge reset_n)
                         int_mask <= csr_writedata[7:0];
                 REG_RX_CTRL:
                     if (csr_byteenable[0]) begin
-                        if (csr_writedata[1])
-                            rx_ram_rd_done <= 1;
-                        if (csr_writedata[2])
-                            rx_lost_flag <= 0;
-                        if (csr_writedata[3])
-                            rx_error_flag <= 0;
                         if (csr_writedata[4])
                             rx_clean_all <= 1;
-                        if (csr_writedata[5])
-                            rx_break_flag <= 0;
+                        if (csr_writedata[1])
+                            rx_ram_rd_done <= 1;
                     end
                 REG_TX_CTRL:
                     if (csr_byteenable[0]) begin
-                        if (csr_writedata[1])
-                            tx_ram_switch <= 1;
-                        if (csr_writedata[2])
-                            cd_flag <= 0;
-                        if (csr_writedata[3])
-                            tx_error_flag <= 0;
-                        if (csr_writedata[4])
-                            tx_abort <= 1;
                         if (csr_writedata[5])
                             has_break <= 1;
+                        if (csr_writedata[4])
+                            tx_abort <= 1;
+                        if (csr_writedata[1])
+                            tx_ram_switch <= 1;
                     end
                 REG_FILTER_M: begin
                     if (csr_byteenable[0])

@@ -10,7 +10,7 @@ This document only shows the modifications. For the protocol and original docume
  
 | Register Name |Addr     | Access | Default                | Description                               | Remarks                       |
 |---------------|---------|--------|------------------------|-------------------------------------------|-------------------------------|
-| VERSION       |  0x00   | RD     | 0x0d                   | Hardware version                          |                               |
+| VERSION       |  0x00   | RD     | 0x0e                   | Hardware version                          |                               |
 | SETTING       |  0x01   | RD/WR  | 0x10                   | Configs                                   |                               |
 | IDLE_WAIT_LEN |  0x02   | RD/WR  | 0x0a                   | How long to enter idle                    |                               |
 | TX_PERMIT_LEN |  0x03   | RD/WR  | 0x14                   | How long to allow sending                 |                               |
