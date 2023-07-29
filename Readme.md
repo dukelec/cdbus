@@ -29,7 +29,7 @@ In this case, it supports:
 ### Arbitration Mode (CDBUS-A)
 
 * It introduces an arbitration mechanism that automatically avoids conflicts like the CAN bus.
-* Support dual baud rate, provide high speed communication, the baud rate in the data phase is up to: `sys_freq` ÷ 3. (e.g. 50 Mbps for 150 MHz `sys_freq`.)
+* Support dual baud rate, provide high speed communication, the baud rate in the high speed phase is up to: `sysclk` ÷ 3. (e.g. 50 Mbps for 150 MHz `sysclk`.)
 * Supports unicast, multicast and broadcast.
 * The maximum user data size is 253 bytes.
 * Hardware packing, unpacking, verification and filtering, save your time and CPU usage.
@@ -41,11 +41,17 @@ The protocol timing example, include only one user data byte:
 ![protocol](docs/img/protocol.svg)
 
 Tips:
- - When a high-priority node needs to send unimportant data, you can dynamically increase the send wait time (TX_PERMIT_LEN).
+ - When a high-priority node needs to send unimportant data, you can dynamically increase the time of TX_PERMIT_LEN.
 
 Arbitration example:
 
 <img alt="arbitration" src="docs/img/arbitration.svg" width="75%">
+
+Example waveforms for TX output and TX_EN pins:
+
+<img alt="arbitration" src="docs/img/to_te_wave.svg" width="75%">
+
+The RX receive data sample point is at 1/2 bit; the TX readback data sample point is at 3/4 bit.
 
 ### Break Sync Mode (CDBUS-BS)
 
@@ -54,8 +60,8 @@ In CDBUS-A mode, if the low-speed part takes a lot of time, it will be a communi
 In this case, single-rate peer-to-peer bus communication can be implemented by CDBUS-BS mode:
 
  - The TX_PERMIT_LEN parameter is configured differently for different nodes, and the difference needs to be large enough to avoid conflicts.
- - If any node has pending tx frame before TX-permit point, then start send at the TX-permit point.
- - Or wait until the idle time exceeds MAX_IDLE_LEN, then send a break character to bring the bus out of idle state.
+ - If any node has pending tx frame before TX-permit point, then start sending at the TX-permit point.
+ - Otherwise, wait until the idle time exceeds MAX_IDLE_LEN, and when there has tx frame pending, send a break character first to bring the bus out of the idle state.
 
 <img alt="arbitration" src="docs/img/break_sync.svg" width="75%">
 
@@ -73,31 +79,31 @@ The CDBUS-BS mode is suitable for high-speed applications with few nodes, and it
 
 ## Registers
 
-| Register Name     |  Addr   | Access | Default         | Description                          | Remarks                                              |
-|-------------------|---------|--------|-----------------|--------------------------------------|------------------------------------------------------|
-| VERSION           |  0x00   | RD     | 0x0e            | Hardware version                     |                                                      |
-| SETTING           |  0x02   | RD/WR  | 0x10            | Configs                              |                                                      |
-| IDLE_WAIT_LEN     |  0x04   | RD/WR  | 0x0a            | Waiting time to enter idle           | Bit 7~0                                              |
-| TX_PERMIT_LEN_L   |  0x05   | RD/WR  | 0x14            | Waiting time to allows sending       | Bit 7~0                                              |
-| TX_PERMIT_LEN_H   |  0x06   | RD/WR  | 0x00            |                                      | Bit 9~8                                              |
-| MAX_IDLE_LEN_L    |  0x07   | RD/WR  | 0xc8            | Max idle waiting time in BS mode     | Bit 7~0                                              |
-| MAX_IDLE_LEN_H    |  0x08   | RD/WR  | 0x00            |                                      | Bit 9~8                                              |
-| TX_PRE_LEN        |  0x09   | RD/WR  | 0x01            | How long to active TX_EN before TX   | Bit 1~0, not used in arbitration mode                |
-| FILTER            |  0x0b   | RD/WR  | 0xff            | Local address                        |                                                      |
-| DIV_LS_L          |  0x0c   | RD/WR  | 0x5a            | Low-speed rate setting               | Bit 7~0                                              |
-| DIV_LS_H          |  0x0d   | RD/WR  | 0x01            |                                      | Bit 15~8                                             |
-| DIV_HS_L          |  0x0e   | RD/WR  | 0x5a            | High-speed rate setting              | If not use dual rate, set the same value as DIV_LS   |
-| DIV_HS_H          |  0x0f   | RD/WR  | 0x01            |                                      |                                                      |
-| INT_FLAG          |  0x10   | RD     | n/a             | Status                               |                                                      |
-| INT_MASK          |  0x11   | RD/WR  | 0x00            | Interrupt mask                       |                                                      |
-| RX                |  0x14   | RD     | n/a             | Read RX page                         |                                                      |
-| TX                |  0x15   | WR     | n/a             | Write TX page                        |                                                      |
-| RX_CTRL           |  0x16   | WR     | n/a             | RX control                           |                                                      |
-| TX_CTRL           |  0x17   | WR     | n/a             | TX control                           |                                                      |
-| RX_ADDR           |  0x18   | RD/WR  | 0x00            | RX page read pointer                 | Rarely used                                          |
-| RX_PAGE_FLAG      |  0x19   | RD     | n/a             | RX page flag                         | Mainly used for debugging                            |
-| FILTER1           |  0x1a   | RD/WR  | 0xff            | Multicast filter1                    |                                                      |
-| FILTER2           |  0x1b   | RD/WR  | 0xff            | Multicast filter2                    |                                                      |
+| Register Name     |  Addr   | Access | Default         | Description (8-bit width by default if not specified)|
+|-------------------|---------|--------|-----------------|------------------------------------------------------|
+| VERSION           |  0x00   | RD     | 0x0e            | Hardware version                                     |
+| SETTING           |  0x02   | RD/WR  | 0x10            | Configs                                              |
+| IDLE_WAIT_LEN     |  0x04   | RD/WR  | 0x0a            | Waiting time to enter idle                           |
+| TX_PERMIT_LEN_L   |  0x05   | RD/WR  | 0x14            | Waiting time to allows sending (10 bits)             |
+| TX_PERMIT_LEN_H   |  0x06   | RD/WR  | 0x00            |                                                      |
+| MAX_IDLE_LEN_L    |  0x07   | RD/WR  | 0xc8            | Max idle waiting time in BS mode (10 bits)           |
+| MAX_IDLE_LEN_H    |  0x08   | RD/WR  | 0x00            |                                                      |
+| TX_PRE_LEN        |  0x09   | RD/WR  | 0x01            | Enable TX_EN how long ahead than TX output (2 bits)  |
+| FILTER            |  0x0b   | RD/WR  | 0xff            | Local address                                        |
+| DIV_LS_L          |  0x0c   | RD/WR  | 0x5a            | Low-speed rate setting (16 bits)                     |
+| DIV_LS_H          |  0x0d   | RD/WR  | 0x01            |                                                      |
+| DIV_HS_L          |  0x0e   | RD/WR  | 0x5a            | High-speed rate setting (16 bits)                    |
+| DIV_HS_H          |  0x0f   | RD/WR  | 0x01            |                                                      |
+| INT_FLAG          |  0x10   | RD     | n/a             | Status                                               |
+| INT_MASK          |  0x11   | RD/WR  | 0x00            | Interrupt mask                                       |
+| RX                |  0x14   | RD     | n/a             | Read RX page                                         |
+| TX                |  0x15   | WR     | n/a             | Write TX page                                        |
+| RX_CTRL           |  0x16   | WR     | n/a             | RX control                                           |
+| TX_CTRL           |  0x17   | WR     | n/a             | TX control                                           |
+| RX_ADDR           |  0x18   | RD/WR  | 0x00            | RX page read pointer (rarely used)                   |
+| RX_PAGE_FLAG      |  0x19   | RD     | n/a             | RX page flag                                         |
+| FILTER_M1         |  0x1a   | RD/WR  | 0xff            | Multicast filter1                                    |
+| FILTER_M2         |  0x1b   | RD/WR  | 0xff            | Multicast filter2                                    |
 
 
 **SETTING:**
@@ -109,7 +115,7 @@ The CDBUS-BS mode is suitable for high-speed applications with few nodes, and it
 | [4]     | Enable arbitration                                |
 | [3]     | Save broken frame                                 |
 | [2]     | CRC maintained by user                            |
-| [1]     | Invert tx output                                  |
+| [1]     | Invert tx pin output                              |
 | [0]     | Enable push-pull output for tx and tx_en pin      |
 
 | [6] | [5] | [4] | DESCRIPTION                     |
@@ -119,11 +125,19 @@ The CDBUS-BS mode is suitable for high-speed applications with few nodes, and it
 | 1   | 0   | 0   | Full-duplex mode                |
 | 0   | 0   | 0   | Traditional half-duplex mode    |
 
+**TX_PRE_LEN:**
+
+Example waveforms for TX output and TX_EN pins (TX_PRE_LEN = 1 bit):
+
+<img alt="arbitration" src="docs/img/to_te_wave_pre.svg" width="75%">
+
+Unused for Arbitration mode and the break character automatically generated by BS mode.
+
 **FILTERS:**
 
 Match from top to bottom:
 
-| SRC_ADDR  | DST_ADDR | FILTER       | FILTERn          | Receive or drop | Remarks          |
+| SRC_ADDR  | DST_ADDR | FILTER       | FILTER_Mx        | Receive or not  | Remarks          |
 |---------- |----------|--------------|------------------|-----------------|------------------|
 | not care  | not care | 255          | not care         | Receive         | Promiscuous mode |
 | = FILTER  | not care | != 255       | not care         | Drop            | Avoid loopback   |
@@ -134,20 +148,22 @@ Match from top to bottom:
 
 It is recommended to reserve the address from `0xe0` to `0xfe` as the multicast address.
 
-The default value 0xff of FILTERn means not enabled.
+The default value 0xff of FILTER_Mx means not enabled.
 
 **DIV_xx_x:**
 
 Baud rate divider value:
-DIV_xx[15:0] = sys_freq ÷ baud_rate − 1
+DIV_xx[15:0] = sysclk ÷ baud_rate − 1
 
 The minimum value is 2.
+
+For single rate, DIV_HS needs to be set to the same value as DIV_LS.
 
 **INT_FLAG:**
 
 | FIELD   | DESCRIPTION                                  |
 |-------- |----------------------------------------------|
-| [7]     | 1: TX error: tx is 0, but rx is 1            |
+| [7]     | 1: TX error: TX is 0, but RX is sampled as 1 |
 | [6]     | 1: TX collision detected                     |
 | [5]     | 1: TX page released by hardware              |
 | [4]     | 1: RX error: frame broken                    |
@@ -184,6 +200,8 @@ Output of irq = ((INT_FLAG & INT_MASK) != 0).
 Value zero indicate the frame in current RX page is correct;  
 Non-zero indicate the pointer of last received byte of the disturbed frame, include CRC.
 
+Always zero if `save broken frame` is not enabled.
+
 
 ## Interface
 
@@ -194,7 +212,7 @@ Non-zero indicate the pointer of last received byte of the disturbed frame, incl
 
     input           clk,            // core clock
     input           reset_n,        // asynch active low reset
-    input           chip_select,    // reduce ram_rx power consumption
+    input           chip_select,
     output          irq,            // interrupt output
 
     // avalon-mm slave interface, read and write without latency
@@ -217,24 +235,24 @@ Non-zero indicate the pointer of last received byte of the disturbed frame, incl
 ```python
     # Configuration
     
-    write(REG_SETTING, [0x11])                  # Enable push-pull output
+    write(REG_SETTING, [0x11])               # Enable push-pull output
     
     
     # TX
     
-    write(REG_TX, [0x0c, 0x0d, 0x01, 0xcd])     # Write frame without CRC
-    while (read(REG_INT_FLAG) & 0x20) == 0:     # Make sure we can successfully switch to the next page
+    write(REG_TX, [0x0c, 0x0d, 0x01, 0xcd])  # Write frame without CRC
+    while (read(REG_INT_FLAG) & 0x20) == 0:  # Make sure we can successfully switch to the next page
         pass
-    write(REG_TX_CTRL, [0x03])                  # Trigger send by switching TX page
+    write(REG_TX_CTRL, [0x03])               # Trigger send by switching TX page
     
     
     # RX
     
-    while (read(REG_INT_FLAG) & 0x02) == 0:     # Wait for RX page ready
+    while (read(REG_INT_FLAG) & 0x02) == 0:  # Wait for RX page ready
         pass
     header = read(REG_RX, len=3)
     data = read(REG_RX, len=header[2])
-    write(REG_RX_CTRL, [0x03])                  # Finish read by switching RX page
+    write(REG_RX_CTRL, [0x03])               # Finish read by switching RX page
 
 ```
 
@@ -250,6 +268,8 @@ The CDCTL controller family uses the CDBUS IP Core, which provide SPI, I<sup>2</
 E.g. The tiny CDCTL-Bx module support SPI and I<sup>2</sup>C interfaces:  
 (This module is completely open source, including the source code and gerber files, in the `example/` directory.)  
 <img alt="cdctl_bx" src="docs/img/cdctl_bx.jpg" width="600px">
+
+For a list of CDBUS-related ASIC chips, please refer to the [wiki](https://github.com/dukelec/cdbus/wiki) page.
 
 More relevant projects that may interest you:
  - CDBUS GUI: https://github.com/dukelec/cdbus_gui

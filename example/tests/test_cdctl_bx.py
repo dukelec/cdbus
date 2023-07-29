@@ -72,10 +72,11 @@ BIT_TX_RST_POINTER          = 1 << 0
 
 
 CLK_FREQ = 40000000
-CLK_PERIOD = 1000000000000 / CLK_FREQ
+CLK_PERIOD = round(1000000000000 / CLK_FREQ)
 
 SPI_FREQ = 32000000
-SPI_PERIOD = 1000000000000 / SPI_FREQ
+SPI_PERIOD = round(1000000000000 / SPI_FREQ)
+SPI_PERIOD_HALF = round(SPI_PERIOD / 2)
 
 
 async def send_bytes(dut, bytes, factor, is_z = True):
@@ -107,42 +108,42 @@ async def spi_rw(dut, w_data = 0):
         dut.sdi.value = 1 if (w_data & 0x80) else 0
         w_data = w_data << 1
         dut.sck_scl.value = 0
-        await Timer(SPI_PERIOD / 2)
+        await Timer(SPI_PERIOD_HALF)
         dut.sck_scl.value = 1
         await ReadOnly()
         if dut.sdo_sda.value.binstr != 'z':
             r_data = (r_data << 1) | dut.sdo_sda.value.integer
         else:
             r_data = (r_data << 1) | 0
-        await Timer(SPI_PERIOD / 2)
+        await Timer(SPI_PERIOD_HALF)
         dut.sck_scl.value = 0
     return r_data
 
 async def spi_read(dut, address, len = 1):
     datas = []
     dut.nss.value = 0
-    await Timer(SPI_PERIOD / 2)
+    await Timer(SPI_PERIOD_HALF)
     await spi_rw(dut, address)
-    await Timer(SPI_PERIOD / 2)
+    await Timer(SPI_PERIOD_HALF)
     while len != 0:
         ret_val = await spi_rw(dut)
         datas.append(ret_val)
-        await Timer(SPI_PERIOD / 2)
+        await Timer(SPI_PERIOD_HALF)
         len -= 1
     dut.nss.value = 1
-    await Timer(SPI_PERIOD / 2)
+    await Timer(SPI_PERIOD_HALF)
     return datas
 
 async def spi_write(dut, address, datas):
     dut.nss.value = 0
-    await Timer(SPI_PERIOD / 2)
+    await Timer(SPI_PERIOD_HALF)
     await spi_rw(dut, address | 0x80)
-    await Timer(SPI_PERIOD / 2)
+    await Timer(SPI_PERIOD_HALF)
     for data in datas:
         await spi_rw(dut, data)
-        await Timer(SPI_PERIOD / 2)
+        await Timer(SPI_PERIOD_HALF)
     dut.nss.value = 1
-    await Timer(SPI_PERIOD / 2)
+    await Timer(SPI_PERIOD_HALF)
 
 
 @cocotb.test()
@@ -182,7 +183,7 @@ async def test_cdctl_bx(dut):
     await RisingEdge(dut.cdctl_bx_m.cdbus_m.rx_pending)
     value = await spi_read(dut, REG_RX, 3)
     print(" ".join([("%02x" % x) for x in value]))
-    value = await spi_read(dut, REG_RX, 3)
+    value = await spi_read(dut, REG_RX, value[2])
     print(" ".join([("%02x" % x) for x in value]))
     
     
