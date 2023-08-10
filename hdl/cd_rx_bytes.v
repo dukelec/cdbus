@@ -50,6 +50,7 @@ reg drop_flag;
 reg finish;
 reg is_promiscuous;
 reg is_multicast;
+reg is_data_gt_253; // great than 253
 
 
 // FSM
@@ -103,6 +104,7 @@ always @(posedge clk or negedge reset_n)
         ram_switch <= 0;
         finish <= 0;
         is_promiscuous <= (filter == 8'hff);
+        is_data_gt_253 <= (data_len > 253);
 
         if (des_data == filter_m0 || des_data == filter_m1)
             is_multicast <= 1;
@@ -154,7 +156,7 @@ always @(posedge clk or negedge reset_n)
 
                 if (byte_cnt == data_len + 5 - 1) begin // last byte
                     if (!drop_flag) begin
-                        if (des_crc_data == 0 || user_crc) begin
+                        if ((des_crc_data == 0 || user_crc) && !is_data_gt_253) begin
                             ram_wr_flags <= 0; // 0: no error; else: rx length
                             ram_switch <= 1;
                         end
