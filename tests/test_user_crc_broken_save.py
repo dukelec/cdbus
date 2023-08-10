@@ -50,12 +50,15 @@ async def test_cdbus(dut):
 
     await RisingEdge(dut.irq1)
     val = await csr_read(dut, 1, REG_INT_FLAG)
-    rx_page_flag = await csr_read(dut, 1, REG_RX_PAGE_FLAG)
-    dut._log.info(f'REG_INT_FLAG: 0x{int(val):02x}, rx page flag: 0x{int(rx_page_flag):02x}')
+    rx_frm_len = await csr_read(dut, 1, REG_RX_FRM_LEN)
+    dut._log.info(f'REG_INT_FLAG: 0x{int(val):02x}, rx frm len: 0x{int(rx_frm_len):02x}')
+    if val != 0x32:
+        dut._log.error(f'idx1: wrong int_flag')
+        await exit_err()
     
     str_ = (await read_rx(dut, 1, 6)).hex() # read 6 bytes (include crc)
     dut._log.info(f'idx1: received: {str_}')
-    if str_ != '010201cd9091' or rx_page_flag != 5:
+    if str_ != '010201cd9091' or rx_frm_len != 5:
         dut._log.error(f'idx1: receive mismatch')
         await exit_err()
     
@@ -70,12 +73,15 @@ async def test_cdbus(dut):
     
     await RisingEdge(dut.irq1)
     val = await csr_read(dut, 1, REG_INT_FLAG)
-    rx_page_flag = await csr_read(dut, 1, REG_RX_PAGE_FLAG)
-    dut._log.info(f'REG_INT_FLAG: 0x{int(val):02x}, rx page flag: 0x{int(rx_page_flag):02x}')
+    rx_frm_len = await csr_read(dut, 1, REG_RX_FRM_LEN)
+    dut._log.info(f'REG_INT_FLAG: 0x{int(val):02x}, rx frm len: 0x{int(rx_frm_len):02x}')
+    if val != 0x22:
+        dut._log.error(f'idx1: wrong int_flag')
+        await exit_err()
     
     str_ = (await read_rx(dut, 1, 6)).hex() # read 6 bytes (include crc)
     dut._log.info(f'idx1: received: {str_}')
-    if str_ != '010201cd8081' or rx_page_flag != 0:
+    if str_ != '010201cd8081' or rx_frm_len != 5:
         dut._log.error(f'idx1: receive mismatch')
         await exit_err()
     

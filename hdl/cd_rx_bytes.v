@@ -33,7 +33,6 @@ module cd_rx_bytes(
         output wire [7:0]   ram_wr_byte,
         output reg  [7:0]   ram_wr_addr,
         output reg          ram_wr_en,
-        output reg  [7:0]   ram_wr_flags,
         output reg          ram_switch
     );
 
@@ -89,7 +88,6 @@ always @(posedge clk or negedge reset_n)
 
         ram_wr_addr <= 0;
         ram_wr_en <= 0;
-        ram_wr_flags <= 0;
         ram_switch <= 0;
 
         byte_cnt <= 0;
@@ -122,10 +120,7 @@ always @(posedge clk or negedge reset_n)
                 if (byte_cnt != 0) begin
                     if (byte_cnt != 1 && !drop_flag) begin
                         error <= 1;
-                        if (not_drop) begin
-                            ram_wr_flags <= ram_wr_addr;
-                            ram_switch <= 1;
-                        end
+                        ram_switch <= not_drop;
                     end
                     finish <= 1;
                     drop_flag <= 1; // avoid multi-clock ram_switch signal
@@ -157,15 +152,11 @@ always @(posedge clk or negedge reset_n)
                 if (byte_cnt == data_len + 5 - 1) begin // last byte
                     if (!drop_flag) begin
                         if ((des_crc_data == 0 || user_crc) && !is_data_gt_253) begin
-                            ram_wr_flags <= 0; // 0: no error; else: rx length
                             ram_switch <= 1;
                         end
                         else begin
                             error <= 1;
-                            if (not_drop) begin
-                                ram_wr_flags <= byte_cnt[8] ? 8'hff : byte_cnt[7:0];
-                                ram_switch <= 1;
-                            end
+                            ram_switch <= not_drop;
                         end
                     end
 

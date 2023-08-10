@@ -54,7 +54,8 @@ wire [7:0] rx_ram_rd_addr;
 wire rx_ram_rd_done;
 wire rx_clean_all;
 wire [7:0] rx_ram_rd_byte;
-wire [7:0] rx_ram_rd_flags;
+wire [7:0] rx_ram_rd_frm_len;
+wire rx_ram_rd_err;
 wire rx_error;
 wire rx_ram_lost;
 wire rx_break;
@@ -76,7 +77,6 @@ wire [7:0] rx_ram_wr_byte;
 wire [7:0] rx_ram_wr_addr;
 wire rx_ram_wr_en;
 wire rx_ram_switch;
-wire [7:0] rx_ram_wr_flags;
 
 wire [7:0] tx_ram_rd_byte;
 wire [7:0] tx_ram_rd_addr;
@@ -147,7 +147,8 @@ cd_csr #(
     .rx_ram_rd_done(rx_ram_rd_done),
     .rx_clean_all(rx_clean_all),
     .rx_ram_rd_byte(rx_ram_rd_byte),
-    .rx_ram_rd_flags(rx_ram_rd_flags),
+    .rx_ram_rd_frm_len(rx_ram_rd_frm_len),
+    .rx_ram_rd_err(rx_ram_rd_err),
     .rx_error(rx_error),
     .rx_ram_lost(rx_ram_lost),
     .rx_break(rx_break),
@@ -177,13 +178,15 @@ cd_rx_ram cd_rx_ram_m(
     .rd_done_all(rx_clean_all),
     .unread(rx_pending),
 
+    .rd_frm_len(rx_ram_rd_frm_len),
+    .rd_err(rx_ram_rd_err),
+
     .wr_byte(rx_ram_wr_byte),
     .wr_addr(rx_ram_wr_addr),
     .wr_en(rx_ram_wr_en),
 
+    .wr_err(rx_error),
     .switch(rx_ram_switch),
-    .wr_flags(rx_ram_wr_flags),
-    .rd_flags(rx_ram_rd_flags),
     .switch_fail(rx_ram_lost)
 );
 
@@ -225,7 +228,6 @@ cd_rx_bytes cd_rx_bytes_m(
     .ram_wr_byte(rx_ram_wr_byte),
     .ram_wr_addr(rx_ram_wr_addr),
     .ram_wr_en(rx_ram_wr_en),
-    .ram_wr_flags(rx_ram_wr_flags),
     .ram_switch(rx_ram_switch)
 );
 
