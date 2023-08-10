@@ -11,7 +11,8 @@
 
 module cd_rx_ram
        #(
-           parameter N_WIDTH = 3
+           parameter I_WIDTH = 6,   // index bit width, 2^6 = 64 entries
+           parameter B_WIDTH = 11   // buffer bit width, 2^11 = 2048 bytes
        )(
            input                 clk,
            input                 reset_n,
@@ -29,41 +30,52 @@ module cd_rx_ram
 
            input                 switch,
            input        [7:0]    wr_flags,
-           output reg   [7:0]    rd_flags,
+           output       [7:0]    rd_flags,
            output reg            switch_fail
        );
 
-reg  [7:0] flags[2**N_WIDTH-1:0];
-wire [7:0] rd_bytes[2**N_WIDTH-1:0];
-wire [7:0] rw_addr[2**N_WIDTH-1:0];
+parameter S_WIDTH = B_WIDTH - I_WIDTH;  // small block size width, 2^(11-6) = 2^5 = 32 bytes
+parameter F_WIDTH = 8 - S_WIDTH;        // frag amount size width, 8-(11-6) = 3, 2^3 x 32 = 8 x 32 = 256 bytes
 
-wire rd_ens[2**N_WIDTH-1:0];
-wire wr_ens[2**N_WIDTH-1:0];
+reg    [I_WIDTH-1:0] wr_sel;
+reg    [I_WIDTH-1:0] rd_sel;
+reg [2**I_WIDTH-1:0] dirty;
 
-reg     [N_WIDTH-1:0] wr_sel;
-reg     [N_WIDTH-1:0] rd_sel;
-reg  [2**N_WIDTH-1:0] dirty;
+assign unread = dirty[rd_sel]; // or (dirty != 0)
 
-assign unread = (dirty != 0);
-assign rd_byte = rd_bytes[rd_sel];
+reg  [B_WIDTH-1:0] buf_wr_addr;
+wire [B_WIDTH-1:0] buf_rd_addr = (rd_sel << S_WIDTH) + rd_addr; // {rd_sel, {S_WIDTH{1'b0}}}
 
-genvar i;
-generate
-    for (i = 0; i < 2**N_WIDTH; i = i + 1) begin : cd_rx_ram_array
-        assign rd_ens[i] = rd_en & (rd_sel == i);
-        assign wr_ens[i] = wr_en & (wr_sel == i);
-        assign rw_addr[i] = wr_ens[i] ? wr_addr : rd_addr;
+// has_err[0], frag_count[2:0], len[7:0]
+reg  [1+F_WIDTH+8-1:0] idx_table [2**I_WIDTH-1:0];
 
-        cd_spram cd_spram_m(
-            .clk(clk),
-            .cen(~rd_ens[i] & ~wr_ens[i]),
-            .addr(rw_addr[i]),
-            .rd(rd_bytes[i]),
-            .wd(wr_byte),
-            .wen(~wr_ens[i])
-        );
-    end
-endgenerate
+reg [1+F_WIDTH+8-1:0] idx_rd_val;
+wire         [7:0] idx_rval_len    = idx_rd_val[7:0];
+wire [F_WIDTH-1:0] idx_rval_amount = idx_rd_val[8+F_WIDTH-1:8];
+wire               idx_rval_err    = idx_rd_val[1+F_WIDTH+8-1];
+
+assign rd_flags = idx_rval_len;
+
+reg wr_cancel;
+reg wr_en_d;
+reg switch_d;
+reg [F_WIDTH-1:0] wr_frag_amount;
+
+always @(posedge clk)
+    idx_rd_val <= idx_table[rd_sel];
+
+
+cd_sdpram #(.A_WIDTH(B_WIDTH)) cd_rx_ram_buf_m(
+    .clk(clk),
+    .cen(~rd_en & ~wr_en_d),
+
+    .ra(buf_rd_addr),
+    .rd(rd_byte),
+
+    .wa(buf_wr_addr),
+    .wd(wr_byte),
+    .wen(~wr_en_d)
+);
 
 
 always @(posedge clk or negedge reset_n)
@@ -72,25 +84,42 @@ always @(posedge clk or negedge reset_n)
         rd_sel <= 0;
         wr_sel <= 0;
         dirty <= 0;
+        wr_cancel <= 0;
+        wr_en_d <= 0;
+        wr_frag_amount <= 0;
+        switch_d <= 0;
     end
     else begin
         switch_fail <= 0;
-        rd_flags <= flags[rd_sel];
+        wr_en_d <= 0;
+        buf_wr_addr <= (wr_sel << S_WIDTH) + wr_addr;
+        switch_d <= switch;
 
-        if (switch) begin
-            if (dirty[wr_sel + 1'b1]) begin
+        if (wr_en & !wr_cancel) begin
+            if (dirty[wr_sel + wr_addr[7:S_WIDTH]]) begin
+                wr_cancel <= 1;
+            end
+            else begin
+                wr_en_d <= 1;
+                wr_frag_amount <= wr_addr[7:S_WIDTH]; // 0 ~ 7
+            end
+        end
+
+        if (switch_d) begin
+            if (wr_cancel) begin
                 switch_fail <= 1;
             end
             else begin
+                idx_table[wr_sel] <= {1'b0, wr_frag_amount, wr_flags}; // TODO: replace flags to len
                 dirty[wr_sel] <= 1;
-                flags[wr_sel] <= wr_flags;
-                wr_sel <= wr_sel + 1'b1;
+                wr_sel <= wr_sel + wr_frag_amount + 1'b1; // wr_sel next may equal to rd_sel
             end
+            wr_cancel <= 0;
         end
 
         if (rd_done && dirty[rd_sel]) begin
             dirty[rd_sel] <= 0;
-            rd_sel <= rd_sel + 1'b1;
+            rd_sel <= rd_sel + 1'b1 + idx_rval_amount;
         end
 
         if (rd_done_all) begin
@@ -98,6 +127,8 @@ always @(posedge clk or negedge reset_n)
             rd_sel <= 0;
             wr_sel <= 0;
             dirty <= 0;
+            wr_cancel <= 0;
+            switch_d <= 0;
         end
     end
 

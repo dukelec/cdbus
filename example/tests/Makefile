@@ -21,6 +21,7 @@ VERILOG_SOURCES = $(PWD)/cdctl_bx_wrapper.v \
                   $(CDBUS_HDL)/cd_tx_ram.v \
                   $(CDBUS_HDL)/cd_rx_ram.v \
                   $(CDBUS_HDL)/lib/cd_spram.v \
+                  $(CDBUS_HDL)/lib/cd_sdpram.v \
                   $(CDBUS_HDL)/cd_rx_bytes.v \
                   $(CDBUS_HDL)/cd_rx_des.v \
                   $(CDBUS_HDL)/cd_crc.v \
