@@ -42,8 +42,8 @@ REG_RX_CTRL         = 0x16
 REG_TX_CTRL         = 0x17
 REG_RX_ADDR         = 0x18
 REG_RX_PAGE_FLAG    = 0x19
-REG_FILTER1         = 0x1a
-REG_FILTER2         = 0x1b
+REG_FILTER_M0       = 0x1a
+REG_FILTER_M1       = 0x1b
 
 BIT_SETTING_FULL_DUPLEX     = 1 << 6
 BIT_SETTING_BREAK_SYNC      = 1 << 5

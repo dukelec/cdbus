@@ -102,8 +102,8 @@ The CDBUS-BS mode is suitable for high-speed applications with few nodes, and it
 | TX_CTRL           |  0x17   | WR     | n/a             | TX control                                           |
 | RX_ADDR           |  0x18   | RD/WR  | 0x00            | RX page read pointer (rarely used)                   |
 | RX_PAGE_FLAG      |  0x19   | RD     | n/a             | RX page flag                                         |
-| FILTER_M1         |  0x1a   | RD/WR  | 0xff            | Multicast filter1                                    |
-| FILTER_M2         |  0x1b   | RD/WR  | 0xff            | Multicast filter2                                    |
+| FILTER_M0         |  0x1a   | RD/WR  | 0xff            | Multicast filter0                                    |
+| FILTER_M1         |  0x1b   | RD/WR  | 0xff            | Multicast filter1                                    |
 
 
 **SETTING:**

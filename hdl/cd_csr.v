@@ -41,8 +41,8 @@ module cd_csr
         output reg  [9:0]   max_idle_len,
         output reg  [1:0]   tx_pre_len,
         output reg  [7:0]   filter,
-        output reg  [7:0]   filter1,
-        output reg  [7:0]   filter2,
+        output reg  [7:0]   filter_m0,
+        output reg  [7:0]   filter_m1,
         output reg  [15:0]  div_ls,
         output reg  [15:0]  div_hs,
 
@@ -90,8 +90,8 @@ localparam
     REG_TX_CTRL         = 'h17,
     REG_RX_ADDR         = 'h18,
     REG_RX_PAGE_FLAG    = 'h19,
-    REG_FILTER1         = 'h1a,
-    REG_FILTER2         = 'h1b;
+    REG_FILTER_M0       = 'h1a,
+    REG_FILTER_M1       = 'h1b;
 
 reg tx_error_flag;
 reg cd_flag;
@@ -154,10 +154,10 @@ always @(*)
             csr_readdata = rx_ram_rd_addr;
         REG_RX_PAGE_FLAG:
             csr_readdata = rx_ram_rd_flags;
-        REG_FILTER1:
-            csr_readdata = filter1;
-        REG_FILTER2:
-            csr_readdata = filter2;
+        REG_FILTER_M0:
+            csr_readdata = filter_m0;
+        REG_FILTER_M1:
+            csr_readdata = filter_m1;
         default:
             csr_readdata = 0;
     endcase
@@ -178,8 +178,8 @@ always @(posedge clk or negedge reset_n)
         max_idle_len <= 200;
         tx_pre_len <= 1;
         filter <= 8'hff;
-        filter1 <= 8'hff;
-        filter2 <= 8'hff;
+        filter_m0 <= 8'hff;
+        filter_m1 <= 8'hff;
         div_ls <= DIV_LS;
         div_hs <= DIV_HS;
 
@@ -297,10 +297,10 @@ always @(posedge clk or negedge reset_n)
                 REG_RX_ADDR: begin
                     rx_ram_rd_addr <= csr_writedata;
                 end
-                REG_FILTER1:
-                    filter1 <= csr_writedata;
-                REG_FILTER2:
-                    filter2 <= csr_writedata;
+                REG_FILTER_M0:
+                    filter_m0 <= csr_writedata;
+                REG_FILTER_M1:
+                    filter_m1 <= csr_writedata;
             endcase
     end
 

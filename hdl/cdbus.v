@@ -45,8 +45,8 @@ wire [9:0] tx_permit_len;
 wire [9:0] max_idle_len;
 wire [1:0] tx_pre_len;
 wire [7:0] filter;
-wire [7:0] filter1;
-wire [7:0] filter2;
+wire [7:0] filter_m0;
+wire [7:0] filter_m1;
 wire [15:0] div_ls;
 wire [15:0] div_hs;
 
@@ -138,8 +138,8 @@ cd_csr #(
     .max_idle_len(max_idle_len),
     .tx_pre_len(tx_pre_len),
     .filter(filter),
-    .filter1(filter1),
-    .filter2(filter2),
+    .filter_m0(filter_m0),
+    .filter_m1(filter_m1),
     .div_ls(div_ls),
     .div_hs(div_hs),
 
@@ -209,8 +209,8 @@ cd_rx_bytes cd_rx_bytes_m(
     .reset_n(reset_n),
 
     .filter(filter),
-    .filter1(filter1),
-    .filter2(filter2),
+    .filter_m0(filter_m0),
+    .filter_m1(filter_m1),
     .user_crc(user_crc),
     .not_drop(not_drop),
     .abort(rx_clean_all),
