@@ -53,7 +53,7 @@ async def test_cdbus(dut):
     await write_tx(dut, 0, b'\x01\x02' + bytes([len(payload)]) + payload) # node 0x01 send to 0x02
     await csr_write(dut, 0, REG_TX_CTRL, BIT_TX_START | BIT_TX_RST_POINTER)
     
-    await write_tx(dut, 1, b'\x02\x01' + bytes([len(payload)]) + payload) # node 0x01 send to 0x02
+    await write_tx(dut, 1, b'\x02\x01' + bytes([len(payload)]) + payload) # node 0x02 send to 0x01
     await csr_write(dut, 1, REG_TX_CTRL, BIT_TX_START | BIT_TX_RST_POINTER)
 
     await RisingEdge(dut.irq1)

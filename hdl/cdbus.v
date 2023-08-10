@@ -166,7 +166,7 @@ cd_csr #(
 );
 
 
-cd_ram #(.N_WIDTH(3)) cd_ram_rx_m(
+cd_rx_ram cd_rx_ram_m(
     .clk(clk),
     .reset_n(reset_n),
 
@@ -187,7 +187,7 @@ cd_ram #(.N_WIDTH(3)) cd_ram_rx_m(
     .switch_fail(rx_ram_lost)
 );
 
-cd_ram #(.N_WIDTH(1)) cd_ram_tx_m(
+cd_tx_ram cd_tx_ram_m(
     .clk(clk),
     .reset_n(reset_n),
 
@@ -195,17 +195,13 @@ cd_ram #(.N_WIDTH(1)) cd_ram_tx_m(
     .rd_addr(tx_ram_rd_addr),
     .rd_en(tx_ram_rd_en),
     .rd_done(tx_ram_rd_done),
-    .rd_done_all(1'b0),
     .unread(tx_pending),
 
     .wr_byte(csr_writedata),
     .wr_addr(tx_ram_wr_addr),
     .wr_en(tx_ram_wr_en),
 
-    .switch(tx_ram_switch),
-    .wr_flags(8'd0),
-    .rd_flags(),
-    .switch_fail()
+    .switch(tx_ram_switch)
 );
 
 cd_rx_bytes cd_rx_bytes_m(

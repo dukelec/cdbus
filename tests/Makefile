@@ -16,8 +16,9 @@ VERILOG_SOURCES = $(PWD)/$(TOPLEVEL).v \
                   $(CDBUS_HDL)/cdbus.v \
                   $(CDBUS_HDL)/cd_csr.v \
                   $(CDBUS_HDL)/cd_baud_rate.v \
-                  $(CDBUS_HDL)/cd_ram.v \
-                  $(CDBUS_HDL)/cd_sram.v \
+                  $(CDBUS_HDL)/cd_tx_ram.v \
+                  $(CDBUS_HDL)/cd_rx_ram.v \
+                  $(CDBUS_HDL)/lib/cd_spram.v \
                   $(CDBUS_HDL)/cd_rx_bytes.v \
                   $(CDBUS_HDL)/cd_rx_des.v \
                   $(CDBUS_HDL)/cd_crc.v \

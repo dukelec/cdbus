@@ -77,18 +77,18 @@ async def _send_bytes(dut, bytes_, sys_clk, factor, is_z=True):
     await Timer(1000)
     factor += 1
     for byte in bytes_:
-        dut.bus_a = 0
+        dut.bus_a.value = 0
         await Timer(factor * clk_period)
         for i in range(0, 8):
             if byte & 0x01 == 0:
-                dut.bus_a = 0
+                dut.bus_a.value = 0
             else:
-                dut.bus_a = BinaryValue('z') if is_z else 1
+                dut.bus_a.value = BinaryValue('z') if is_z else 1
             await Timer(factor * clk_period)
             byte = byte >> 1
-        dut.bus_a = BinaryValue('z') if is_z else 1
+        dut.bus_a.value = BinaryValue('z') if is_z else 1
         await Timer(factor * clk_period)
-        dut.bus_a = BinaryValue('z')
+        dut.bus_a.value = BinaryValue('z')
 
 # Pass in a frame of data from the outside of the dut.
 async def send_frame(dut, bytes_, sys_clk, factor_l, factor_h):
@@ -105,12 +105,14 @@ async def reset(dut, idx, duration=10000):
     getattr(dut, f'reset{idx}').value = 1
     dut._log.debug(f'idx{idx}: out of reset')
 
-async def csr_read(dut, idx, address, burst=False):
+async def csr_read(dut, idx, address, burst=False, burst_end=False):
     addr_len = len(getattr(dut, f'csr_addr{idx}'))
     
     await RisingEdge(getattr(dut, f'clk{idx}'))
     getattr(dut, f'csr_addr{idx}').value = address
     getattr(dut, f'csr_read{idx}').value = 1
+    if burst_end:
+        getattr(dut, f'csr_read{idx}').value = 0
     await ReadOnly()
     data = getattr(dut, f'csr_rdata{idx}').value
     if not burst:
@@ -173,7 +175,7 @@ async def read_rx(dut, idx, len_):
         if i < len_ - 1:
             val = await csr_read(dut, idx, REG_RX, True)
         else:
-            val = await csr_read(dut, idx, REG_RX, False)
+            val = await csr_read(dut, idx, REG_RX, False, True)
         ret += bytes([int(val)])
     return ret
 

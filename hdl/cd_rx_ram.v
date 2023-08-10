@@ -9,26 +9,22 @@
  * Author: Duke Fong <d@d-l.io>
  */
 
-//`define SINGLE_ADDR
-`define HAS_RD_EN
-
-module cd_ram
+module cd_rx_ram
        #(
-           parameter A_WIDTH = 8,
-           parameter N_WIDTH = 1
+           parameter N_WIDTH = 3
        )(
            input                 clk,
            input                 reset_n,
 
-           output reg   [7:0]    rd_byte,
-           input [(A_WIDTH-1):0] rd_addr,
+           output       [7:0]    rd_byte,
+           input        [7:0]    rd_addr,
            input                 rd_en,
            input                 rd_done,
            input                 rd_done_all,
            output                unread,
 
            input        [7:0]    wr_byte,
-           input [(A_WIDTH-1):0] wr_addr,
+           input        [7:0]    wr_addr,
            input                 wr_en,
 
            input                 switch,
@@ -37,61 +33,37 @@ module cd_ram
            output reg            switch_fail
        );
 
-reg             [7:0] flags[2**N_WIDTH-1:0];
+reg  [7:0] flags[2**N_WIDTH-1:0];
+wire [7:0] rd_bytes[2**N_WIDTH-1:0];
+wire [7:0] rw_addr[2**N_WIDTH-1:0];
 
-wire            [7:0] rd_bytes[2**N_WIDTH-1:0];
-`ifdef HAS_RD_EN
-wire                  rd_ens[2**N_WIDTH-1:0];
-`endif
-wire                  wr_ens[2**N_WIDTH-1:0];
-`ifdef SINGLE_ADDR
-wire [2**A_WIDTH-1:0] rw_addr[2**N_WIDTH-1:0];
-`endif
+wire rd_ens[2**N_WIDTH-1:0];
+wire wr_ens[2**N_WIDTH-1:0];
 
 reg     [N_WIDTH-1:0] wr_sel;
 reg     [N_WIDTH-1:0] rd_sel;
 reg  [2**N_WIDTH-1:0] dirty;
 
 assign unread = (dirty != 0);
-
+assign rd_byte = rd_bytes[rd_sel];
 
 genvar i;
-
 generate
-    for (i = 0; i < 2**N_WIDTH; i = i + 1) begin : cd_sram_array
-`ifdef HAS_RD_EN
+    for (i = 0; i < 2**N_WIDTH; i = i + 1) begin : cd_rx_ram_array
         assign rd_ens[i] = rd_en & (rd_sel == i);
-`endif
         assign wr_ens[i] = wr_en & (wr_sel == i);
-`ifdef SINGLE_ADDR
         assign rw_addr[i] = wr_ens[i] ? wr_addr : rd_addr;
-`endif
 
-        cd_sram cd_sram_m(
+        cd_spram cd_spram_m(
             .clk(clk),
-`ifdef SINGLE_ADDR
+            .cen(~rd_ens[i] & ~wr_ens[i]),
             .addr(rw_addr[i]),
-`else
-            .ra(rd_addr),
-            .wa(wr_addr),
-`endif
             .rd(rd_bytes[i]),
-`ifdef HAS_RD_EN
-            .re(rd_ens[i]),
-`endif
             .wd(wr_byte),
-            .we(wr_ens[i])
+            .wen(~wr_ens[i])
         );
     end
 endgenerate
-
-
-`ifdef HAS_RD_EN
-always @(*)
-`else
-always @(posedge clk)
-`endif
-    rd_byte <= rd_bytes[rd_sel];
 
 
 always @(posedge clk or negedge reset_n)

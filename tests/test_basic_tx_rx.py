@@ -52,7 +52,9 @@ async def test_cdbus(dut):
     val = await csr_read(dut, 1, REG_INT_FLAG)
     dut._log.info(f'REG_INT_FLAG: 0x{int(val):02x}')
     
-    str_ = (await read_rx(dut, 1, 6)).hex() # read 6 bytes (include crc)
+    str1_ = (await read_rx(dut, 1, 3)).hex() # read 3 bytes
+    str2_ = (await read_rx(dut, 1, 3)).hex() # read 3 bytes (include crc)
+    str_ = str1_ + str2_
     dut._log.info(f'idx1: received: {str_}')
     if str_ != '010201cd601d':
         dut._log.error(f'idx1: receive mismatch')
