@@ -50,7 +50,7 @@ module cd_csr
         output reg          rx_ram_rd_done,
         output reg          rx_clean_all,
         input       [7:0]   rx_ram_rd_byte,
-        input       [7:0]   rx_ram_rd_frm_len,
+        input       [7:0]   rx_ram_rd_len,
         input               rx_ram_rd_err,
         input               rx_error,
         input               rx_ram_lost,
@@ -90,7 +90,7 @@ localparam
     REG_RX_CTRL         = 'h16,
     REG_TX_CTRL         = 'h17,
     REG_RX_ADDR         = 'h18,
-    REG_RX_FRM_LEN      = 'h19,
+    REG_RX_LEN          = 'h19,
     REG_FILTER_M0       = 'h1a,
     REG_FILTER_M1       = 'h1b;
 
@@ -154,8 +154,8 @@ always @(*)
             csr_readdata = rx_ram_rd_byte;
         REG_RX_ADDR:
             csr_readdata = rx_ram_rd_addr;
-        REG_RX_FRM_LEN:
-            csr_readdata = rx_ram_rd_frm_len;
+        REG_RX_LEN:
+            csr_readdata = rx_ram_rd_len;
         REG_FILTER_M0:
             csr_readdata = filter_m0;
         REG_FILTER_M1:

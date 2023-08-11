@@ -41,7 +41,7 @@ REG_TX              = 0x15
 REG_RX_CTRL         = 0x16
 REG_TX_CTRL         = 0x17
 REG_RX_ADDR         = 0x18
-REG_RX_FRM_LEN      = 0x19
+REG_RX_LEN          = 0x19
 REG_FILTER_M0       = 0x1a
 REG_FILTER_M1       = 0x1b
 

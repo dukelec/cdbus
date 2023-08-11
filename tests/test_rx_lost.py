@@ -99,7 +99,8 @@ async def test_cdbus(dut):
     # read first package from buffer:
     
     val = await csr_read(dut, 1, REG_INT_FLAG)
-    dut._log.info(f'{0}: REG_INT_FLAG: 0x{int(val):02x}')
+    rx_len = await csr_read(dut, 1, REG_RX_LEN)
+    dut._log.info(f'{0}: REG_INT_FLAG: 0x{int(val):02x}, rx len: {int(rx_len)}')
     if val & 0x08:
         dut._log.info(f'lost detected')
     else:
@@ -150,7 +151,8 @@ async def test_cdbus(dut):
     
     for i in range(1, len(user_size)-2):
         val = await csr_read(dut, 1, REG_INT_FLAG)
-        dut._log.info(f'{i}: REG_INT_FLAG: 0x{int(val):02x}')
+        rx_len = await csr_read(dut, 1, REG_RX_LEN)
+        dut._log.info(f'{i}: REG_INT_FLAG: 0x{int(val):02x}, rx len: {int(rx_len)}')
         if val & 0x08:
             dut._log.error(f'lost detected')
             await exit_err()
@@ -175,7 +177,8 @@ async def test_cdbus(dut):
     # read last package:
     
     val = await csr_read(dut, 1, REG_INT_FLAG)
-    dut._log.info(f'{0}: REG_INT_FLAG: 0x{int(val):02x}')
+    rx_len = await csr_read(dut, 1, REG_RX_LEN)
+    dut._log.info(f'{0}: REG_INT_FLAG: 0x{int(val):02x}, rx len: {int(rx_len)}')
     if val & 0x08:
         dut._log.info(f'lost detected')
     if not (val & 0x02):
@@ -205,7 +208,8 @@ async def test_cdbus(dut):
     
     await RisingEdge(dut.irq1)
     val = await csr_read(dut, 1, REG_INT_FLAG)
-    dut._log.info(f'REG_INT_FLAG: 0x{int(val):02x}')
+    rx_len = await csr_read(dut, 1, REG_RX_LEN)
+    dut._log.info(f'REG_INT_FLAG: 0x{int(val):02x}, rx len: {int(rx_len)}')
     
     str_ = (await read_rx(dut, 1, 6)).hex() # read 6 bytes (include crc)
     dut._log.info(f'idx1: received: {str_}')

@@ -49,8 +49,9 @@ async def test_cdbus(dut):
     await csr_write(dut, 0, REG_TX_CTRL, BIT_TX_START | BIT_TX_RST_POINTER)
 
     await RisingEdge(dut.irq1)
+    len_ = await csr_read(dut, 1, REG_RX_LEN)
     val = await csr_read(dut, 1, REG_INT_FLAG)
-    dut._log.info(f'REG_INT_FLAG: 0x{int(val):02x}')
+    dut._log.info(f'REG_INT_FLAG: 0x{int(val):02x}, len: 0x{int(len_):02x}')
     
     str1_ = (await read_rx(dut, 1, 3)).hex() # read 3 bytes
     str2_ = (await read_rx(dut, 1, 3)).hex() # read 3 bytes (include crc)

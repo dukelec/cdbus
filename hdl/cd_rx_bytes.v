@@ -30,9 +30,10 @@ module cd_rx_bytes(
         output reg          des_force_wait_idle,
 
         // pp_ram
-        output wire [7:0]   ram_wr_byte,
+        output      [7:0]   ram_wr_byte,
         output reg  [7:0]   ram_wr_addr,
         output reg          ram_wr_en,
+        output      [7:0]   ram_wr_len,
         output reg          ram_switch
     );
 
@@ -50,6 +51,8 @@ reg finish;
 reg is_promiscuous;
 reg is_multicast;
 reg is_data_gt_253; // great than 253
+
+assign ram_wr_len = not_drop ? ram_wr_addr : data_len;
 
 
 // FSM
