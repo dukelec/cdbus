@@ -33,14 +33,13 @@ REG_DIV_LS_L        = 0x0c
 REG_DIV_LS_H        = 0x0d
 REG_DIV_HS_L        = 0x0e
 REG_DIV_HS_H        = 0x0f
-REG_INT_FLAG        = 0x10
 REG_INT_MASK        = 0x11
+REG_INT_FLAG        = 0x12
+REG_RX_LEN          = 0x13
 REG_RX              = 0x14
 REG_TX              = 0x15
 REG_RX_CTRL         = 0x16
 REG_TX_CTRL         = 0x17
-REG_RX_ADDR         = 0x18
-REG_RX_LEN          = 0x19
 REG_FILTER_M0       = 0x1a
 REG_FILTER_M1       = 0x1b
 

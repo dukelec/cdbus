@@ -18,8 +18,8 @@ module cd_csr
         input               clk,
         input               reset_n,
         output              irq,
-`ifdef INT_FLAG_SNAPSHOT // avoid metastability due to int_flag
-        input               int_flag_update,
+`ifdef HAS_CHIP_SELECT
+        input               chip_select,
 `endif
 
         input       [4:0]   csr_address,
@@ -83,14 +83,13 @@ localparam
     REG_DIV_LS_H        = 'h0d,
     REG_DIV_HS_L        = 'h0e,
     REG_DIV_HS_H        = 'h0f,
-    REG_INT_FLAG        = 'h10,
     REG_INT_MASK        = 'h11,
+    REG_INT_FLAG        = 'h12,
+    REG_RX_LEN          = 'h13,
     REG_RX              = 'h14,
     REG_TX              = 'h15,
     REG_RX_CTRL         = 'h16,
     REG_TX_CTRL         = 'h17,
-    REG_RX_ADDR         = 'h18,
-    REG_RX_LEN          = 'h19,
     REG_FILTER_M0       = 'h1a,
     REG_FILTER_M1       = 'h1b;
 
@@ -104,8 +103,19 @@ wire int_rx_err = not_drop ? rx_ram_rd_err : rx_error_flag;
 reg [7:0] int_mask;
 wire [7:0] int_flag = {tx_error_flag, cd_flag, ~tx_pending, int_rx_err,
                        rx_lost_flag, rx_break_flag, rx_pending, bus_idle};
-`ifdef INT_FLAG_SNAPSHOT
-reg [7:0] int_flag_snapshot;
+
+`ifdef HAS_CHIP_SELECT
+reg sub_addr;
+reg has_read_rx;
+reg chip_select_delayed;
+reg [7:0] int_flag_snapshot;    // avoid metastability due to int_flag
+
+always @(posedge clk) begin
+    if (!chip_select)
+        sub_addr <= 0;
+    else if (csr_read)          // csr_read || csr_write
+        sub_addr <= !sub_addr;  // sub_addr + 1'd1;
+end
 `endif
 
 assign tx_ram_wr_en = (csr_address == REG_TX) ? csr_write : 1'b0;
@@ -142,20 +152,18 @@ always @(*)
             csr_readdata = div_hs[7:0];
         REG_DIV_HS_H:
             csr_readdata = div_hs[15:8];
+        REG_INT_MASK:
+            csr_readdata = int_mask;
         REG_INT_FLAG:
-`ifdef INT_FLAG_SNAPSHOT
-            csr_readdata = int_flag_snapshot;
+`ifdef HAS_CHIP_SELECT
+            csr_readdata = sub_addr ? rx_ram_rd_len : int_flag_snapshot;
 `else
             csr_readdata = int_flag;
 `endif
-        REG_INT_MASK:
-            csr_readdata = int_mask;
-        REG_RX:
-            csr_readdata = rx_ram_rd_byte;
-        REG_RX_ADDR:
-            csr_readdata = rx_ram_rd_addr;
         REG_RX_LEN:
             csr_readdata = rx_ram_rd_len;
+        REG_RX:
+            csr_readdata = rx_ram_rd_byte;
         REG_FILTER_M0:
             csr_readdata = filter_m0;
         REG_FILTER_M1:
@@ -192,8 +200,10 @@ always @(posedge clk or negedge reset_n)
         rx_break_flag <= 0;
 
         int_mask <= 0;
-`ifdef INT_FLAG_SNAPSHOT
+`ifdef HAS_CHIP_SELECT
+        chip_select_delayed <= 0;
         int_flag_snapshot <= 0;
+        has_read_rx <= 0;
 `endif
 
         rx_ram_rd_addr <= 0;
@@ -211,9 +221,16 @@ always @(posedge clk or negedge reset_n)
         tx_ram_switch <= 0;
         tx_abort <= 0;
 
-`ifdef INT_FLAG_SNAPSHOT
-        if (int_flag_update)
+`ifdef HAS_CHIP_SELECT
+        chip_select_delayed <= chip_select;
+        if (!chip_select) begin
             int_flag_snapshot <= int_flag;
+            rx_ram_rd_addr <= 0;
+            tx_ram_wr_addr <= 0;
+            has_read_rx <= 0;
+            if (chip_select_delayed && has_read_rx)
+                rx_ram_rd_done <= 1; // auto release rx page
+        end
 `endif
 
         if (csr_read) begin
@@ -224,8 +241,12 @@ always @(posedge clk or negedge reset_n)
                 cd_flag <= 0;
                 tx_error_flag <= 0;
             end
-            if (csr_address == REG_RX)
-                rx_ram_rd_addr <= rx_ram_rd_addr + 1'd1; 
+            else if (csr_address == REG_RX) begin
+                rx_ram_rd_addr <= rx_ram_rd_addr + 1'd1;
+`ifdef HAS_CHIP_SELECT
+                has_read_rx <= 1;
+`endif
+            end
         end
 
         if (rx_error)
@@ -283,8 +304,9 @@ always @(posedge clk or negedge reset_n)
                         rx_clean_all <= 1;
                     if (csr_writedata[1])
                         rx_ram_rd_done <= 1;
-                    if (csr_writedata[0])
-                        rx_ram_rd_addr <= 0;
+`ifndef HAS_CHIP_SELECT
+                    rx_ram_rd_addr <= 0;
+`endif
                 end
                 REG_TX_CTRL: begin
                     if (csr_writedata[5])
@@ -293,11 +315,9 @@ always @(posedge clk or negedge reset_n)
                         tx_abort <= 1;
                     if (csr_writedata[1])
                         tx_ram_switch <= 1;
-                    if (csr_writedata[0])
-                        tx_ram_wr_addr <= 0;
-                end
-                REG_RX_ADDR: begin
-                    rx_ram_rd_addr <= csr_writedata;
+`ifndef HAS_CHIP_SELECT
+                    tx_ram_wr_addr <= 0;
+`endif
                 end
                 REG_FILTER_M0:
                     filter_m0 <= csr_writedata;

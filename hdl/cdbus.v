@@ -116,8 +116,8 @@ cd_csr #(
     .clk(clk),
     .reset_n(reset_n),
     .irq(irq),
-`ifdef INT_FLAG_SNAPSHOT
-    .int_flag_update(~chip_select),
+`ifdef HAS_CHIP_SELECT
+    .chip_select(chip_select),
 `endif
 
     .csr_address(csr_address),

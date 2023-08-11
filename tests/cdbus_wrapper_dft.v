@@ -18,6 +18,9 @@ module cdbus_wrapper_dft(
         input       reset0,
         input       reset1,
         input       reset2,
+        input       cs0,
+        input       cs1,
+        input       cs2,
 
         input       [4:0] csr_addr0,
         input       csr_read0,
@@ -85,7 +88,7 @@ always @(*)
 cdbus cdbus_m0(
           .clk(clk0),
           .reset_n(reset0),
-          .chip_select(1'b1),
+          .chip_select(cs0),
           .irq(irq0),
           
           .csr_address(csr_addr0),
@@ -102,7 +105,7 @@ cdbus cdbus_m0(
 cdbus cdbus_m1(
           .clk(clk1),
           .reset_n(reset1),
-          .chip_select(1'b1),
+          .chip_select(cs1),
           .irq(irq1),
           
           .csr_address(csr_addr1),
@@ -119,7 +122,7 @@ cdbus cdbus_m1(
 cdbus cdbus_m2(
           .clk(clk2),
           .reset_n(reset2),
-          .chip_select(1'b1),
+          .chip_select(cs2),
           .irq(irq2),
           
           .csr_address(csr_addr2),

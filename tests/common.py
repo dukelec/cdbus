@@ -34,14 +34,13 @@ REG_DIV_LS_L        = 0x0c
 REG_DIV_LS_H        = 0x0d
 REG_DIV_HS_L        = 0x0e
 REG_DIV_HS_H        = 0x0f
-REG_INT_FLAG        = 0x10
 REG_INT_MASK        = 0x11
+REG_INT_FLAG        = 0x12
+REG_RX_LEN          = 0x13
 REG_RX              = 0x14
 REG_TX              = 0x15
 REG_RX_CTRL         = 0x16
 REG_TX_CTRL         = 0x17
-REG_RX_ADDR         = 0x18
-REG_RX_LEN          = 0x19
 REG_FILTER_M0       = 0x1a
 REG_FILTER_M1       = 0x1b
 
@@ -104,11 +103,13 @@ async def reset(dut, idx, duration=10000):
     await RisingEdge(getattr(dut, f'clk{idx}'))
     getattr(dut, f'reset{idx}').value = 1
     dut._log.debug(f'idx{idx}: out of reset')
+    getattr(dut, f'cs{idx}').value = 0
 
 async def csr_read(dut, idx, address, burst=False, burst_end=False):
     addr_len = len(getattr(dut, f'csr_addr{idx}'))
     
     await RisingEdge(getattr(dut, f'clk{idx}'))
+    getattr(dut, f'cs{idx}').value = 1
     getattr(dut, f'csr_addr{idx}').value = address
     getattr(dut, f'csr_read{idx}').value = 1
     if burst_end:
@@ -119,6 +120,7 @@ async def csr_read(dut, idx, address, burst=False, burst_end=False):
         await RisingEdge(getattr(dut, f'clk{idx}'))
         getattr(dut, f'csr_read{idx}').value = 0
         getattr(dut, f'csr_addr{idx}').value = BinaryValue('x' * addr_len)
+        getattr(dut, f'cs{idx}').value = 0
     return data
 
 async def csr_write(dut, idx, address, data, burst=False):
@@ -126,6 +128,7 @@ async def csr_write(dut, idx, address, data, burst=False):
     wdata_len = len(getattr(dut, f'csr_wdata{idx}'))
     
     await RisingEdge(getattr(dut, f'clk{idx}'))
+    getattr(dut, f'cs{idx}').value = 1
     getattr(dut, f'csr_addr{idx}').value = address
     getattr(dut, f'csr_wdata{idx}').value = data
     getattr(dut, f'csr_write{idx}').value = 1
@@ -134,6 +137,7 @@ async def csr_write(dut, idx, address, data, burst=False):
         getattr(dut, f'csr_write{idx}').value = 0
         getattr(dut, f'csr_addr{idx}').value = BinaryValue('x' * addr_len)
         getattr(dut, f'csr_wdata{idx}').value = BinaryValue('x' * wdata_len)
+        getattr(dut, f'cs{idx}').value = 0
 
 
 async def check_version(dut, idx):
