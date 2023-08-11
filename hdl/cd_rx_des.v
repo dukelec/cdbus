@@ -24,7 +24,7 @@ module cd_rx_des(
         input               rx, // already sync
 
         output reg  [7:0]   data,
-        output      [15:0]  crc_data,
+        output              crc_eq_zero,
         output reg          data_clk
     );
 
@@ -45,6 +45,8 @@ reg [1:0] rx_d;
 always @(posedge clk) rx_d <= {rx_d[0], rx};
 
 reg crc_clk;
+wire [15:0] crc_data;
+assign crc_eq_zero = (crc_data == 0);
 
 reg is_first_byte;
 reg baud_sync;

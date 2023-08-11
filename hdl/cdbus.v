@@ -85,7 +85,7 @@ wire tx_ram_rd_en;
 wire tx_ram_rd_done;
 
 wire [7:0] des_data;
-wire [15:0] des_crc_data;
+wire des_crc_eq_zero;
 wire des_data_clk;
 wire force_wait_idle;
 
@@ -223,7 +223,7 @@ cd_rx_bytes cd_rx_bytes_m(
 
     .des_bus_idle(bus_idle),
     .des_data(des_data),
-    .des_crc_data(des_crc_data),
+    .des_crc_eq_zero(des_crc_eq_zero),
     .des_data_clk(des_data_clk),
     .des_force_wait_idle(force_wait_idle),
 
@@ -249,7 +249,7 @@ cd_rx_des cd_rx_des_m(
     .rx(rx_d[1]),
 
     .data(des_data),
-    .crc_data(des_crc_data),
+    .crc_eq_zero(des_crc_eq_zero),
     .data_clk(des_data_clk)
 );
 

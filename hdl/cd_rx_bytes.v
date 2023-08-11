@@ -25,7 +25,7 @@ module cd_rx_bytes(
         // rx_des
         input               des_bus_idle,
         input       [7:0]   des_data,
-        input       [15:0]  des_crc_data,
+        input               des_crc_eq_zero,
         input               des_data_clk,
         output reg          des_force_wait_idle,
 
@@ -154,7 +154,7 @@ always @(posedge clk or negedge reset_n)
 
                 if (byte_cnt == data_len + 5 - 1) begin // last byte
                     if (!drop_flag) begin
-                        if ((des_crc_data == 0 || user_crc) && !is_data_gt_253) begin
+                        if ((des_crc_eq_zero || user_crc) && !is_data_gt_253) begin
                             ram_switch <= 1;
                         end
                         else begin
