@@ -99,10 +99,10 @@ reg rx_error_flag;
 reg rx_lost_flag;
 reg rx_break_flag;
 
-wire int_rx_err = not_drop ? rx_ram_rd_err : rx_error_flag;
+reg idle_invert;
 reg [7:0] int_mask;
-wire [7:0] int_flag = {tx_error_flag, cd_flag, ~tx_pending, int_rx_err,
-                       rx_lost_flag, rx_break_flag, rx_pending, bus_idle};
+wire [7:0] int_flag = {tx_error_flag, cd_flag, ~tx_pending, (not_drop ? rx_ram_rd_err : rx_error_flag),
+                       rx_lost_flag, rx_break_flag, rx_pending, (idle_invert ? ~bus_idle : bus_idle)};
 
 `ifdef HAS_CHIP_SELECT
 reg sub_addr;
@@ -128,7 +128,7 @@ always @(*)
         REG_VERSION:
             csr_readdata = VERSION;
         REG_SETTING:
-            csr_readdata = {1'd0, full_duplex, break_sync, arbitration,
+            csr_readdata = {idle_invert, full_duplex, break_sync, arbitration,
                             not_drop, user_crc, tx_invert, tx_push_pull};
         REG_IDLE_WAIT_LEN:
             csr_readdata = idle_wait_len;
@@ -175,6 +175,7 @@ always @(*)
 
 always @(posedge clk or negedge reset_n)
     if (!reset_n) begin
+        idle_invert <= 0;
         full_duplex <= 0;
         break_sync <= 0;
         arbitration <= 1;
@@ -265,6 +266,7 @@ always @(posedge clk or negedge reset_n)
         if (csr_write)
             case (csr_address)
                 REG_SETTING: begin
+                    idle_invert <= csr_writedata[7];
                     full_duplex <= csr_writedata[6];
                     break_sync <= csr_writedata[5];
                     arbitration <= csr_writedata[4];
