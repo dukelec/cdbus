@@ -5,7 +5,7 @@ module cdc_event(
         input clk,
         input reset_n,
         input src_event,
-        output busy,
+        //output busy,
         
         input dst_clk,
         input dst_reset_n,
@@ -16,7 +16,7 @@ reg req;
 reg ack;
 reg xack_pipe;
 
-assign busy = req || ack;
+//assign busy = req || ack;
 
 reg xreq_pipe;
 reg new_req;
@@ -30,7 +30,8 @@ always @(posedge clk or negedge reset_n)
         xack_pipe <= 0;
     end
     else begin
-        if (!busy && src_event)
+        // comment out the busy signal to increase the spi maximum frequency
+        if (/*!busy &&*/ src_event)
             req <= 1;
         else if (ack)
             req <= 0;
