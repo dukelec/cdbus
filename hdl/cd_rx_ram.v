@@ -71,6 +71,34 @@ always @(posedge clk)
     idx_rd_val <= idx_table[rd_sel];
 
 
+`ifdef SPRAM_ONLY
+// when there is a read/write conflict, rd_byte will be updated one clock later
+// which is suitable for interfaces such as spi
+
+wire [7:0] rd_byte_ori;
+reg  [7:0] rd_byte_bk;
+reg wr_en_d2;
+
+always @(posedge clk) begin
+    wr_en_d2 <= wr_en_d;
+    rd_byte_bk <= wr_en_d2 ? rd_byte_bk : rd_byte_ori;
+end
+
+assign rd_byte = wr_en_d2 ? rd_byte_bk : rd_byte_ori;
+
+cd_spram #(.A_WIDTH(B_WIDTH)) cd_rx_ram_buf_m(
+    .clk(clk),
+    .cen(~rd_en & ~wr_en_d),
+
+    .addr(wr_en_d ? buf_wr_addr : buf_rd_addr),
+
+    .rd(rd_byte_ori),
+
+    .wd(wr_byte),
+    .wen(~wr_en_d)
+);
+
+`else
 cd_sdpram #(.A_WIDTH(B_WIDTH)) cd_rx_ram_buf_m(
     .clk(clk),
     .cen(~rd_en & ~wr_en_d),
@@ -82,6 +110,7 @@ cd_sdpram #(.A_WIDTH(B_WIDTH)) cd_rx_ram_buf_m(
     .wd(wr_byte),
     .wen(~wr_en_d)
 );
+`endif
 
 
 always @(posedge clk or negedge reset_n)

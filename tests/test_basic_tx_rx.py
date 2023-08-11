@@ -64,6 +64,33 @@ async def test_cdbus(dut):
     await csr_write(dut, 1, REG_RX_CTRL, BIT_RX_CLR_PENDING | BIT_RX_RST_POINTER)
     await FallingEdge(dut.irq1)
     
+    
+    # test spram read and write conflict
+    
+    payload = b''
+    for x in range(64):
+        payload += bytes([x])
+    dut._log.info(f'payload len: {len(payload)}')
+    tx_pkt = b'\x01\x02' + bytes([len(payload)]) + payload
+    
+    await Timer(10, units='us')
+    await write_tx(dut, 0, tx_pkt) # node 0x01 send to 0x02
+    await csr_write(dut, 0, REG_TX_CTRL, BIT_TX_START | BIT_TX_RST_POINTER)
+    
+    await Timer(200, units='us')
+    await write_tx(dut, 0, tx_pkt) # node 0x01 send to 0x02
+    await csr_write(dut, 0, REG_TX_CTRL, BIT_TX_START | BIT_TX_RST_POINTER)
+    
+    await Timer(20, units='us')
+    
+    len_ = await csr_read(dut, 1, REG_RX_LEN)
+    val = await csr_read(dut, 1, REG_INT_FLAG)
+    dut._log.info(f'REG_INT_FLAG: 0x{int(val):02x}, len: 0x{int(len_):02x}')
+    
+    str_ = (await read_rx(dut, 1, 64+5)).hex()
+    dut._log.info(f'idx1: sent:     {tx_pkt.hex()}')
+    dut._log.info(f'idx1: received: {str_} (not equal for spram)')
+    
     dut._log.info('test_cdbus done.')
     await exit_ok()
 
