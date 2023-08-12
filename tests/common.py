@@ -19,7 +19,7 @@ from PyCRC.CRC16 import CRC16
 def modbus_crc(data):
     return CRC16(modbus_flag=True).calculate(data).to_bytes(2, byteorder='little')
 
-DFT_VERSION         = 0x0e
+DFT_VERSION         = 0x0f
 
 REG_VERSION         = 0x00
 REG_SETTING         = 0x02

@@ -11,7 +11,7 @@
 
 module cd_csr
     #(
-        parameter VERSION = 8'h0e,
+        parameter VERSION = 8'h0f,
         parameter DIV_LS = 346, // default: 115200 bps for 40MHz clk
         parameter DIV_HS = 346
     )(
@@ -46,9 +46,9 @@ module cd_csr
         output reg  [15:0]  div_ls,
         output reg  [15:0]  div_hs,
 
-        output reg  [7:0]   rx_ram_rd_addr,
-        output reg          rx_ram_rd_done,
         output reg          rx_clean_all,
+        output reg          rx_ram_rd_done,
+        output reg  [7:0]   rx_ram_rd_addr,
         input       [7:0]   rx_ram_rd_byte,
         input       [7:0]   rx_ram_rd_len,
         input               rx_ram_rd_err,

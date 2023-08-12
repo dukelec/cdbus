@@ -21,7 +21,7 @@ module cd_rx_des(
 
         input               force_wait_idle,
 
-        input               rx, // already sync
+        input               rx, // safe for this clock domain
 
         output reg  [7:0]   data,
         output              crc_eq_zero,

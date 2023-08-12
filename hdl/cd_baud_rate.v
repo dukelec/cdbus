@@ -49,11 +49,11 @@ always @(posedge clk) begin
     else begin
         cnt <= cnt + 1'b1;
 
-        if (FOR_TX) begin // at 3/4 position
+        if (FOR_TX) begin   // at 3/4 position
             if (cnt == div - div[15:2])
                 cap_d <= 1;
         end
-        else begin // at 1/2 position
+        else begin          // at 1/2 position
             if (cnt == {1'd0, div[15:1]})
                 cap_d <= 1;
         end

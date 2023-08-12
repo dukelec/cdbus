@@ -50,9 +50,9 @@ wire [7:0] filter_m1;
 wire [15:0] div_ls;
 wire [15:0] div_hs;
 
-wire [7:0] rx_ram_rd_addr;
-wire rx_ram_rd_done;
 wire rx_clean_all;
+wire rx_ram_rd_done;
+wire [7:0] rx_ram_rd_addr;
 wire [7:0] rx_ram_rd_byte;
 wire [7:0] rx_ram_rd_len;
 wire rx_ram_rd_err;
@@ -144,9 +144,9 @@ cd_csr #(
     .div_ls(div_ls),
     .div_hs(div_hs),
 
-    .rx_ram_rd_addr(rx_ram_rd_addr),
-    .rx_ram_rd_done(rx_ram_rd_done),
     .rx_clean_all(rx_clean_all),
+    .rx_ram_rd_done(rx_ram_rd_done),
+    .rx_ram_rd_addr(rx_ram_rd_addr),
     .rx_ram_rd_byte(rx_ram_rd_byte),
     .rx_ram_rd_len(rx_ram_rd_len),
     .rx_ram_rd_err(rx_ram_rd_err),

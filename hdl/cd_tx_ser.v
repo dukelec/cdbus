@@ -22,7 +22,7 @@ module cd_tx_ser(
         input               has_break,
         output reg          ack_break,
 
-        input               bus_idle, // from rx_des
+        input               bus_idle,   // from rx_des
 
         input       [15:0]  div_ls,
         input       [15:0]  div_hs,
@@ -33,7 +33,7 @@ module cd_tx_ser(
         input               break_sync,
         input               arbitration,
         input               abort,
-        output reg          cd, // collision detect
+        output reg          cd,         // collision detected
         output reg          err,
 
         input               rx,
