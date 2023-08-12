@@ -103,6 +103,7 @@ reg idle_invert;
 reg [7:0] int_mask;
 wire [7:0] int_flag = {tx_error_flag, cd_flag, ~tx_pending, (not_drop ? rx_ram_rd_err : rx_error_flag),
                        rx_lost_flag, rx_break_flag, rx_pending, (idle_invert ? ~bus_idle : bus_idle)};
+reg [7:0] h_val_bkup;
 
 `ifdef HAS_CHIP_SELECT
 reg sub_addr;
@@ -206,6 +207,7 @@ always @(posedge clk or negedge reset_n)
         int_flag_snapshot <= 0;
         has_read_rx <= 0;
 `endif
+        h_val_bkup <= 0;
 
         rx_ram_rd_addr <= 0;
         rx_ram_rd_done <= 0;
@@ -262,6 +264,8 @@ always @(posedge clk or negedge reset_n)
             tx_error_flag <= 1;
         if (ack_break)
             has_break <= 0;
+        if (csr_read || csr_write)
+            h_val_bkup <= 0; // optional
 
         if (csr_write)
             case (csr_address)
@@ -278,25 +282,25 @@ always @(posedge clk or negedge reset_n)
                 REG_IDLE_WAIT_LEN:
                     idle_wait_len <= csr_writedata;
                 REG_TX_PERMIT_LEN_L:
-                    tx_permit_len[7:0] <= csr_writedata;
+                    tx_permit_len <= {h_val_bkup[1:0], csr_writedata};
                 REG_TX_PERMIT_LEN_H:
-                    tx_permit_len[9:8] <= csr_writedata[1:0];
+                    h_val_bkup <= csr_writedata;
                 REG_MAX_IDLE_LEN_L:
-                    max_idle_len[7:0] <= csr_writedata;
+                    max_idle_len <= {h_val_bkup[1:0], csr_writedata};
                 REG_MAX_IDLE_LEN_H:
-                    max_idle_len[9:8] <= csr_writedata[1:0];
+                    h_val_bkup <= csr_writedata;
                 REG_TX_PRE_LEN:
                     tx_pre_len <= csr_writedata[1:0];
                 REG_FILTER:
                     filter <= csr_writedata;
                 REG_DIV_LS_L:
-                    div_ls[7:0] <= csr_writedata;
+                    div_ls <= {h_val_bkup, csr_writedata};
                 REG_DIV_LS_H:
-                    div_ls[15:8] <= csr_writedata;
+                    h_val_bkup <= csr_writedata;
                 REG_DIV_HS_L:
-                    div_hs[7:0] <= csr_writedata;
+                    div_hs <= {h_val_bkup, csr_writedata};
                 REG_DIV_HS_H:
-                    div_hs[15:8] <= csr_writedata;
+                    h_val_bkup <= csr_writedata;
                 REG_INT_MASK:
                     int_mask <= csr_writedata;
                 REG_TX:

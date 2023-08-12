@@ -104,6 +104,9 @@ The CDBUS-BS mode is suitable for high-speed applications with few nodes, and it
 | FILTER_M0         |  0x1a   | RD/WR  | 0xff            | Multicast filter0                                    |
 | FILTER_M1         |  0x1b   | RD/WR  | 0xff            | Multicast filter1                                    |
 
+To write a register with more than 8 bits, write the high byte first and then the low byte.
+The high byte can be omitted if it is 0.
+
 
 **SETTING:**
 
