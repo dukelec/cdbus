@@ -19,6 +19,7 @@ from PyCRC.CRC16 import CRC16
 def modbus_crc(data):
     return CRC16(modbus_flag=True).calculate(data).to_bytes(2, byteorder='little')
 
+IS_32BITS           = False
 DFT_VERSION         = 0x0f
 
 REG_VERSION         = 0x00
@@ -44,6 +45,7 @@ REG_TX_CTRL         = 0x17
 REG_FILTER_M0       = 0x1a
 REG_FILTER_M1       = 0x1b
 
+BIT_SETTING_IDLE_INVERT     = 1 << 7
 BIT_SETTING_FULL_DUPLEX     = 1 << 6
 BIT_SETTING_BREAK_SYNC      = 1 << 5
 BIT_SETTING_ARBITRATE       = 1 << 4
@@ -63,12 +65,10 @@ BIT_FLAG_BUS_IDLE           = 1 << 0
 
 BIT_RX_RST                  = 1 << 4
 BIT_RX_CLR_PENDING          = 1 << 1
-BIT_RX_RST_POINTER          = 1 << 0
 
 BIT_TX_SEND_BREAK           = 1 << 5
 BIT_TX_ABORT                = 1 << 4
 BIT_TX_START                = 1 << 1
-BIT_TX_RST_POINTER          = 1 << 0
 
 
 async def _send_bytes(dut, bytes_, sys_clk, factor, is_z=True):
@@ -182,6 +182,12 @@ async def read_rx(dut, idx, len_):
             val = await csr_read(dut, idx, REG_RX, False, True)
         ret += bytes([int(val)])
     return ret
+
+async def read_rx_len(dut, idx):
+    return await csr_read(dut, idx, REG_RX_LEN)
+
+async def read_int_flag(dut, idx):
+    return await csr_read(dut, idx, REG_INT_FLAG)
 
 
 async def exit_err():

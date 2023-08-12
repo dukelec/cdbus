@@ -22,9 +22,9 @@ async def test_cdbus(dut):
     sys_clk = 40000000
     clk_period = 1000000000000 / sys_clk
 
-    cocotb.fork(Clock(dut.clk0, clk_period).start())
-    cocotb.fork(Clock(dut.clk1, clk_period).start())
-    cocotb.fork(Clock(dut.clk2, clk_period).start())
+    cocotb.start_soon(Clock(dut.clk0, clk_period).start())
+    cocotb.start_soon(Clock(dut.clk1, clk_period).start())
+    cocotb.start_soon(Clock(dut.clk2, clk_period).start())
     await reset(dut, 0)
     await reset(dut, 1)
     await reset(dut, 2)

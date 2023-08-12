@@ -22,9 +22,9 @@ async def test_cdbus(dut):
     sys_clk = 40000000
     clk_period = 1000000000000 / sys_clk
 
-    cocotb.fork(Clock(dut.clk0, clk_period).start())
-    cocotb.fork(Clock(dut.clk1, clk_period).start())
-    cocotb.fork(Clock(dut.clk2, clk_period).start())
+    cocotb.start_soon(Clock(dut.clk0, clk_period).start())
+    cocotb.start_soon(Clock(dut.clk1, clk_period).start())
+    cocotb.start_soon(Clock(dut.clk2, clk_period).start())
     await reset(dut, 0)
     await reset(dut, 1)
     await reset(dut, 2)
@@ -56,7 +56,7 @@ async def test_cdbus(dut):
     dut._log.info(f'send_frame:   {tx_str_}')
 
     await RisingEdge(dut.irq1)
-    val = await csr_read(dut, 1, REG_INT_FLAG)
+    val = await read_int_flag(dut, 1)
     dut._log.info(f'REG_INT_FLAG: 0x{int(val):02x}')
     
     if not (val & BIT_FLAG_RX_ERROR):
@@ -74,10 +74,13 @@ async def test_cdbus(dut):
     
     
     await write_tx(dut, 0, b'\x01\x02' + bytes([len(payload)]) + payload) # node 0x01 send to 0x02
-    await csr_write(dut, 0, REG_TX_CTRL, BIT_TX_START | BIT_TX_RST_POINTER)
+    await csr_write(dut, 0, REG_TX_CTRL, BIT_TX_START)
     await Timer(250, units='us')
     
-    rx_str_ = (await read_rx(dut, 1, 256)).hex() # read 6 bytes (include crc)
+    if IS_32BITS:
+        rx_str_ = (await read_rx(dut, 1, 5)).hex() # read 5 bytes (include crc)
+    else:
+        rx_str_ = (await read_rx(dut, 1, 256)).hex() # read 256 bytes
     dut._log.info(f'idx1: rx ram: {rx_str_}  (not received)')
     
     dut._log.info('test_cdbus done.')

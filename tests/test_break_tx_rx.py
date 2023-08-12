@@ -22,9 +22,9 @@ async def test_cdbus(dut):
     sys_clk = 40000000
     clk_period = 1000000000000 / sys_clk
 
-    cocotb.fork(Clock(dut.clk0, clk_period).start())
-    cocotb.fork(Clock(dut.clk1, clk_period).start())
-    cocotb.fork(Clock(dut.clk2, clk_period).start())
+    cocotb.start_soon(Clock(dut.clk0, clk_period).start())
+    cocotb.start_soon(Clock(dut.clk1, clk_period).start())
+    cocotb.start_soon(Clock(dut.clk2, clk_period).start())
     await reset(dut, 0)
     await reset(dut, 1)
     await reset(dut, 2)
@@ -53,11 +53,11 @@ async def test_cdbus(dut):
     await csr_write(dut, 0, REG_TX_CTRL, BIT_TX_SEND_BREAK)
     
     # start tx at same time
-    cocotb.fork(csr_write(dut, 0, REG_TX_CTRL, BIT_TX_START | BIT_TX_RST_POINTER))
-    cocotb.fork(csr_write(dut, 1, REG_TX_CTRL, BIT_TX_START | BIT_TX_RST_POINTER))
+    cocotb.start_soon(csr_write(dut, 0, REG_TX_CTRL, BIT_TX_START))
+    cocotb.start_soon(csr_write(dut, 1, REG_TX_CTRL, BIT_TX_START))
 
     await RisingEdge(dut.irq2)
-    val = await csr_read(dut, 2, REG_INT_FLAG)
+    val = await read_int_flag(dut, 2)
     dut._log.info(f'REG_INT_FLAG: 0x{int(val):02x}')
     
     if not (val & BIT_FLAG_RX_BREAK):
@@ -66,7 +66,7 @@ async def test_cdbus(dut):
     await FallingEdge(dut.irq2)
     
     await RisingEdge(dut.irq2)
-    val = await csr_read(dut, 2, REG_INT_FLAG)
+    val = await read_int_flag(dut, 2)
     dut._log.info(f'REG_INT_FLAG: 0x{int(val):02x}')
     
     str_ = (await read_rx(dut, 2, 4)).hex() # read 4 bytes
@@ -75,11 +75,11 @@ async def test_cdbus(dut):
         dut._log.error(f'idx2: receive mismatch first frame')
         await exit_err()
     
-    await csr_write(dut, 2, REG_RX_CTRL, BIT_RX_CLR_PENDING | BIT_RX_RST_POINTER)
+    await csr_write(dut, 2, REG_RX_CTRL, BIT_RX_CLR_PENDING)
     await Timer(500, units='ns')
     
     await RisingEdge(dut.irq2)
-    val = await csr_read(dut, 2, REG_INT_FLAG)
+    val = await read_int_flag(dut, 2)
     dut._log.info(f'REG_INT_FLAG: 0x{int(val):02x}')
     
     str_ = (await read_rx(dut, 2, 4)).hex() # read 4 bytes
@@ -88,7 +88,7 @@ async def test_cdbus(dut):
         dut._log.error(f'idx2: receive mismatch second frame')
         await exit_err()
     
-    await csr_write(dut, 2, REG_RX_CTRL, BIT_RX_CLR_PENDING | BIT_RX_RST_POINTER)
+    await csr_write(dut, 2, REG_RX_CTRL, BIT_RX_CLR_PENDING)
     await FallingEdge(dut.irq2)
     
     dut._log.info('test_cdbus done.')

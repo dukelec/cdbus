@@ -43,6 +43,7 @@ REG_TX_CTRL         = 0x17
 REG_FILTER_M0       = 0x1a
 REG_FILTER_M1       = 0x1b
 
+BIT_SETTING_IDLE_INVERT     = 1 << 7
 BIT_SETTING_FULL_DUPLEX     = 1 << 6
 BIT_SETTING_BREAK_SYNC      = 1 << 5
 BIT_SETTING_ARBITRATE       = 1 << 4
@@ -62,12 +63,10 @@ BIT_FLAG_BUS_IDLE           = 1 << 0
 
 BIT_RX_RST                  = 1 << 4
 BIT_RX_CLR_PENDING          = 1 << 1
-BIT_RX_RST_POINTER          = 1 << 0
 
 BIT_TX_SEND_BREAK           = 1 << 5
 BIT_TX_ABORT                = 1 << 4
 BIT_TX_START                = 1 << 1
-BIT_TX_RST_POINTER          = 1 << 0
 
 
 CLK_FREQ = 40000000
@@ -130,7 +129,7 @@ async def spi_read(dut, address, len = 1):
         await Timer(SPI_PERIOD_HALF)
         len -= 1
     dut.nss.value = 1
-    await Timer(SPI_PERIOD_HALF)
+    await Timer(SPI_PERIOD_HALF + CLK_PERIOD)
     return datas
 
 async def spi_write(dut, address, datas):
@@ -142,10 +141,10 @@ async def spi_write(dut, address, datas):
         await spi_rw(dut, data)
         await Timer(SPI_PERIOD_HALF)
     dut.nss.value = 1
-    await Timer(SPI_PERIOD_HALF)
+    await Timer(SPI_PERIOD_HALF + CLK_PERIOD)
 
 
-@cocotb.test()
+@cocotb.test(timeout_time=2500, timeout_unit='us')
 async def test_cdctl_bx(dut):
     """
     test_cdctl_bx
@@ -171,19 +170,25 @@ async def test_cdctl_bx(dut):
     await spi_write(dut, REG_FILTER, [0x00])
     # TODO: reset rx...
 
-    await spi_write(dut, REG_TX, [0x01])
-    await spi_write(dut, REG_TX, [0x00])
-    await spi_write(dut, REG_TX, [0x01, 0xcd])
-    #await spi_write(dut, REG_TX, [0xcd])
+    await spi_write(dut, REG_TX, [0x01, 0x00, 0x01, 0xcd])
 
-    await spi_write(dut, REG_TX_CTRL, [BIT_TX_START | BIT_TX_RST_POINTER])
+    await spi_write(dut, REG_TX_CTRL, [BIT_TX_START])
 
-    
     await RisingEdge(dut.cdctl_bx_m.cdbus_m.rx_pending)
-    value = await spi_read(dut, REG_RX, 3)
-    print(" ".join([("%02x" % x) for x in value]))
-    value = await spi_read(dut, REG_RX, value[2])
-    print(" ".join([("%02x" % x) for x in value]))
+    int_flag, rx_len = await spi_read(dut, REG_INT_FLAG, 2)
+    dut._log.info(f"int_flag: {int_flag:02x}")
+    dut._log.info(f"rx_len: {rx_len:02x}")
+    
+    value = await spi_read(dut, REG_RX, 3 + rx_len)
+    dut._log.info(" ".join([("%02x" % x) for x in value]))
+    
+    int_flag = (await spi_read(dut, REG_INT_FLAG))[0]
+    dut._log.info(f"int_flag: {int_flag:02x}")
+    
+    int_flag = (await spi_read(dut, REG_INT_FLAG))[0]
+    dut._log.info(f"int_flag: {int_flag:02x}")
+    if int_flag != 0x20:
+        dut._log.error(f'wrong int_flag')
     
     
     #await RisingEdge(dut.cdctl_bx_m.cdbus_m.bus_idle)

@@ -9,7 +9,7 @@
  * Author: Duke Fong <d@d-l.io>
  */
 
-`define INT_FLAG_SNAPSHOT
+`define HAS_CHIP_SELECT
 
 
 module cdctl_spi(
