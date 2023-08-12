@@ -21,11 +21,11 @@ module cdbus
         input               chip_select, // reduce ram_rx power consumption
         output              irq,
 
-        input       [4:0]   csr_address,
+        input       [3:0]   csr_address,
         input               csr_read,
-        output      [7:0]   csr_readdata,
+        output      [31:0]  csr_readdata,
         input               csr_write,
-        input       [7:0]   csr_writedata,
+        input       [31:0]  csr_writedata,
 
         input               rx,
         output              tx,
@@ -52,8 +52,8 @@ wire [15:0] div_hs;
 
 wire rx_clean_all;
 wire rx_ram_rd_done;
-wire [7:0] rx_ram_rd_addr;
-wire [7:0] rx_ram_rd_byte;
+wire [5:0] rx_ram_rd_addr;
+wire [31:0] rx_ram_rd_word;
 wire [7:0] rx_ram_rd_len;
 wire rx_ram_rd_err;
 wire rx_error;
@@ -63,7 +63,7 @@ wire rx_pending;
 wire bus_idle;
 
 wire tx_ram_wr_en;
-wire [7:0] tx_ram_wr_addr;
+wire [5:0] tx_ram_wr_addr;
 wire tx_ram_switch;
 wire tx_abort;
 wire has_break;
@@ -147,7 +147,7 @@ cd_csr #(
     .rx_clean_all(rx_clean_all),
     .rx_ram_rd_done(rx_ram_rd_done),
     .rx_ram_rd_addr(rx_ram_rd_addr),
-    .rx_ram_rd_byte(rx_ram_rd_byte),
+    .rx_ram_rd_word(rx_ram_rd_word),
     .rx_ram_rd_len(rx_ram_rd_len),
     .rx_ram_rd_err(rx_ram_rd_err),
     .rx_error(rx_error),
@@ -172,7 +172,7 @@ cd_rx_ram cd_rx_ram_m(
     .clk(clk),
     .reset_n(reset_n),
 
-    .rd_byte(rx_ram_rd_byte),
+    .rd_word(rx_ram_rd_word),
     .rd_addr(rx_ram_rd_addr),
     .rd_en(chip_select),
     .rd_done(rx_ram_rd_done),
@@ -202,7 +202,7 @@ cd_tx_ram cd_tx_ram_m(
     .rd_done(tx_ram_rd_done),
     .unread(tx_pending),
 
-    .wr_byte(csr_writedata),
+    .wr_word(csr_writedata),
     .wr_addr(tx_ram_wr_addr),
     .wr_en(tx_ram_wr_en),
 

@@ -8,6 +8,7 @@
 # Author: Duke Fong <d@d-l.io>
 #
 
+import struct
 import cocotb
 from cocotb.binary import BinaryValue
 from cocotb.triggers import RisingEdge, ReadOnly, Timer
@@ -19,31 +20,26 @@ from PyCRC.CRC16 import CRC16
 def modbus_crc(data):
     return CRC16(modbus_flag=True).calculate(data).to_bytes(2, byteorder='little')
 
-IS_32BITS           = False
+IS_32BITS           = True
+
 DFT_VERSION         = 0x0f
 
 REG_VERSION         = 0x00
-REG_SETTING         = 0x02
-REG_IDLE_WAIT_LEN   = 0x04
-REG_TX_PERMIT_LEN_L = 0x05
-REG_TX_PERMIT_LEN_H = 0x06
-REG_MAX_IDLE_LEN_L  = 0x07
-REG_MAX_IDLE_LEN_H  = 0x08
-REG_TX_PRE_LEN      = 0x09
-REG_FILTER          = 0x0b
-REG_DIV_LS_L        = 0x0c
-REG_DIV_LS_H        = 0x0d
-REG_DIV_HS_L        = 0x0e
-REG_DIV_HS_H        = 0x0f
-REG_INT_MASK        = 0x11
-REG_INT_FLAG        = 0x12
-REG_RX_LEN          = 0x13
-REG_RX              = 0x14
-REG_TX              = 0x15
-REG_RX_CTRL         = 0x16
-REG_TX_CTRL         = 0x17
-REG_FILTER_M0       = 0x1a
-REG_FILTER_M1       = 0x1b
+REG_SETTING         = 0x01
+REG_IDLE_WAIT_LEN   = 0x02
+REG_TX_PERMIT_LEN   = 0x03
+REG_MAX_IDLE_LEN    = 0x04
+REG_TX_PRE_LEN      = 0x05
+REG_FILTER          = 0x06
+REG_DIV_LS          = 0x07
+REG_DIV_HS          = 0x08
+REG_INT_MASK        = 0x09
+REG_INT_FLAG        = 0x0a
+REG_RX              = 0x0b
+REG_TX              = 0x0c
+REG_RX_CTRL         = 0x0d
+REG_TX_CTRL         = 0x0e
+REG_FILTER_M        = 0x0f
 
 BIT_SETTING_IDLE_INVERT     = 1 << 7
 BIT_SETTING_FULL_DUPLEX     = 1 << 6
@@ -126,6 +122,8 @@ async def csr_read(dut, idx, address, burst=False, burst_end=False):
 async def csr_write(dut, idx, address, data, burst=False):
     addr_len = len(getattr(dut, f'csr_addr{idx}'))
     wdata_len = len(getattr(dut, f'csr_wdata{idx}'))
+    if isinstance(data, BinaryValue): # padding to 32 bits
+        data = BinaryValue(value=int(data), n_bits=32, bigEndian=False)
     
     await RisingEdge(getattr(dut, f'clk{idx}'))
     getattr(dut, f'cs{idx}').value = 1
@@ -148,46 +146,53 @@ async def check_version(dut, idx):
         exit(-1)
 
 async def set_div(dut, idx, div_ls, div_hs):
-    await csr_write(dut, idx, REG_DIV_LS_H, div_ls >> 8, True)
-    await csr_write(dut, idx, REG_DIV_LS_L, div_ls & 0xff, True)
-    await csr_write(dut, idx, REG_DIV_HS_H, div_hs >> 8, True)
-    await csr_write(dut, idx, REG_DIV_HS_L, div_hs & 0xff, False)
+    await csr_write(dut, idx, REG_DIV_LS, div_ls)
+    await csr_write(dut, idx, REG_DIV_HS, div_hs)
 
 async def set_max_idle_len(dut, idx, max_idle_len):
-    await csr_write(dut, idx, REG_MAX_IDLE_LEN_H, max_idle_len >> 8, True)
-    await csr_write(dut, idx, REG_MAX_IDLE_LEN_L, max_idle_len & 0xff, False)
+    await csr_write(dut, idx, REG_MAX_IDLE_LEN, max_idle_len)
 
 async def set_tx_permit_len(dut, idx, tx_permit_len):
-    await csr_write(dut, idx, REG_TX_PERMIT_LEN_H, tx_permit_len >> 8, True)
-    await csr_write(dut, idx, REG_TX_PERMIT_LEN_L, tx_permit_len & 0xff, False)
+    await csr_write(dut, idx, REG_TX_PERMIT_LEN, tx_permit_len)
 
 async def write_tx(dut, idx, bytes_):
     if len(bytes_) == 0:
         return
-    for i in range(len(bytes_)):
-        if i < len(bytes_) - 1:
-            await csr_write(dut, idx, REG_TX, bytes_[i], True)
+    blk_cnt = int((len(bytes_)+3)/4)
+    for i in range(blk_cnt):
+        val = struct.unpack('<I', (bytes_[i*4 : i*4+4] + b'\x00\x00\x00')[0:4])[0]
+        if i < blk_cnt - 1:
+            await csr_write(dut, idx, REG_TX, val, True)
         else:
-            await csr_write(dut, idx, REG_TX, bytes_[i], False)
+            await csr_write(dut, idx, REG_TX, val, False)
 
 async def read_rx(dut, idx, len_):
     ret = b''
     if len_ == 0:
         return ret
     await csr_read(dut, idx, REG_RX, True) # skip 1 clk ram output delay
-    for i in range(len_):
-        if i < len_ - 1:
+    blk_cnt = int((len_+3)/4)
+    left = len_%4
+    for i in range(blk_cnt):
+        if i < blk_cnt - 1:
             val = await csr_read(dut, idx, REG_RX, True)
         else:
             val = await csr_read(dut, idx, REG_RX, False, True)
-        ret += bytes([int(val)])
-    return ret
-
-async def read_rx_len(dut, idx):
-    return await csr_read(dut, idx, REG_RX_LEN)
+            if left != 0:
+                start = (4 - left) * 8
+                val = val[start : 31]
+        ret += struct.pack('<I', int(val))
+    return ret[0: len_]
 
 async def read_int_flag(dut, idx):
-    return await csr_read(dut, idx, REG_INT_FLAG)
+    val = await csr_read(dut, idx, REG_INT_FLAG)
+    val = val[24 : 31]
+    return int(val)
+
+async def read_rx_len(dut, idx):
+    val = await csr_read(dut, idx, REG_INT_FLAG)
+    val = val[16 : 23]
+    return int(val)
 
 
 async def exit_err():

@@ -17,8 +17,8 @@ module cd_rx_ram
            input                 clk,
            input                 reset_n,
 
-           output       [7:0]    rd_byte,
-           input        [7:0]    rd_addr,
+           output      [31:0]    rd_word,
+           input        [5:0]    rd_addr,
            input                 rd_en,
            input                 rd_done,
            input                 rd_done_all,
@@ -50,7 +50,7 @@ assign unread = dirty[rd_sel]; // better than (dirty != 0)
 assign rd_err = error[rd_sel];
 
 reg  [B_WIDTH-1:0] buf_wr_addr;
-wire [B_WIDTH-1:0] buf_rd_addr = (rd_sel << S_WIDTH) + rd_addr; // {rd_sel, {S_WIDTH{1'b0}}}
+wire [B_WIDTH-1:0] buf_rd_addr = (rd_sel << S_WIDTH) + (rd_addr << 2); // {rd_sel, {S_WIDTH{1'b0}}}
 
 // has_err[0], frag_count[2:0], len[7:0]
 reg  [F_WIDTH+8-1:0] idx_table [2**I_WIDTH-1:0];
@@ -61,6 +61,7 @@ wire  [F_WIDTH-1:0] idx_rval_amount = idx_rd_val[8+F_WIDTH-1:8];
 
 assign rd_len = idx_rval_len;
 
+reg [31:0] wr_word;
 reg wr_cancel;
 reg wr_en_d;
 reg wr_err_d;
@@ -70,47 +71,28 @@ reg [F_WIDTH-1:0] wr_frag_amount;
 always @(posedge clk)
     idx_rd_val <= idx_table[rd_sel];
 
+always @(posedge clk)
+    if (wr_en) begin
+        case (wr_addr[1:0])
+            2'b00:   wr_word = {24'bx, wr_byte};
+            2'b01:   wr_word = {16'bx, wr_byte, wr_word[7:0]};
+            2'b10:   wr_word = {8'bx, wr_byte, wr_word[15:0]};
+            default: wr_word = {wr_byte, wr_word[23:0]};
+        endcase
+    end
 
-`ifdef SPRAM_ONLY
-// when there is a read/write conflict, rd_byte will be updated one clock later
-// which is suitable for interfaces such as spi
 
-wire [7:0] rd_byte_ori;
-reg  [7:0] rd_byte_bk;
-reg wr_en_d2;
-
-always @(posedge clk) begin
-    wr_en_d2 <= wr_en_d;
-    rd_byte_bk <= wr_en_d2 ? rd_byte_bk : rd_byte_ori;
-end
-
-assign rd_byte = wr_en_d2 ? rd_byte_bk : rd_byte_ori;
-
-cd_spram #(.A_WIDTH(B_WIDTH)) cd_rx_ram_buf_m(
+cd_sdpram #(.A_WIDTH(B_WIDTH-2), .D_WIDTH(32)) cd_rx_ram_buf_m(
     .clk(clk),
     .cen(~rd_en & ~wr_en_d),
 
-    .addr(wr_en_d ? buf_wr_addr : buf_rd_addr),
+    .ra(buf_rd_addr[B_WIDTH-1:2]),
+    .rd(rd_word),
 
-    .rd(rd_byte_ori),
-
-    .wd(wr_byte),
+    .wa(buf_wr_addr[B_WIDTH-1:2]),
+    .wd(wr_word),
     .wen(~wr_en_d)
 );
-
-`else
-cd_sdpram #(.A_WIDTH(B_WIDTH)) cd_rx_ram_buf_m(
-    .clk(clk),
-    .cen(~rd_en & ~wr_en_d),
-
-    .ra(buf_rd_addr),
-    .rd(rd_byte),
-
-    .wa(buf_wr_addr),
-    .wd(wr_byte),
-    .wen(~wr_en_d)
-);
-`endif
 
 
 always @(posedge clk or negedge reset_n)

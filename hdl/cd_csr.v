@@ -22,11 +22,11 @@ module cd_csr
         input               chip_select,
 `endif
 
-        input       [4:0]   csr_address,
+        input       [3:0]   csr_address,
         input               csr_read,
-        output reg  [7:0]   csr_readdata,
+        output reg  [31:0]  csr_readdata,
         input               csr_write,
-        input       [7:0]   csr_writedata,
+        input       [31:0]  csr_writedata,
 
         output reg          full_duplex,
         output reg          break_sync,
@@ -48,8 +48,8 @@ module cd_csr
 
         output reg          rx_clean_all,
         output reg          rx_ram_rd_done,
-        output reg  [7:0]   rx_ram_rd_addr,
-        input       [7:0]   rx_ram_rd_byte,
+        output reg  [5:0]   rx_ram_rd_addr,
+        input      [31:0]   rx_ram_rd_word,
         input       [7:0]   rx_ram_rd_len,
         input               rx_ram_rd_err,
         input               rx_error,
@@ -59,7 +59,7 @@ module cd_csr
         input               bus_idle,
 
         output              tx_ram_wr_en,
-        output reg  [7:0]   tx_ram_wr_addr,
+        output reg  [5:0]   tx_ram_wr_addr,
         output reg          tx_ram_switch,
         output reg          tx_abort,
         output reg          has_break,
@@ -71,27 +71,21 @@ module cd_csr
 
 localparam
     REG_VERSION         = 'h00,
-    REG_SETTING         = 'h02,
-    REG_IDLE_WAIT_LEN   = 'h04,
-    REG_TX_PERMIT_LEN_L = 'h05,
-    REG_TX_PERMIT_LEN_H = 'h06,
-    REG_MAX_IDLE_LEN_L  = 'h07,
-    REG_MAX_IDLE_LEN_H  = 'h08,
-    REG_TX_PRE_LEN      = 'h09,
-    REG_FILTER          = 'h0b,
-    REG_DIV_LS_L        = 'h0c,
-    REG_DIV_LS_H        = 'h0d,
-    REG_DIV_HS_L        = 'h0e,
-    REG_DIV_HS_H        = 'h0f,
-    REG_INT_MASK        = 'h11,
-    REG_INT_FLAG        = 'h12,
-    REG_RX_LEN          = 'h13,
-    REG_RX              = 'h14,
-    REG_TX              = 'h15,
-    REG_RX_CTRL         = 'h16,
-    REG_TX_CTRL         = 'h17,
-    REG_FILTER_M0       = 'h1a,
-    REG_FILTER_M1       = 'h1b;
+    REG_SETTING         = 'h01,
+    REG_IDLE_WAIT_LEN   = 'h02,
+    REG_TX_PERMIT_LEN   = 'h03,
+    REG_MAX_IDLE_LEN    = 'h04,
+    REG_TX_PRE_LEN      = 'h05,
+    REG_FILTER          = 'h06,
+    REG_DIV_LS          = 'h07,
+    REG_DIV_HS          = 'h08,
+    REG_INT_MASK        = 'h09,
+    REG_INT_FLAG        = 'h0a,
+    REG_RX              = 'h0b,
+    REG_TX              = 'h0c,
+    REG_RX_CTRL         = 'h0d,
+    REG_TX_CTRL         = 'h0e,
+    REG_FILTER_M        = 'h0f;
 
 reg tx_error_flag;
 reg cd_flag;
@@ -103,20 +97,11 @@ reg idle_invert;
 reg [7:0] int_mask;
 wire [7:0] int_flag = {tx_error_flag, cd_flag, ~tx_pending, (not_drop ? rx_ram_rd_err : rx_error_flag),
                        rx_lost_flag, rx_break_flag, rx_pending, (idle_invert ? ~bus_idle : bus_idle)};
-reg [7:0] h_val_bkup;
 
 `ifdef HAS_CHIP_SELECT
-reg sub_addr;
 reg has_read_rx;
 reg chip_select_delayed;
 reg [7:0] int_flag_snapshot;    // avoid metastability due to int_flag
-
-always @(posedge clk) begin
-    if (!chip_select)
-        sub_addr <= 0;
-    else if (csr_read)          // csr_read || csr_write
-        sub_addr <= !sub_addr;  // sub_addr + 1'd1;
-end
 `endif
 
 assign tx_ram_wr_en = (csr_address == REG_TX) ? csr_write : 1'b0;
@@ -127,48 +112,36 @@ assign irq = (int_flag & int_mask) != 0;
 always @(*)
     case (csr_address)
         REG_VERSION:
-            csr_readdata = VERSION;
+            csr_readdata = {24'd0, VERSION};
         REG_SETTING:
-            csr_readdata = {idle_invert, full_duplex, break_sync, arbitration,
+            csr_readdata = {24'd0, idle_invert, full_duplex, break_sync, arbitration,
                             not_drop, user_crc, tx_invert, tx_push_pull};
         REG_IDLE_WAIT_LEN:
-            csr_readdata = idle_wait_len;
-        REG_TX_PERMIT_LEN_L:
-            csr_readdata = tx_permit_len[7:0];
-        REG_TX_PERMIT_LEN_H:
-            csr_readdata = {6'd0, tx_permit_len[9:8]};
-        REG_MAX_IDLE_LEN_L:
-            csr_readdata = max_idle_len[7:0];
-        REG_MAX_IDLE_LEN_H:
-            csr_readdata = {6'd0, max_idle_len[9:8]};
+            csr_readdata = {24'd0, idle_wait_len};
+        REG_TX_PERMIT_LEN:
+            csr_readdata = {22'd0, tx_permit_len};
+        REG_MAX_IDLE_LEN:
+            csr_readdata = {22'd0, max_idle_len};
         REG_TX_PRE_LEN:
-            csr_readdata = {6'd0, tx_pre_len};
+            csr_readdata = {30'd0, tx_pre_len};
         REG_FILTER:
-            csr_readdata = filter;
-        REG_DIV_LS_L:
-            csr_readdata = div_ls[7:0];
-        REG_DIV_LS_H:
-            csr_readdata = div_ls[15:8];
-        REG_DIV_HS_L:
-            csr_readdata = div_hs[7:0];
-        REG_DIV_HS_H:
-            csr_readdata = div_hs[15:8];
+            csr_readdata = {24'd0, filter};
+        REG_DIV_LS:
+            csr_readdata = {24'd0, div_ls};
+        REG_DIV_HS:
+            csr_readdata = {24'd0, div_hs};
         REG_INT_MASK:
-            csr_readdata = int_mask;
+            csr_readdata = {24'd0, int_mask};
         REG_INT_FLAG:
 `ifdef HAS_CHIP_SELECT
-            csr_readdata = sub_addr ? rx_ram_rd_len : int_flag_snapshot;
+            csr_readdata = {16'd0, rx_ram_rd_len, int_flag_snapshot};
 `else
-            csr_readdata = int_flag;
+            csr_readdata = {16'd0, rx_ram_rd_len, int_flag};
 `endif
-        REG_RX_LEN:
-            csr_readdata = rx_ram_rd_len;
         REG_RX:
-            csr_readdata = rx_ram_rd_byte;
-        REG_FILTER_M0:
-            csr_readdata = filter_m0;
-        REG_FILTER_M1:
-            csr_readdata = filter_m1;
+            csr_readdata = rx_ram_rd_word;
+        REG_FILTER_M:
+            csr_readdata = {16'd0, filter_m1, filter_m0};
         default:
             csr_readdata = 0;
     endcase
@@ -207,7 +180,6 @@ always @(posedge clk or negedge reset_n)
         int_flag_snapshot <= 0;
         has_read_rx <= 0;
 `endif
-        h_val_bkup <= 0;
 
         rx_ram_rd_addr <= 0;
         rx_ram_rd_done <= 0;
@@ -264,8 +236,6 @@ always @(posedge clk or negedge reset_n)
             tx_error_flag <= 1;
         if (ack_break)
             has_break <= 0;
-        if (csr_read || csr_write)
-            h_val_bkup <= 0; // optional
 
         if (csr_write)
             case (csr_address)
@@ -280,29 +250,21 @@ always @(posedge clk or negedge reset_n)
                     tx_push_pull <= csr_writedata[0];
                 end
                 REG_IDLE_WAIT_LEN:
-                    idle_wait_len <= csr_writedata;
-                REG_TX_PERMIT_LEN_L:
-                    tx_permit_len <= {h_val_bkup[1:0], csr_writedata};
-                REG_TX_PERMIT_LEN_H:
-                    h_val_bkup <= csr_writedata;
-                REG_MAX_IDLE_LEN_L:
-                    max_idle_len <= {h_val_bkup[1:0], csr_writedata};
-                REG_MAX_IDLE_LEN_H:
-                    h_val_bkup <= csr_writedata;
+                    idle_wait_len <= csr_writedata[7:0];
+                REG_TX_PERMIT_LEN:
+                    tx_permit_len[9:0] <= csr_writedata[9:0];
+                REG_MAX_IDLE_LEN:
+                    max_idle_len[9:0] <= csr_writedata[9:0];
                 REG_TX_PRE_LEN:
                     tx_pre_len <= csr_writedata[1:0];
                 REG_FILTER:
-                    filter <= csr_writedata;
-                REG_DIV_LS_L:
-                    div_ls <= {h_val_bkup, csr_writedata};
-                REG_DIV_LS_H:
-                    h_val_bkup <= csr_writedata;
-                REG_DIV_HS_L:
-                    div_hs <= {h_val_bkup, csr_writedata};
-                REG_DIV_HS_H:
-                    h_val_bkup <= csr_writedata;
+                    filter <= csr_writedata[7:0];
+                REG_DIV_LS:
+                    div_ls[15:0] <= csr_writedata[15:0];
+                REG_DIV_HS:
+                    div_hs[15:0] <= csr_writedata[15:0];
                 REG_INT_MASK:
-                    int_mask <= csr_writedata;
+                    int_mask <= csr_writedata[7:0];
                 REG_TX:
                     tx_ram_wr_addr <= tx_ram_wr_addr + 1'd1;
                 REG_RX_CTRL: begin
@@ -325,10 +287,10 @@ always @(posedge clk or negedge reset_n)
                     tx_ram_wr_addr <= 0;
 `endif
                 end
-                REG_FILTER_M0:
-                    filter_m0 <= csr_writedata;
-                REG_FILTER_M1:
-                    filter_m1 <= csr_writedata;
+                REG_FILTER_M: begin
+                    filter_m0 <= csr_writedata[7:0];
+                    filter_m1 <= csr_writedata[15:8];
+                end
             endcase
     end
 
