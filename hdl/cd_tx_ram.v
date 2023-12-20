@@ -26,45 +26,34 @@ module cd_tx_ram(
            input                 switch
        );
 
-wire [31:0] rd_bytes[1:0];
-wire [5:0] rw_addr[1:0];
-
-wire rd_ens[1:0];
-wire wr_ens[1:0];
+parameter B_WIDTH = 9; // buffer bit width, 2^9 = 2 x 256 bytes
 
 reg wr_sel;
 reg rd_sel;
 reg [1:0] dirty;
 
-assign unread = (dirty != 0);
+assign unread = dirty[rd_sel]; // better than (dirty != 0)
+wire [31:0] rd_word;
 
 always @(*)
     case (rd_addr[1:0])
-        2'b00:   rd_byte = rd_bytes[rd_sel][7:0];
-        2'b01:   rd_byte = rd_bytes[rd_sel][15:8];
-        2'b10:   rd_byte = rd_bytes[rd_sel][23:16];
-        default: rd_byte = rd_bytes[rd_sel][31:24];
+        2'b00:   rd_byte = rd_word[7:0];
+        2'b01:   rd_byte = rd_word[15:8];
+        2'b10:   rd_byte = rd_word[23:16];
+        default: rd_byte = rd_word[31:24];
     endcase
 
+cd_sdpram #(.A_WIDTH(B_WIDTH-2), .D_WIDTH(32)) cd_tx_ram_buf_m(
+    .clk(clk),
+    .cen(~rd_en & ~wr_en),
 
-genvar i;
-generate
-    for (i = 0; i < 2; i = i + 1) begin : cd_tx_ram_array
-        assign rd_ens[i] = rd_en & (rd_sel == i);
-        assign wr_ens[i] = wr_en & (wr_sel == i);
-        assign rw_addr[i] = wr_ens[i] ? wr_addr : rd_addr[7:2];
+    .ra({rd_sel, rd_addr[7:2]}),
+    .rd(rd_word),
 
-        // 2^6 = 64, 32 bits = 4 bytes, 64 x 4 = 256 bytes
-        cd_spram #(.A_WIDTH(6), .D_WIDTH(32)) cd_spram_m(
-            .clk(clk),
-            .cen(~rd_ens[i] & ~wr_ens[i]),
-            .addr(rw_addr[i]),
-            .rd(rd_bytes[i]),
-            .wd(wr_word),
-            .wen(~wr_ens[i])
-        );
-    end
-endgenerate
+    .wa({wr_sel, wr_addr}),
+    .wd(wr_word),
+    .wen(~wr_en)
+);
 
 
 always @(posedge clk or negedge reset_n)
