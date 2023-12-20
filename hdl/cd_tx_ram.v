@@ -26,36 +26,78 @@ module cd_tx_ram(
            input                 switch
        );
 
-wire [7:0] rd_bytes[1:0];
-wire [7:0] rw_addr[1:0];
-
-wire rd_ens[1:0];
-wire wr_ens[1:0];
+parameter B_WIDTH = 9; // buffer bit width, 2^9 = 2 x 256 bytes
 
 reg wr_sel;
 reg rd_sel;
 reg [1:0] dirty;
 
-assign unread = (dirty != 0);
-assign rd_byte = rd_bytes[rd_sel];
+assign unread = dirty[rd_sel]; // better than (dirty != 0)
 
-genvar i;
-generate
-    for (i = 0; i < 2; i = i + 1) begin : cd_tx_ram_array
-        assign rd_ens[i] = rd_en & (rd_sel == i);
-        assign wr_ens[i] = wr_en & (wr_sel == i);
-        assign rw_addr[i] = wr_ens[i] ? wr_addr : rd_addr;
 
-        cd_spram cd_spram_m(
-            .clk(clk),
-            .cen(~rd_ens[i] & ~wr_ens[i]),
-            .addr(rw_addr[i]),
-            .rd(rd_bytes[i]),
-            .wd(wr_byte),
-            .wen(~wr_ens[i])
-        );
+`ifdef SPRAM_ONLY
+// when there is a read/write conflict, writing is delayed
+// which is suitable for interfaces such as spi
+
+reg  [8:0] rd_addr_bk;
+wire [7:0] rd_byte_ori;
+reg  [7:0] rd_byte_bk;
+
+reg wr_en_bk;
+reg [8:0] wr_addr_bk; // optional
+reg [7:0] wr_byte_bk; // optional for spi
+
+reg  wr_en_final_bk;
+wire wr_en_final = rd_addr_bk == {rd_sel, rd_addr} ? wr_en_bk : 0;
+assign rd_byte = wr_en_final_bk ? rd_byte_bk : rd_byte_ori;
+
+always @(posedge clk) begin
+    wr_en_final_bk <= wr_en_final;
+    rd_byte_bk <= wr_en_final_bk ? rd_byte_bk : rd_byte_ori;
+    
+    rd_addr_bk <= {rd_sel, rd_addr};
+end
+
+always @(posedge clk or negedge reset_n)
+    if (!reset_n) begin
+        wr_en_bk <= 0;
     end
-endgenerate
+    else begin
+        if (wr_en) begin
+            wr_en_bk <= 1;
+            wr_addr_bk <= {wr_sel, wr_addr};
+            wr_byte_bk <= wr_byte;
+        end
+        else if (wr_en_final) begin
+            wr_en_bk <= 0;
+        end
+    end
+
+cd_spram #(.A_WIDTH(B_WIDTH)) cd_tx_ram_buf_m(
+    .clk(clk),
+    .cen(~rd_en & ~wr_en_final),
+
+    .addr(wr_en_final ? wr_addr_bk : {rd_sel, rd_addr}),
+
+    .rd(rd_byte_ori),
+
+    .wd(wr_byte_bk),
+    .wen(~wr_en_final)
+);
+
+`else
+cd_sdpram #(.A_WIDTH(B_WIDTH)) cd_tx_ram_buf_m(
+    .clk(clk),
+    .cen(~rd_en & ~wr_en),
+
+    .ra({rd_sel, rd_addr}),
+    .rd(rd_byte),
+
+    .wa({wr_sel, wr_addr}),
+    .wd(wr_byte),
+    .wen(~wr_en)
+);
+`endif
 
 
 always @(posedge clk or negedge reset_n)

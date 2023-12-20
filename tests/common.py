@@ -165,7 +165,7 @@ async def write_tx(dut, idx, bytes_):
     if len(bytes_) == 0:
         return
     for i in range(len(bytes_)):
-        if i < len(bytes_) - 1:
+        if i < len(bytes_) - 1: # or always false for SPRAM_ONLY test
             await csr_write(dut, idx, REG_TX, bytes_[i], True)
         else:
             await csr_write(dut, idx, REG_TX, bytes_[i], False)
