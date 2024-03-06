@@ -14,34 +14,39 @@ CDBUS IP Core
 8. [License](#license)
 
 
+CDBUS is a simple protocol designed for serial ports and serial bus communication, commonly employed in RS-485 buses.
+It utilizes hardware arbitration and other mechanisms to avoid data conflicts, allowing nodes to freely transmit and receive data packets,
+thereby overcoming the limitations of single-master polling.
+
+
 ## CDBUS Protocol
 
-CDBUS is a protocol for Asynchronous Serial Communication,
-it has a 3-byte header: `[src_addr, dst_addr, data_len]`, then user data, and finally 2 bytes of CRC. (Same as MODBUS CRC.)
+CDBUS has a 3-byte header: `[src_addr, dst_addr, data_len]`, followed by user data, and concluding with a 2-byte CRC (identical to MODBUS CRC).
 
-It's suitable for one-to-one communication, e.g. UART or RS-232.
-In this case, the address for each side are usually carefully selected and fixed,
-e.g: `[0x55, 0xaa, data_len, ...]`, and the backward is: `[0xaa, 0x55, data_len, ...]`. (`data_len` ≤ 255.)
+The CDBUS protocol at the byte level can be directly used for traditional serial communication,
+such as traditional UART, RS-232, RS-485, and USB virtual serial ports.
 
-The CDBUS protocol is more valuable for bus communication, e.g. RS-485, M-LVDS or Single Line UART.
-In this case, it supports:
+The full CDBUS protocol at the bit level requires dedicated hardware controllers (or software emulation)
+to achieve conflict avoidance, higher speeds, and strong real-time performance.
+
 
 ### Arbitration Mode (CDBUS-A)
 
-* It introduces an arbitration mechanism that automatically avoids conflicts like the CAN bus.
-* Support dual baud rate, provide high speed communication, the baud rate in the high speed phase is up to: `sysclk` ÷ 3. (e.g. 50 Mbps for 150 MHz `sysclk`.)
+* It introduces an arbitration mechanism, similar to the CAN bus, to automatically avoid conflicts.
+* Supporting dual baud rates achieves high-speed communication,
+  with the maximum baud rate during the high-speed phase up to: `sysclk` ÷ 3. (e.g. 50 Mbps for 150 MHz `sysclk`.)
 * Supports unicast, multicast and broadcast.
 * The maximum user data size is 253 bytes.
-* Hardware packing, unpacking, verification and filtering, save your time and CPU usage.
-* Backward compatible with traditional RS-485 hardware (The arbitration function still works).
+* Hardware packing, unpacking, verification and filtering, saving your time and CPU usage.
+* Compatible with traditional RS-485 hardware (arbitration function remains effective).
 
-The protocol timing example, include only one user data byte:  
-(You can set the length of time to enter idle and wait to send.)
+The protocol timing example, consisting of only one byte of user data:  
+(You can configure the lengths of idle time and transmission permit time.)
 
 ![protocol](docs/img/protocol.svg)
 
 Tips:
- - When a high-priority node needs to send unimportant data, you can dynamically increase the time of TX_PERMIT_LEN.
+ - When a high-priority node needs to send unimportant data, we can dynamically increase the transmission permit time (TX_PERMIT_LEN).
 
 Arbitration example:
 
@@ -51,17 +56,18 @@ Example waveforms for TX output and TX_EN pins:
 
 <img alt="arbitration" src="docs/img/to_te_wave.svg" width="75%">
 
-The RX receive data sample point is at 1/2 bit; the TX readback data sample point is at 3/4 bit.
+The RX data sampling point for reception is at 1/2 bit; for TX readback, it's at 3/4 bit.
 
 ### Break Sync Mode (CDBUS-BS)
 
-In CDBUS-A mode, if the low-speed part takes a lot of time, it will be a communication efficiency bottleneck.
+In CDBUS-A mode, if the low-speed portion takes longer, it can become a bottleneck for communication efficiency.
 
-In this case, single-rate peer-to-peer bus communication can be implemented by CDBUS-BS mode:
+To address this, single-rate peer-to-peer bus communication can be achieved using CDBUS-BS mode:
 
- - The TX_PERMIT_LEN parameter is configured differently for different nodes, and the difference needs to be large enough to avoid conflicts.
- - If any node has pending tx frame before TX-permit point, then start sending at the TX-permit point.
- - Otherwise, wait until the idle time exceeds MAX_IDLE_LEN, and when there has tx frame pending, send a break character first to bring the bus out of the idle state.
+ - Different nodes have different configurations for the TX_PERMIT_LEN parameter, requiring sufficiently large differences to avoid conflicts.
+ - If any node has pending data frames waiting to be sent before the transmission permit point, transmission starts from that point.
+ - Otherwise, wait until the idle time exceeds MAX_IDLE_LEN. When there are pending data frames waiting for transmission,
+   first send a break character to bring the bus out of the idle state.
 
 <img alt="arbitration" src="docs/img/break_sync.svg" width="75%">
 
@@ -104,7 +110,7 @@ The CDBUS-BS mode is suitable for high-speed applications with few nodes, and it
 | FILTER_M0         |  0x1a   | RD/WR  | 0xff            | Multicast filter0                                    |
 | FILTER_M1         |  0x1b   | RD/WR  | 0xff            | Multicast filter1                                    |
 
-To write a register with more than 8 bits, write the high byte first and then the low byte.
+To write a register with more than 8 bits, first write the high byte followed by the low byte.
 The high byte can be omitted if it is 0.
 
 
@@ -151,7 +157,7 @@ Match from top to bottom:
 | != FILTER | != 255   | = DST_ADDR   | not care         | Receive         | Unicast          |
 | not care  | != 255   | != DST_ADDR  | all != DST_ADDR  | Drop            |                  |
 
-It is recommended to reserve the address from `0xe0` to `0xfe` as the multicast address.
+For example, addresses from 0xe0 to 0xfe can be reserved for multicast address.
 
 The default value 0xff of FILTER_Mx means not enabled.
 
@@ -182,7 +188,7 @@ Output of irq = ((INT_FLAG & INT_MASK) != 0).
 | [3]     | 1: RX lost: no empty page for RX             |
 | [2]     | 1: Break character received                  |
 | [1]     | 1: RX page ready for read                    |
-| [0]     | 1: Bus in IDLE mode or BUSY mode             |
+| [0]     | 1: Bus in IDLE or BUSY mode                  |
 
 Reading this register will automatically clear bit7, bit6, bit4, bit3 and bit2.
 
@@ -192,10 +198,10 @@ If `save broken frame` is set, bit4 indicates whether the current page to be rea
 
 **RX_LEN:**
 
-The default value of this register is the data_len of the frame to be read.  
-If `save broken frame` is set, the value of this register is the size of the frame to be read minus one (include CRC).
+The default value of this register corresponds to the data_len of the frame to be read.  
+If `save broken frame` is enabled, this register's value equals the size of the frame to be read minus one (including CRC).
 
-For interfaces such as SPI, if two bytes are read from the INT_FLAG register in a single transfer, the second byte holds RX_LEN.
+For interfaces like SPI, when two bytes are read from the INT_FLAG register in a single transfer, the second byte indicates RX_LEN.
 
 
 **RX_CTRL:**
@@ -205,7 +211,7 @@ For interfaces such as SPI, if two bytes are read from the INT_FLAG register in 
 | [4]     | Reset RX block              |
 | [1]     | Release RX page             |
 
-For interfaces such as SPI, the page is automatically released at the end of a transfer that reads the RX page.
+For interfaces like SPI, the RX page is automatically released at the end of a transfer that reads from it.
 
 
 **TX_CTRL:**
@@ -225,7 +231,7 @@ For interfaces such as SPI, the page is automatically released at the end of a t
 
 
     input           clk,            // core clock
-    input           reset_n,        // asynch active low reset
+    input           reset_n,        // async active-low reset
     input           chip_select,
     output          irq,            // interrupt output
 
@@ -258,7 +264,7 @@ For interfaces such as SPI, the page is automatically released at the end of a t
     write(REG_TX, [0x0c, 0x0d, 0x01, 0xcd])  # Write frame without CRC
     while (read(REG_INT_FLAG) & 0x20) == 0:  # Make sure we can successfully switch to the next page
         pass
-    write(REG_TX_CTRL, [0x02])               # Trigger send by switching TX page
+    write(REG_TX_CTRL, [0x02])               # Trigger sending by switching TX page
     
     
     # RX
@@ -267,7 +273,7 @@ For interfaces such as SPI, the page is automatically released at the end of a t
         pass
     header = read(REG_RX, len=3)
     data = read(REG_RX, len=header[2])
-    write(REG_RX_CTRL, [0x02])               # Finish read by release RX page
+    write(REG_RX_CTRL, [0x02])               # Release RX page
 
 ```
 
@@ -279,9 +285,9 @@ Install `iverilog` (>= v10) and `cocotb`, goto `tests/` folder, run `./test_all.
 
 ## Ready To Use Devices
 
-The CDCTL controller family uses the CDBUS IP Core, which provide SPI, I<sup>2</sup>C and PCIe peripheral interfaces.  
-E.g. The tiny CDCTL-Bx module support SPI and I<sup>2</sup>C interfaces:  
-(This module is completely open source, including the source code and gerber files, in the `example/` directory.)  
+The CDCTL controllers family incorporates the CDBUS IP Core, providing peripheral interfaces such as SPI, I<sup>2</sup>C, and PCIe.  
+E.g. The tiny CDCTL-Bx module supports SPI and I<sup>2</sup>C interfaces:  
+(The source code and gerber files for this module are fully open-source and located in the `example/` directory.)  
 <img alt="cdctl_bx" src="docs/img/cdctl_bx.jpg" width="600px">
 
 For a list of CDBUS-related ASIC chips, please refer to the [wiki](https://github.com/dukelec/cdbus/wiki) page.
