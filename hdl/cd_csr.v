@@ -106,17 +106,20 @@ wire [7:0] int_flag = {tx_error_flag, cd_flag, ~tx_pending, (not_drop ? rx_ram_r
 reg [7:0] h_val_bkup;
 
 `ifdef HAS_CHIP_SELECT
-reg sub_addr;
 reg has_read_rx;
 reg chip_select_delayed;
-reg [7:0] int_flag_snapshot;    // avoid metastability due to int_flag
+reg [15:0] int_flag_shift;      // avoid metastability due to int_flag
 
-always @(posedge clk) begin
-    if (!chip_select)
-        sub_addr <= 0;
-    else if (csr_read)          // csr_read || csr_write
-        sub_addr <= !sub_addr;  // sub_addr + 1'd1;
-end
+always @(posedge clk or negedge reset_n)
+    if (!reset_n) begin
+        int_flag_shift <= 0;
+    end
+    else begin
+        if (!chip_select)
+            int_flag_shift <= {rx_ram_rd_len, int_flag};
+        else if (csr_read)
+            int_flag_shift <= {8'd0, int_flag_shift[15:8]};
+    end
 `endif
 
 assign tx_ram_wr_en = (csr_address == REG_TX) ? csr_write : 1'b0;
@@ -157,7 +160,7 @@ always @(*)
             csr_readdata = int_mask;
         REG_INT_FLAG:
 `ifdef HAS_CHIP_SELECT
-            csr_readdata = sub_addr ? rx_ram_rd_len : int_flag_snapshot;
+            csr_readdata = int_flag_shift[7:0];
 `else
             csr_readdata = int_flag;
 `endif
@@ -204,7 +207,6 @@ always @(posedge clk or negedge reset_n)
         int_mask <= 0;
 `ifdef HAS_CHIP_SELECT
         chip_select_delayed <= 0;
-        int_flag_snapshot <= 0;
         has_read_rx <= 0;
 `endif
         h_val_bkup <= 0;
@@ -227,7 +229,6 @@ always @(posedge clk or negedge reset_n)
 `ifdef HAS_CHIP_SELECT
         chip_select_delayed <= chip_select;
         if (!chip_select) begin
-            int_flag_snapshot <= int_flag;
             rx_ram_rd_addr <= 0;
             tx_ram_wr_addr <= 0;
             has_read_rx <= 0;
