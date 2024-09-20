@@ -52,12 +52,12 @@ assign rd_err = error[rd_sel];
 reg  [B_WIDTH-1:0] buf_wr_addr;
 wire [B_WIDTH-1:0] buf_rd_addr = (rd_sel << S_WIDTH) + (rd_addr << 2); // {rd_sel, {S_WIDTH{1'b0}}}
 
-// has_err[0], frag_count[2:0], len[7:0]
-reg  [F_WIDTH+8-1:0] idx_table [2**I_WIDTH-1:0];
+// frag_count[2:0], len[7:0]
+reg  [F_WIDTH+7:0] idx_table [2**I_WIDTH-1:0];
 
-reg [F_WIDTH+8-1:0] idx_rd_val;
-wire          [7:0] idx_rval_len    = idx_rd_val[7:0];
-wire  [F_WIDTH-1:0] idx_rval_amount = idx_rd_val[8+F_WIDTH-1:8];
+reg  [F_WIDTH+7:0] idx_rd_val;
+wire         [7:0] idx_rval_len    = idx_rd_val[7:0];
+wire [F_WIDTH-1:0] idx_rval_amount = idx_rd_val[F_WIDTH+7:8];
 
 assign rd_len = idx_rval_len;
 

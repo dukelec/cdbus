@@ -105,8 +105,9 @@ wire tx_d;
 wire tx_en_d;
 wire tx_may_invert = tx_invert ? ~tx_d : tx_d;
 
-assign tx_en = (reset_n && tx_push_pull) ? tx_en_d : 1'bz;
-assign tx = (reset_n && (tx_push_pull || !tx_may_invert)) ? tx_may_invert : 1'bz;
+// tx_en can act as tx pin, supports single-wire push-pull UART bus
+assign tx_en = reset_n ? (tx_push_pull ? tx_en_d : (tx_en_d ? tx_may_invert : 1'bz)) : 1'bz;
+assign tx = reset_n ? (tx_push_pull ? tx_may_invert : (tx_d ? 1'bz : tx_may_invert)) : 1'bz;
 
 
 cd_csr #(
