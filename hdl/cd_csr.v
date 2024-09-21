@@ -28,9 +28,10 @@ module cd_csr
         input               csr_write,
         input       [31:0]  csr_writedata,
 
-        output reg          full_duplex,
-        output reg          break_sync,
-        output reg          arbitration,
+        output reg          rx_invert,
+        output              full_duplex,
+        output              break_sync,
+        output              arbitration,
         output reg          not_drop,
         output reg          user_crc,
         output reg          tx_invert,
@@ -94,6 +95,7 @@ reg rx_lost_flag;
 reg rx_break_flag;
 
 reg idle_invert;
+reg [1:0] mode_sel;
 reg [7:0] int_mask;
 wire [7:0] int_flag = {tx_error_flag, cd_flag, ~tx_pending, (not_drop ? rx_ram_rd_err : rx_error_flag),
                        rx_lost_flag, rx_break_flag, rx_pending, (idle_invert ? ~bus_idle : bus_idle)};
@@ -107,6 +109,9 @@ reg [7:0] int_flag_snapshot;    // avoid metastability due to int_flag
 assign tx_ram_wr_en = (csr_address == REG_TX) ? csr_write : 1'b0;
 
 assign irq = (int_flag & int_mask) != 0;
+assign full_duplex = mode_sel == 2'd3;
+assign break_sync = mode_sel == 2'd2;
+assign arbitration = mode_sel == 2'd1;
 
 
 always @(*)
@@ -114,8 +119,7 @@ always @(*)
         REG_VERSION:
             csr_readdata = {24'd0, VERSION};
         REG_SETTING:
-            csr_readdata = {24'd0, idle_invert, full_duplex, break_sync, arbitration,
-                            not_drop, user_crc, tx_invert, tx_push_pull};
+            csr_readdata = {24'd0, idle_invert, rx_invert, mode_sel, not_drop, user_crc, tx_invert, tx_push_pull};
         REG_IDLE_WAIT_LEN:
             csr_readdata = {24'd0, idle_wait_len};
         REG_TX_PERMIT_LEN:
@@ -150,9 +154,8 @@ always @(*)
 always @(posedge clk or negedge reset_n)
     if (!reset_n) begin
         idle_invert <= 0;
-        full_duplex <= 0;
-        break_sync <= 0;
-        arbitration <= 1;
+        rx_invert <= 0;
+        mode_sel <= 2'b01;
         not_drop <= 0;
         user_crc <= 0;
         tx_invert <= 0;
@@ -241,9 +244,8 @@ always @(posedge clk or negedge reset_n)
             case (csr_address)
                 REG_SETTING: begin
                     idle_invert <= csr_writedata[7];
-                    full_duplex <= csr_writedata[6];
-                    break_sync <= csr_writedata[5];
-                    arbitration <= csr_writedata[4];
+                    rx_invert <= csr_writedata[6];
+                    mode_sel <= csr_writedata[5:4];
                     not_drop <= csr_writedata[3];
                     user_crc <= csr_writedata[2];
                     tx_invert <= csr_writedata[1];
