@@ -119,20 +119,19 @@ The high byte can be omitted if it is 0.
 | FIELD   | DESCRIPTION                                       |
 |-------- |---------------------------------------------------|
 | [7]     | Defines bit0 of int_flag: 0: bus idle, 1: bus busy|
-| [6]     | Full duplex mode                                  |
-| [5]     | Break Sync mode                                   |
-| [4]     | Enable arbitration                                |
+| [6]     | RX pin inversion                                  |
+| [5:4]   | Mode selection                                    |
 | [3]     | Save broken frame                                 |
 | [2]     | CRC maintained by user                            |
-| [1]     | Invert tx pin output                              |
-| [0]     | Enable push-pull output for tx and tx_en pin      |
+| [1]     | TX pin inversion                                  |
+| [0]     | Enable push-pull output for TX and TX_EN pin      |
 
-| [6] | [5] | [4] | DESCRIPTION                     |
-|-----|-----|-----|---------------------------------|
-| 0   | 0   | 1   | CDBUS-A mode (default)          |
-| 0   | 1   | 0   | CDBUS-BS mode                   |
-| 1   | 0   | 0   | Full-duplex mode                |
-| 0   | 0   | 0   | Traditional half-duplex mode    |
+| [5] | [4] | DESCRIPTION                     |
+|-----|-----|---------------------------------|
+| 0   | 1   | CDBUS-A mode (default)          |
+| 1   | 0   | CDBUS-BS mode                   |
+| 1   | 1   | Full-duplex mode                |
+| 0   | 0   | Traditional half-duplex mode    |
 
 
 **TX_PRE_LEN:**

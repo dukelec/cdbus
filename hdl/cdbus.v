@@ -32,6 +32,7 @@ module cdbus
         output              tx_en
     );
 
+wire rx_invert;
 wire full_duplex;
 wire break_sync;
 wire arbitration;
@@ -99,7 +100,7 @@ wire [15:0] ser_crc_data;
 
 reg [1:0] rx_d;
 always @(posedge clk)
-    rx_d <= {rx_d[0], rx};
+    rx_d <= {rx_d[0], rx_invert ? ~rx : rx};
 
 wire tx_d;
 wire tx_en_d;
@@ -127,6 +128,7 @@ cd_csr #(
     .csr_write(csr_write),
     .csr_writedata(csr_writedata),
 
+    .rx_invert(rx_invert),
     .full_duplex(full_duplex),
     .break_sync(break_sync),
     .arbitration(arbitration),

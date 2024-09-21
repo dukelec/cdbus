@@ -32,8 +32,8 @@ async def test_cdbus(dut):
     val = await csr_read(dut, 0, REG_SETTING)
     dut._log.info(f'idx0 REG_SETTING: 0x{int(val):02x}')
 
-    await csr_write(dut, 0, REG_SETTING, BinaryValue('01000001'))
-    await csr_write(dut, 1, REG_SETTING, BinaryValue('01000001'))
+    await csr_write(dut, 0, REG_SETTING, BinaryValue('00110001'))
+    await csr_write(dut, 1, REG_SETTING, BinaryValue('00110001'))
     await csr_write(dut, 0, REG_INT_MASK, BinaryValue('11011110'))
     await csr_write(dut, 1, REG_INT_MASK, BinaryValue('11011110'))
     
