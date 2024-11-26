@@ -22,11 +22,11 @@ module cd_rx_ram
            input                 rd_en,
            input                 rd_done,
            input                 rd_done_all,
-           output                unread,
+           output reg            unread,
 
            // user data len (0: 0 bytes, 253: 253 bytes), or: frame len, include crc (0: 1bytes, 255: 256bytes)
            output       [7:0]    rd_len,
-           output                rd_err,
+           output reg            rd_err,
 
            input        [7:0]    wr_byte,
            input        [7:0]    wr_addr,
@@ -45,9 +45,6 @@ reg    [I_WIDTH-1:0] wr_sel;
 reg    [I_WIDTH-1:0] rd_sel;
 reg [2**I_WIDTH-1:0] dirty;
 reg [2**I_WIDTH-1:0] error;
-
-assign unread = dirty[rd_sel]; // better than (dirty != 0)
-assign rd_err = error[rd_sel];
 
 reg  [B_WIDTH-1:0] buf_wr_addr;
 wire [B_WIDTH-1:0] buf_rd_addr = (rd_sel << S_WIDTH) + (rd_addr << 2); // {rd_sel, {S_WIDTH{1'b0}}}
@@ -68,8 +65,11 @@ reg wr_err_d;
 reg switch_d;
 reg [F_WIDTH-1:0] wr_frag_amount;
 
-always @(posedge clk)
+always @(posedge clk) begin
     idx_rd_val <= idx_table[rd_sel];
+    unread <= dirty[rd_sel];
+    rd_err <= error[rd_sel];
+end
 
 always @(posedge clk)
     if (wr_en) begin

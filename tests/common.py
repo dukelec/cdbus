@@ -192,6 +192,10 @@ async def read_rx_len(dut, idx):
     val = val[16 : 23]
     return int(val)
 
+async def read_int_flag2(dut, idx):
+    val = await csr_read(dut, idx, REG_INT_FLAG)
+    return val[24 : 31], val[16 : 23]
+
 
 async def exit_err():
     await Timer(100, units='ns')

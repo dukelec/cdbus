@@ -10,6 +10,7 @@
  */
 
 `timescale 1 ns / 1 ps
+`define HAS_CHIP_SELECT
 
 module cdbus_wrapper_dft(
         input       clk0,

@@ -213,11 +213,24 @@ always @(posedge clk or negedge reset_n)
 
         if (csr_read) begin
             if (csr_address == REG_INT_FLAG) begin
+`ifdef HAS_CHIP_SELECT
+                if (int_flag_snapshot[4])
+                    rx_error_flag <= 0; // not care when not_drop
+                if (int_flag_snapshot[3])
+                    rx_lost_flag <= 0;
+                if (int_flag_snapshot[2])
+                    rx_break_flag <= 0;
+                if (int_flag_snapshot[6])
+                    cd_flag <= 0;
+                if (int_flag_snapshot[7])
+                    tx_error_flag <= 0;
+`else
                 rx_error_flag <= 0;
                 rx_lost_flag <= 0;
                 rx_break_flag <= 0;
                 cd_flag <= 0;
                 tx_error_flag <= 0;
+`endif
             end
             else if (csr_address == REG_RX) begin
                 rx_ram_rd_addr <= rx_ram_rd_addr + 1'd1;
