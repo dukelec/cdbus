@@ -110,17 +110,17 @@ reg [7:0] h_val_bkup;
 `ifdef HAS_CHIP_SELECT
 reg has_read_rx;
 reg chip_select_delayed;
-reg [15:0] int_flag_shift;      // avoid metastability due to int_flag
+reg [7:0] int_flag_out;
+reg [7:0] int_flag_snapshot;    // avoid metastability due to int_flag
 
-always @(posedge clk or negedge reset_n)
-    if (!reset_n) begin
-        int_flag_shift <= 0;
-    end
-    else begin
-        if (!chip_select)
-            int_flag_shift <= {rx_ram_rd_len, int_flag};
-        else if (csr_read)
-            int_flag_shift <= {8'd0, int_flag_shift[15:8]};
+always @(posedge clk) begin
+        if (!chip_select) begin
+            int_flag_snapshot <= int_flag;
+            int_flag_out <= int_flag;
+        end
+        else if (csr_read) begin
+            int_flag_out <= rx_ram_rd_len;
+        end
     end
 `endif
 
@@ -164,7 +164,7 @@ always @(*)
             csr_readdata = int_mask;
         REG_INT_FLAG:
 `ifdef HAS_CHIP_SELECT
-            csr_readdata = int_flag_shift[7:0];
+            csr_readdata = int_flag_out;
 `else
             csr_readdata = int_flag;
 `endif
@@ -242,11 +242,24 @@ always @(posedge clk or negedge reset_n)
 
         if (csr_read) begin
             if (csr_address == REG_INT_FLAG) begin
+`ifdef HAS_CHIP_SELECT
+                if (int_flag_snapshot[4])
+                    rx_error_flag <= 0; // not care when not_drop
+                if (int_flag_snapshot[3])
+                    rx_lost_flag <= 0;
+                if (int_flag_snapshot[2])
+                    rx_break_flag <= 0;
+                if (int_flag_snapshot[6])
+                    cd_flag <= 0;
+                if (int_flag_snapshot[7])
+                    tx_error_flag <= 0;
+`else
                 rx_error_flag <= 0;
                 rx_lost_flag <= 0;
                 rx_break_flag <= 0;
                 cd_flag <= 0;
                 tx_error_flag <= 0;
+`endif
             end
             else if (csr_address == REG_RX) begin
                 rx_ram_rd_addr <= rx_ram_rd_addr + 1'd1;

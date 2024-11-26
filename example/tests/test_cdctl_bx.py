@@ -196,7 +196,10 @@ async def test_cdctl_bx(dut):
     await Timer(15000000)
 
     await send_frame(dut, b'\x05\x00\x01\xcd', 39, 3)
+    await Timer(15000000)
     
+    int_flag = (await spi_read(dut, REG_INT_FLAG, 2))
+    dut._log.info(f"int_flag: {int_flag[0]:02x} {int_flag[1]:02x}")
     await Timer(50000000)
 
     dut._log.info("test_cdctl_bx done.")

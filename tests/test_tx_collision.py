@@ -65,7 +65,7 @@ async def test_cdbus(dut):
         dut._log.error(f'idx2: receive mismatch first frame')
         await exit_err()
     
-    await csr_write(dut, 2, REG_RX_CTRL, BIT_RX_CLR_PENDING)
+    #await csr_write(dut, 2, REG_RX_CTRL, BIT_RX_CLR_PENDING)
     await Timer(500, units='ns')
     
     await RisingEdge(dut.irq2)
@@ -78,7 +78,7 @@ async def test_cdbus(dut):
         dut._log.error(f'idx2: receive mismatch second frame')
         await exit_err()
     
-    await csr_write(dut, 2, REG_RX_CTRL, BIT_RX_CLR_PENDING)
+    #await csr_write(dut, 2, REG_RX_CTRL, BIT_RX_CLR_PENDING)
     await FallingEdge(dut.irq2)
     
     dut._log.info('test_cdbus done.')

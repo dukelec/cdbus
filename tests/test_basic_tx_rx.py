@@ -52,20 +52,16 @@ async def test_cdbus(dut):
     len_ = await read_rx_len(dut, 1)
     val = await read_int_flag(dut, 1)
     dut._log.info(f'REG_INT_FLAG: 0x{int(val):02x}, len: 0x{int(len_):02x}')
+    val, len_ = await read_int_flag2(dut, 1)
+    dut._log.info(f'REG_INT_FLAG2: 0x{int(val):02x}, len: 0x{int(len_):02x}')
     
-    if IS_32BITS:
-        str1_ = (await read_rx(dut, 1, 4)).hex() # read 4 bytes
-        str2_ = (await read_rx(dut, 1, 2)).hex() # read 2 bytes (include crc)
-    else:
-        str1_ = (await read_rx(dut, 1, 3)).hex() # read 3 bytes
-        str2_ = (await read_rx(dut, 1, 3)).hex() # read 3 bytes (include crc)
-    str_ = str1_ + str2_
+    str_ = (await read_rx(dut, 1, 6)).hex() # read 6 bytes (include crc)
     dut._log.info(f'idx1: received: {str_}')
     if str_ != '010201cd601d':
         dut._log.error(f'idx1: receive mismatch')
         await exit_err()
     
-    await csr_write(dut, 1, REG_RX_CTRL, BIT_RX_CLR_PENDING)
+    #await csr_write(dut, 1, REG_RX_CTRL, BIT_RX_CLR_PENDING)
     await FallingEdge(dut.irq1)
     
     

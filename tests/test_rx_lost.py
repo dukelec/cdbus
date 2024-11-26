@@ -116,7 +116,7 @@ async def test_cdbus(dut):
     if str_ != tx_pkt_strs[0]:
         dut._log.error(f'idx1: receive mismatch')
         await exit_err()
-    await csr_write(dut, 1, REG_RX_CTRL, BIT_RX_CLR_PENDING)
+    #await csr_write(dut, 1, REG_RX_CTRL, BIT_RX_CLR_PENDING)
     
     await Timer(1, units='us')
     dirty = dut.cdbus_m1.cd_rx_ram_m.dirty.value;
@@ -165,7 +165,7 @@ async def test_cdbus(dut):
         if str_ != tx_pkt_strs[i]:
             dut._log.error(f'idx1: receive mismatch')
             await exit_err()
-        await csr_write(dut, 1, REG_RX_CTRL, BIT_RX_CLR_PENDING)
+        #await csr_write(dut, 1, REG_RX_CTRL, BIT_RX_CLR_PENDING)
         
         await Timer(1, units='us')
         dirty = dut.cdbus_m1.cd_rx_ram_m.dirty.value;
@@ -190,7 +190,7 @@ async def test_cdbus(dut):
     if str_ != tx_pkt_strs[-1]:
         dut._log.error(f'idx1: receive mismatch')
         await exit_err()
-    await csr_write(dut, 1, REG_RX_CTRL, BIT_RX_CLR_PENDING)
+    #await csr_write(dut, 1, REG_RX_CTRL, BIT_RX_CLR_PENDING)
     
     await Timer(1, units='us')
     dirty = dut.cdbus_m1.cd_rx_ram_m.dirty.value;
@@ -217,7 +217,7 @@ async def test_cdbus(dut):
         dut._log.error(f'idx1: receive mismatch')
         await exit_err()
     
-    await csr_write(dut, 1, REG_RX_CTRL, BIT_RX_CLR_PENDING)
+    #await csr_write(dut, 1, REG_RX_CTRL, BIT_RX_CLR_PENDING)
     await FallingEdge(dut.irq1)
     
     await Timer(1, units='us')
