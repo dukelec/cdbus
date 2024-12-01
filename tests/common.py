@@ -194,7 +194,7 @@ async def read_int_flag2(dut, idx):
 
 
 async def exit_err():
-    await Timer(100, units='ns')
+    await Timer(1000, units='ns')
     exit(-1)
 
 async def exit_ok():

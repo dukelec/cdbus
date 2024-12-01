@@ -35,57 +35,6 @@ reg [1:0] dirty;
 assign unread = dirty[rd_sel]; // better than (dirty != 0)
 
 
-`ifdef SPRAM_ONLY
-// when there is a read/write conflict, writing is delayed
-// which is suitable for interfaces such as spi
-
-reg  [8:0] rd_addr_bk;
-wire [7:0] rd_byte_ori;
-reg  [7:0] rd_byte_bk;
-
-reg wr_en_bk;
-reg [8:0] wr_addr_bk; // optional
-reg [7:0] wr_byte_bk; // optional for spi
-
-reg  wr_en_final_bk;
-wire wr_en_final = rd_addr_bk == {rd_sel, rd_addr} ? wr_en_bk : 0;
-assign rd_byte = wr_en_final_bk ? rd_byte_bk : rd_byte_ori;
-
-always @(posedge clk) begin
-    wr_en_final_bk <= wr_en_final;
-    rd_byte_bk <= wr_en_final_bk ? rd_byte_bk : rd_byte_ori;
-    
-    rd_addr_bk <= {rd_sel, rd_addr};
-end
-
-always @(posedge clk or negedge reset_n)
-    if (!reset_n) begin
-        wr_en_bk <= 0;
-    end
-    else begin
-        if (wr_en) begin
-            wr_en_bk <= 1;
-            wr_addr_bk <= {wr_sel, wr_addr};
-            wr_byte_bk <= wr_byte;
-        end
-        else if (wr_en_final) begin
-            wr_en_bk <= 0;
-        end
-    end
-
-cd_spram #(.A_WIDTH(B_WIDTH)) cd_tx_ram_buf_m(
-    .clk(clk),
-    .cen(~rd_en & ~wr_en_final),
-
-    .addr(wr_en_final ? wr_addr_bk : {rd_sel, rd_addr}),
-
-    .rd(rd_byte_ori),
-
-    .wd(wr_byte_bk),
-    .wen(~wr_en_final)
-);
-
-`else
 cd_sdpram #(.A_WIDTH(B_WIDTH)) cd_tx_ram_buf_m(
     .clk(clk),
     .cen(~rd_en & ~wr_en),
@@ -97,7 +46,6 @@ cd_sdpram #(.A_WIDTH(B_WIDTH)) cd_tx_ram_buf_m(
     .wd(wr_byte),
     .wen(~wr_en)
 );
-`endif
 
 
 always @(posedge clk or negedge reset_n)

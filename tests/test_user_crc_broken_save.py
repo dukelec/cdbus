@@ -37,7 +37,7 @@ async def test_cdbus(dut):
 
     await csr_write(dut, 0, REG_SETTING, BinaryValue('00010101')) # user crc
     await csr_write(dut, 1, REG_SETTING, BinaryValue('00011001')) # save broken frame
-    await csr_write(dut, 1, REG_INT_MASK, BinaryValue('11011110'))
+    await csr_write(dut, 1, REG_INT_MASK, BinaryValue('11001110'))
     
     await set_div(dut, 0, 39, 2) # 1Mbps, 13.333Mbps
     await set_div(dut, 1, 39, 2)
