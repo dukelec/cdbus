@@ -26,7 +26,7 @@ module cd_rx_ram
 
            // user data len (0: 0 bytes, 253: 253 bytes), or: frame len, include crc (0: 1bytes, 255: 256bytes)
            output       [7:0]    rd_len,
-           output reg            rd_err,
+           output                rd_err,
 
            input        [7:0]    wr_byte,
            input        [7:0]    wr_addr,
@@ -44,19 +44,14 @@ parameter F_WIDTH = 8 - S_WIDTH;        // frag amount size width, 8-(11-6) = 3,
 reg    [I_WIDTH-1:0] wr_sel;
 reg    [I_WIDTH-1:0] rd_sel;
 reg [2**I_WIDTH-1:0] dirty;
-reg [2**I_WIDTH-1:0] error;
 
 reg  [B_WIDTH-1:0] buf_wr_addr;
 wire [B_WIDTH-1:0] buf_rd_addr = (rd_sel << S_WIDTH) + (rd_addr << 2); // {rd_sel, {S_WIDTH{1'b0}}}
 
-// frag_count[2:0], len[7:0]
-reg  [F_WIDTH+7:0] idx_table [2**I_WIDTH-1:0];
-
-reg  [F_WIDTH+7:0] idx_rd_val;
-wire         [7:0] idx_rval_len    = idx_rd_val[7:0];
-wire [F_WIDTH-1:0] idx_rval_amount = idx_rd_val[F_WIDTH+7:8];
-
-assign rd_len = idx_rval_len;
+wire [F_WIDTH+8:0] idx_rd_val; // {err_flag, frag_amount, len}
+wire [F_WIDTH-1:0] idx_frag_amount = idx_rd_val[F_WIDTH+7:8];
+assign rd_len = idx_rd_val[7:0];
+assign rd_err = idx_rd_val[F_WIDTH+8];
 
 reg [31:0] wr_word;
 reg wr_cancel;
@@ -65,11 +60,8 @@ reg wr_err_d;
 reg switch_d;
 reg [F_WIDTH-1:0] wr_frag_amount;
 
-always @(posedge clk) begin
-    idx_rd_val <= idx_table[rd_sel];
+always @(posedge clk)
     unread <= dirty[rd_sel];
-    rd_err <= error[rd_sel];
-end
 
 always @(posedge clk)
     if (wr_en) begin
@@ -94,6 +86,18 @@ cd_sdpram #(.A_WIDTH(B_WIDTH-2), .D_WIDTH(32)) cd_rx_ram_buf_m(
     .wen(~wr_en_d)
 );
 
+cd_sdpram #(.A_WIDTH(I_WIDTH), .D_WIDTH(F_WIDTH+9)) cd_rx_idx_table_m(
+    .clk(clk),
+    .cen(~dirty[rd_sel] & ~(switch_d & ~wr_cancel)),
+
+    .ra(rd_sel),
+    .rd(idx_rd_val),
+
+    .wa(wr_sel),
+    .wd({wr_err_d, wr_frag_amount, wr_len}),
+    .wen(~(switch_d & ~wr_cancel))
+);
+
 
 always @(posedge clk or negedge reset_n)
     if (!reset_n) begin
@@ -101,7 +105,6 @@ always @(posedge clk or negedge reset_n)
         rd_sel <= 0;
         wr_sel <= 0;
         dirty <= 0;
-        error <= 0;
         wr_cancel <= 0;
         wr_en_d <= 0;
         wr_frag_amount <= 0;
@@ -130,17 +133,16 @@ always @(posedge clk or negedge reset_n)
                 switch_fail <= 1;
             end
             else begin
-                idx_table[wr_sel] <= {wr_frag_amount, wr_len};
-                error[wr_sel] <= wr_err_d;
                 dirty[wr_sel] <= 1;
                 wr_sel <= wr_sel + wr_frag_amount + 1'b1; // wr_sel next may equal to rd_sel
+                // write idx_table here
             end
             wr_cancel <= 0;
         end
 
         if (rd_done && dirty[rd_sel]) begin
             dirty[rd_sel] <= 0;
-            rd_sel <= rd_sel + 1'b1 + idx_rval_amount;
+            rd_sel <= rd_sel + 1'b1 + idx_frag_amount;
         end
 
         if (rd_done_all) begin

@@ -131,9 +131,9 @@ always @(*)
         REG_FILTER:
             csr_readdata = {24'd0, filter};
         REG_DIV_LS:
-            csr_readdata = {24'd0, div_ls};
+            csr_readdata = {16'd0, div_ls};
         REG_DIV_HS:
-            csr_readdata = {24'd0, div_hs};
+            csr_readdata = {16'd0, div_hs};
         REG_INT_MASK:
             csr_readdata = {24'd0, int_mask};
         REG_INT_FLAG:
@@ -267,17 +267,17 @@ always @(posedge clk or negedge reset_n)
                 REG_IDLE_WAIT_LEN:
                     idle_wait_len <= csr_writedata[7:0];
                 REG_TX_PERMIT_LEN:
-                    tx_permit_len[9:0] <= csr_writedata[9:0];
+                    tx_permit_len <= csr_writedata[9:0];
                 REG_MAX_IDLE_LEN:
-                    max_idle_len[9:0] <= csr_writedata[9:0];
+                    max_idle_len <= csr_writedata[9:0];
                 REG_TX_PRE_LEN:
                     tx_pre_len <= csr_writedata[1:0];
                 REG_FILTER:
                     filter <= csr_writedata[7:0];
                 REG_DIV_LS:
-                    div_ls[15:0] <= csr_writedata[15:0];
+                    div_ls <= csr_writedata[15:0];
                 REG_DIV_HS:
-                    div_hs[15:0] <= csr_writedata[15:0];
+                    div_hs <= csr_writedata[15:0];
                 REG_INT_MASK:
                     int_mask <= csr_writedata[7:0];
                 REG_TX:
