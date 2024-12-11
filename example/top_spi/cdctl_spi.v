@@ -55,6 +55,7 @@ spi_slave spi_slave_m(
     .clk(g_clk),
     .reset_n(reset_n),
     .chip_select(chip_select),
+    .advance(1'b0),
     
     .csr_address(csr_address),
     .csr_read(csr_read),

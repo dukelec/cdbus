@@ -108,7 +108,7 @@ async def spi_rw(dut, w_data = 0):
         dut.sck_scl.value = 0
         await Timer(SPI_PERIOD_HALF)
         dut.sck_scl.value = 1
-        await ReadOnly()
+        #await ReadOnly()
         if dut.sdo_sda.value.binstr != 'z':
             r_data = (r_data << 1) | dut.sdo_sda.value.integer
         else:
@@ -121,7 +121,7 @@ async def spi_read(dut, address, len = 1):
     datas = []
     dut.nss.value = 0
     await Timer(SPI_PERIOD_HALF)
-    await spi_rw(dut, address)
+    await spi_rw(dut, address << 1)
     await Timer(SPI_PERIOD_HALF)
     while len != 0:
         ret_val = await spi_rw(dut)
@@ -135,7 +135,7 @@ async def spi_read(dut, address, len = 1):
 async def spi_write(dut, address, datas):
     dut.nss.value = 0
     await Timer(SPI_PERIOD_HALF)
-    await spi_rw(dut, address | 0x80)
+    await spi_rw(dut, (address << 1) | 0x80)
     await Timer(SPI_PERIOD_HALF)
     for data in datas:
         await spi_rw(dut, data)
