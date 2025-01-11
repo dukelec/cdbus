@@ -23,6 +23,7 @@ module cd_rx_ram
            input                 rd_done,
            input                 rd_done_all,
            output reg            unread,
+           output reg [I_WIDTH-1:0] unread_len,
 
            // user data len (0: 0 bytes, 253: 253 bytes), or: frame len, include crc (0: 1bytes, 255: 256bytes)
            output       [7:0]    rd_len,
@@ -108,6 +109,7 @@ always @(posedge clk or negedge reset_n)
         wr_frag_amount <= 0;
         switch_d <= 0;
         wr_err_d <= 0;
+        unread_len <= 0;
     end
     else begin
         switch_fail <= 0;
@@ -133,6 +135,7 @@ always @(posedge clk or negedge reset_n)
             else begin
                 dirty[wr_sel] <= 1;
                 wr_sel <= wr_sel + wr_frag_amount + 1'b1; // wr_sel next may equal to rd_sel
+                unread_len <= unread_len + 1;
                 // write idx_table here
             end
             wr_cancel <= 0;
@@ -141,6 +144,7 @@ always @(posedge clk or negedge reset_n)
         if (rd_done && dirty[rd_sel]) begin
             dirty[rd_sel] <= 0;
             rd_sel <= rd_sel + 1'b1 + idx_frag_amount;
+            unread_len <= unread_len - 1;
         end
 
         if (rd_done_all) begin
@@ -150,6 +154,7 @@ always @(posedge clk or negedge reset_n)
             dirty <= 0;
             wr_cancel <= 0;
             switch_d <= 0;
+            unread_len <= 0;
         end
     end
 

@@ -34,8 +34,8 @@ async def test_cdbus(dut):
 
     await csr_write(dut, 0, REG_SETTING, BinaryValue('00110001'))
     await csr_write(dut, 1, REG_SETTING, BinaryValue('00110001'))
-    await csr_write(dut, 0, REG_INT_MASK, BinaryValue('11011110'))
-    await csr_write(dut, 1, REG_INT_MASK, BinaryValue('11011110'))
+    await csr_write(dut, 0, REG_INT_MASK_L, BinaryValue('11001111'))
+    await csr_write(dut, 1, REG_INT_MASK_L, BinaryValue('11001111'))
     
     await set_div(dut, 0, 2, 2)
     await set_div(dut, 1, 2, 2)
@@ -44,10 +44,8 @@ async def test_cdbus(dut):
     await csr_write(dut, 1, REG_FILTER, 0x02) # set local filter to 0x02
     
     await write_tx(dut, 0, b'\x01\x02\x01\x12') # node 0x01 send to 0x02
-    await write_tx(dut, 1, b'\x02\x01\x01\x21') # node 0x02 send to 0x01
-    await csr_write(dut, 0, REG_TX_CTRL, BIT_TX_START)
     await Timer(3, units='us')
-    await csr_write(dut, 1, REG_TX_CTRL, BIT_TX_START)
+    await write_tx(dut, 1, b'\x02\x01\x01\x21') # node 0x02 send to 0x01
     
     await Timer(4, units='us')
     dut.dbg0.value = 0
@@ -60,7 +58,7 @@ async def test_cdbus(dut):
         dut._log.error(f'idx1: receive mismatch')
         await exit_err()
     
-    #await csr_write(dut, 1, REG_RX_CTRL, BIT_RX_CLR_PENDING)
+    #await csr_write(dut, 1, REG_CTRL, BIT_RX_CLR_PENDING)
     await FallingEdge(dut.irq1)
     dut.dbg0.value = 1
     
@@ -75,7 +73,7 @@ async def test_cdbus(dut):
         dut._log.error(f'idx0: receive mismatch')
         await exit_err()
     
-    #await csr_write(dut, 0, REG_RX_CTRL, BIT_RX_CLR_PENDING)
+    #await csr_write(dut, 0, REG_CTRL, BIT_RX_CLR_PENDING)
     await FallingEdge(dut.irq0)
     dut.dbg0.value = 1
     

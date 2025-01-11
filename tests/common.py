@@ -35,17 +35,16 @@ REG_DIV_LS_L        = 0x0c
 REG_DIV_LS_H        = 0x0d
 REG_DIV_HS_L        = 0x0e
 REG_DIV_HS_H        = 0x0f
-REG_INT_MASK        = 0x11
-REG_INT_FLAG        = 0x12
-REG_RX_LEN          = 0x13
-REG_RX              = 0x14
-REG_TX              = 0x15
-REG_RX_CTRL         = 0x16
-REG_TX_CTRL         = 0x17
+REG_INT_MASK_L      = 0x10
+REG_INT_MASK_H      = 0x11
+REG_INT_FLAG_L      = 0x12
+REG_INT_FLAG_H      = 0x13
+REG_RX_LEN          = 0x14
+REG_DAT             = 0x15
+REG_CTRL            = 0x16
 REG_FILTER_M0       = 0x1a
 REG_FILTER_M1       = 0x1b
 
-BIT_SETTING_IDLE_INVERT     = 1 << 7
 BIT_SETTING_RX_INVERT       = 1 << 6
 BIT_SETTING_NO_DROP         = 1 << 3
 BIT_SETTING_USER_CRC        = 1 << 2
@@ -55,18 +54,18 @@ BIT_SETTING_TX_PUSH_PULL    = 1 << 0
 BIT_FLAG_TX_ERROR           = 1 << 7
 BIT_FLAG_TX_CD              = 1 << 6
 BIT_FLAG_TX_BUF_CLEAN       = 1 << 5
-BIT_FLAG_RX_ERROR           = 1 << 4
-BIT_FLAG_RX_LOST            = 1 << 3
-BIT_FLAG_RX_BREAK           = 1 << 2
-BIT_FLAG_RX_PENDING         = 1 << 1
-BIT_FLAG_BUS_IDLE           = 1 << 0
+BIT_FLAG_TX_BUF_FREE        = 1 << 4
+BIT_FLAG_RX_ERROR           = 1 << 3
+BIT_FLAG_RX_LOST            = 1 << 2
+BIT_FLAG_RX_BREAK           = 1 << 1
+BIT_FLAG_RX_PENDING         = 1 << 0
 
-BIT_RX_RST                  = 1 << 4
-BIT_RX_CLR_PENDING          = 1 << 1
-
-BIT_TX_SEND_BREAK           = 1 << 5
-BIT_TX_ABORT                = 1 << 4
-BIT_TX_START                = 1 << 1
+BIT_RX_RST                  = 1 << 7
+BIT_RX_CLR_PENDING          = 1 << 4
+BIT_TX_ABORT                = 1 << 3
+BIT_TX_DROP                 = 1 << 2
+BIT_TX_SEND_BREAK           = 1 << 1
+BIT_TX_START                = 1 << 0
 
 
 async def _send_bytes(dut, bytes_, sys_clk, factor, is_z=True):
@@ -164,20 +163,20 @@ async def write_tx(dut, idx, bytes_):
         return
     for i in range(len(bytes_)):
         if i < len(bytes_) - 1: # or always false for SPRAM_ONLY test
-            await csr_write(dut, idx, REG_TX, bytes_[i], True)
+            await csr_write(dut, idx, REG_DAT, bytes_[i], True)
         else:
-            await csr_write(dut, idx, REG_TX, bytes_[i], False)
+            await csr_write(dut, idx, REG_DAT, bytes_[i], False)
 
 async def read_rx(dut, idx, len_):
     ret = b''
     if len_ == 0:
         return ret
-    await csr_read(dut, idx, REG_RX, True) # skip 1 clk ram output delay
+    await csr_read(dut, idx, REG_DAT, True) # skip 1 clk ram output delay
     for i in range(len_):
         if i < len_ - 1:
-            val = await csr_read(dut, idx, REG_RX, True)
+            val = await csr_read(dut, idx, REG_DAT, True)
         else:
-            val = await csr_read(dut, idx, REG_RX, False, True)
+            val = await csr_read(dut, idx, REG_DAT, False, True)
         ret += bytes([int(val)])
     return ret
 
@@ -185,12 +184,13 @@ async def read_rx_len(dut, idx):
     return await csr_read(dut, idx, REG_RX_LEN)
 
 async def read_int_flag(dut, idx):
-    return await csr_read(dut, idx, REG_INT_FLAG)
+    return await csr_read(dut, idx, REG_INT_FLAG_L)
 
-async def read_int_flag2(dut, idx):
-    val0 = await csr_read(dut, idx, REG_INT_FLAG, True)
-    val1 = await csr_read(dut, idx, REG_INT_FLAG, False, True)
-    return val0, val1
+async def read_int_flag3(dut, idx):
+    val0 = await csr_read(dut, idx, REG_INT_FLAG_L, True)
+    val1 = await csr_read(dut, idx, REG_INT_FLAG_L, True)
+    val2 = await csr_read(dut, idx, REG_INT_FLAG_L, False, True)
+    return val0, val1, val2
 
 
 async def exit_err():

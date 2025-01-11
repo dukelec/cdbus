@@ -38,7 +38,7 @@ async def test_cdbus(dut):
     await csr_write(dut, 0, REG_SETTING, BinaryValue('00100001')) # bs mode
     await csr_write(dut, 1, REG_SETTING, BinaryValue('00100001'))
     await csr_write(dut, 2, REG_SETTING, BinaryValue('00100001'))
-    await csr_write(dut, 2, REG_INT_MASK, BinaryValue('11011010')) # not select break rx
+    await csr_write(dut, 2, REG_INT_MASK_L, BinaryValue('11001101')) # not select break rx
     
     await set_max_idle_len(dut, 0, 40)
     await set_max_idle_len(dut, 1, 40)
@@ -59,12 +59,9 @@ async def test_cdbus(dut):
     
     await Timer(10, units='us') # wait exceed max idle
     
-    await write_tx(dut, 0, b'\x55\x03\x01\xc5') # node 0x55 send to 0x03
-    await write_tx(dut, 1, b'\xa5\x03\x01\xca') # node 0xa5 send to 0x03
-    
     # start tx at same time
-    cocotb.start_soon(csr_write(dut, 0, REG_TX_CTRL, BIT_TX_START))
-    cocotb.start_soon(csr_write(dut, 1, REG_TX_CTRL, BIT_TX_START))
+    cocotb.start_soon(write_tx(dut, 0, b'\x55\x03\x01\xc5')) # node 0x55 send to 0x03
+    cocotb.start_soon(write_tx(dut, 1, b'\xa5\x03\x01\xca')) # node 0xa5 send to 0x03
 
     await RisingEdge(dut.irq2)
     val = await read_int_flag(dut, 2)
@@ -79,7 +76,7 @@ async def test_cdbus(dut):
         dut._log.error(f'idx2: receive mismatch first frame')
         await exit_err()
     
-    #await csr_write(dut, 2, REG_RX_CTRL, BIT_RX_CLR_PENDING)
+    #await csr_write(dut, 2, REG_CTRL, BIT_RX_CLR_PENDING)
     await Timer(500, units='ns')
     
     await RisingEdge(dut.irq2)
@@ -92,20 +89,17 @@ async def test_cdbus(dut):
         dut._log.error(f'idx2: receive mismatch second frame')
         await exit_err()
     
-    #await csr_write(dut, 2, REG_RX_CTRL, BIT_RX_CLR_PENDING)
+    #await csr_write(dut, 2, REG_CTRL, BIT_RX_CLR_PENDING)
     await FallingEdge(dut.irq2)
     
     
     await Timer(10, units='us') # wait exceed max idle
     
-    await write_tx(dut, 0, b'\x55\x03\x01\xc5') # node 0x55 send to 0x03
-    await write_tx(dut, 1, b'\xa5\x03\x01\xca') # node 0xa5 send to 0x03
-    
-    cocotb.start_soon(csr_write(dut, 1, REG_TX_CTRL, BIT_TX_START))
+    cocotb.start_soon(write_tx(dut, 1, b'\xa5\x03\x01\xca')) # node 0xa5 send to 0x03
     dut.dbg0.value = 0
     await Timer(2700, units='ns') # wait frame pending after tx permit
     dut.dbg0.value = 1
-    cocotb.start_soon(csr_write(dut, 0, REG_TX_CTRL, BIT_TX_START))
+    cocotb.start_soon(write_tx(dut, 0, b'\x55\x03\x01\xc5')) # node 0x55 send to 0x03
     
     await RisingEdge(dut.irq2)
     val = await read_int_flag(dut, 2)
@@ -120,7 +114,7 @@ async def test_cdbus(dut):
         dut._log.error(f'idx2: receive mismatch first frame')
         await exit_err()
     
-    #await csr_write(dut, 2, REG_RX_CTRL, BIT_RX_CLR_PENDING)
+    #await csr_write(dut, 2, REG_CTRL, BIT_RX_CLR_PENDING)
     await Timer(500, units='ns')
     
     await RisingEdge(dut.irq2)
@@ -133,7 +127,7 @@ async def test_cdbus(dut):
         dut._log.error(f'idx2: receive mismatch second frame')
         await exit_err()
     
-    #await csr_write(dut, 2, REG_RX_CTRL, BIT_RX_CLR_PENDING)
+    #await csr_write(dut, 2, REG_CTRL, BIT_RX_CLR_PENDING)
     await FallingEdge(dut.irq2)
     
     dut._log.info('test_cdbus done.')

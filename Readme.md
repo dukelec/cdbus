@@ -100,13 +100,13 @@ The CDBUS-BS mode is suitable for high-speed applications with few nodes, and it
 | DIV_LS_H          |  0x0d   | RD/WR  | 0x01            |                                                      |
 | DIV_HS_L          |  0x0e   | RD/WR  | 0x5a            | High-speed rate setting (16 bits)                    |
 | DIV_HS_H          |  0x0f   | RD/WR  | 0x01            |                                                      |
-| INT_MASK          |  0x11   | RD/WR  | 0x00            | Interrupt mask                                       |
-| INT_FLAG          |  0x12   | RD     | n/a             | Status                                               |
-| RX_LEN            |  0x13   | RD     | n/a             | Data length of the frame to be read, or frame_len -1 |
-| RX                |  0x14   | RD     | n/a             | Read RX page                                         |
-| TX                |  0x15   | WR     | n/a             | Write TX page                                        |
-| RX_CTRL           |  0x16   | WR     | n/a             | RX control                                           |
-| TX_CTRL           |  0x17   | WR     | n/a             | TX control                                           |
+| INT_MASK_L        |  0x10   | RD/WR  | 0x00            | Interrupt mask (16 bits)                             |
+| INT_MASK_H        |  0x11   | RD/WR  | 0x00            |                                                      |
+| INT_FLAG_L        |  0x12   | RD     | n/a             | Status (16 bits)                                     |
+| INT_FLAG_H        |  0x13   | RD     | n/a             |                                                      |
+| RX_LEN            |  0x14   | RD     | n/a             | Data length of the frame to be read, or frame_len -1 |
+| DAT               |  0x15   | RD/WR  | n/a             | Read & Write RX page                                 |
+| CTRL              |  0x16   | WR     | n/a             | RX & TX control                                      |
 | FILTER_M0         |  0x1a   | RD/WR  | 0xff            | Multicast filter0                                    |
 | FILTER_M1         |  0x1b   | RD/WR  | 0xff            | Multicast filter1                                    |
 
@@ -118,7 +118,6 @@ The high byte can be omitted if it is 0.
 
 | FIELD   | DESCRIPTION                                       |
 |-------- |---------------------------------------------------|
-| [7]     | Defines bit0 of int_flag: 0: bus idle, 1: bus busy|
 | [6]     | RX pin inversion                                  |
 | [5:4]   | Mode selection                                    |
 | [3]     | Save broken frame                                 |
@@ -180,19 +179,22 @@ Output of irq = ((INT_FLAG & INT_MASK) != 0).
 
 | FIELD   | DESCRIPTION                                  |
 |-------- |----------------------------------------------|
+| [15]    | 1: Bus not idle                              |
+| [14]    | 1: Bus is idle                               |
+| [13:8]  | RX pages pending amount                      |
 | [7]     | 1: TX error: TX is 0, but RX is sampled as 1 |
 | [6]     | 1: TX collision detected                     |
 | [5]     | 1: TX page released by hardware              |
-| [4]     | 1: RX error: frame broken detected           |
-| [3]     | 1: RX lost: no empty page for RX             |
-| [2]     | 1: Break character received                  |
-| [1]     | 1: RX page ready for read                    |
-| [0]     | 1: Bus in IDLE or BUSY mode                  |
+| [4]     | 1: Empty TX page exist                       |
+| [3]     | 1: RX error: frame broken detected           |
+| [2]     | 1: RX lost: no empty page for RX             |
+| [1]     | 1: Break character received                  |
+| [0]     | 1: RX page ready for read                    |
 
-Reading this register will automatically clear bit7, bit6, bit4, bit3 and bit2.
+Reading this register will automatically clear bit7, bit6, bit3, bit2 and bit1.
 
-If `save broken frame` is set, bit4 indicates whether the current page to be read is broken
-(reading this register does not clear bit4).
+If `save broken frame` is set, bit3 indicates whether the current page to be read is broken
+(reading this register does not clear bit3).
 
 
 **RX_LEN:**
@@ -200,26 +202,23 @@ If `save broken frame` is set, bit4 indicates whether the current page to be rea
 The default value of this register corresponds to the data_len of the frame to be read.  
 If `save broken frame` is enabled, this register's value equals the size of the frame to be read minus one (including CRC).
 
-For interfaces like SPI, when two bytes are read from the INT_FLAG register in a single transfer, the second byte indicates RX_LEN.
+For interfaces like SPI, when two or three bytes are read from the INT_FLAG_L register in a single transfer,
+the first byte represents INT_FLAG_L, the second byte represents RX_LEN, and the third byte represents INT_FLAG_H.
 
 
-**RX_CTRL:**
+**CTRL:**
 
-| FIELD   | DESCRIPTION                 |
-|-------- |-----------------------------|
-| [4]     | Reset RX block              |
-| [1]     | Release RX page             |
+| FIELD   | DESCRIPTION                                     |
+|-------- |-------------------------------------------------|
+| [7]     | Reset RX block                                  |
+| [4]     | Release current RX page                         |
+| [3]     | Abort transmission and clear current TX page    |
+| [2]     | Clear pending TX page                           |
+| [1]     | Send break character                            |
+| [0]     | Submit TX page                                  |
 
-For interfaces like SPI, the RX page is automatically released at the end of a transfer that reads from it.
-
-
-**TX_CTRL:**
-
-| FIELD   | DESCRIPTION                                                 |
-|-------- |-------------------------------------------------------------|
-| [5]     | Send break character                                        |
-| [4]     | Abort TX                                                    |
-| [1]     | Switch TX page                                              |
+For interfaces like SPI, the RX page is automatically released after a transfer that reads the DAT register,
+while the TX page is automatically submitted after a transfer that writes to the DAT register.
 
 
 ## Interface
@@ -255,25 +254,23 @@ For interfaces like SPI, the RX page is automatically released at the end of a t
 ```python
     # Configuration
     
-    write(REG_SETTING, [0x11])               # Enable push-pull output
+    write(REG_SETTING, [0x11])                # Enable push-pull output
     
     
     # TX
     
-    write(REG_TX, [0x0c, 0x0d, 0x01, 0xcd])  # Write frame without CRC
-    while (read(REG_INT_FLAG) & 0x20) == 0:  # Make sure we can successfully switch to the next page
+    while (read(REG_INT_FLAG_L) & 0x10) == 0: # Ensure free TX page is available
         pass
-    write(REG_TX_CTRL, [0x02])               # Trigger sending by switching TX page
+    write(REG_DAT, [0x0c, 0x0d, 0x01, 0xcd])  # Write frame without CRC
     
     
     # RX
     
-    while (read(REG_INT_FLAG) & 0x02) == 0:  # Wait for RX page ready
-        pass
-    header = read(REG_RX, len=3)
-    data = read(REG_RX, len=header[2])
-    write(REG_RX_CTRL, [0x02])               # Release RX page
-
+    while True:                               # Wait until RX page is ready
+        val = read(REG_INT_FLAG_L, len=2)
+        if (val[0] & 0x01) != 0:
+            break
+    data = read(REG_DAT, len=val[2]+3)
 ```
 
 
@@ -304,6 +301,6 @@ with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
 Notice: The scope granted to MPL excludes the ASIC industry.
 The CDBUS protocol is royalty-free for everyone except chip manufacturers.
 
-Copyright (c) 2017 DUKELEC, All rights reserved.
+Copyright (c) 2025 DUKELEC, All rights reserved.
 ```
 

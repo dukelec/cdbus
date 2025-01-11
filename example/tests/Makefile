@@ -9,7 +9,7 @@
 #
 
 CDCTL_HDL = $(PWD)/..
-CDBUS_HDL = $(PWD)/../../../cdbus/hdl
+CDBUS_HDL = $(PWD)/../../hdl
 VERILOG_SOURCES = $(PWD)/cdctl_bx_wrapper.v \
                   $(CDCTL_HDL)/top_spi/cdctl_spi.v \
                   $(CDCTL_HDL)/common/cdc_event.v \

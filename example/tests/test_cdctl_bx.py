@@ -33,20 +33,17 @@ REG_DIV_LS_L        = 0x0c
 REG_DIV_LS_H        = 0x0d
 REG_DIV_HS_L        = 0x0e
 REG_DIV_HS_H        = 0x0f
-REG_INT_MASK        = 0x11
-REG_INT_FLAG        = 0x12
-REG_RX_LEN          = 0x13
-REG_RX              = 0x14
-REG_TX              = 0x15
-REG_RX_CTRL         = 0x16
-REG_TX_CTRL         = 0x17
+REG_INT_MASK_L      = 0x10
+REG_INT_MASK_H      = 0x11
+REG_INT_FLAG_L      = 0x12
+REG_INT_FLAG_H      = 0x13
+REG_RX_LEN          = 0x14
+REG_DAT             = 0x15
+REG_CTRL            = 0x16
 REG_FILTER_M0       = 0x1a
 REG_FILTER_M1       = 0x1b
 
-BIT_SETTING_IDLE_INVERT     = 1 << 7
-BIT_SETTING_FULL_DUPLEX     = 1 << 6
-BIT_SETTING_BREAK_SYNC      = 1 << 5
-BIT_SETTING_ARBITRATE       = 1 << 4
+BIT_SETTING_RX_INVERT       = 1 << 6
 BIT_SETTING_NO_DROP         = 1 << 3
 BIT_SETTING_USER_CRC        = 1 << 2
 BIT_SETTING_TX_INVERT       = 1 << 1
@@ -55,18 +52,18 @@ BIT_SETTING_TX_PUSH_PULL    = 1 << 0
 BIT_FLAG_TX_ERROR           = 1 << 7
 BIT_FLAG_TX_CD              = 1 << 6
 BIT_FLAG_TX_BUF_CLEAN       = 1 << 5
-BIT_FLAG_RX_ERROR           = 1 << 4
-BIT_FLAG_RX_LOST            = 1 << 3
-BIT_FLAG_RX_BREAK           = 1 << 2
-BIT_FLAG_RX_PENDING         = 1 << 1
-BIT_FLAG_BUS_IDLE           = 1 << 0
+BIT_FLAG_TX_BUF_FREE        = 1 << 4
+BIT_FLAG_RX_ERROR           = 1 << 3
+BIT_FLAG_RX_LOST            = 1 << 2
+BIT_FLAG_RX_BREAK           = 1 << 1
+BIT_FLAG_RX_PENDING         = 1 << 0
 
-BIT_RX_RST                  = 1 << 4
-BIT_RX_CLR_PENDING          = 1 << 1
-
-BIT_TX_SEND_BREAK           = 1 << 5
-BIT_TX_ABORT                = 1 << 4
-BIT_TX_START                = 1 << 1
+BIT_RX_RST                  = 1 << 7
+BIT_RX_CLR_PENDING          = 1 << 4
+BIT_TX_ABORT                = 1 << 3
+BIT_TX_DROP                 = 1 << 2
+BIT_TX_SEND_BREAK           = 1 << 1
+BIT_TX_START                = 1 << 0
 
 
 CLK_FREQ = 40000000
@@ -170,24 +167,22 @@ async def test_cdctl_bx(dut):
     await spi_write(dut, REG_FILTER, [0x00])
     # TODO: reset rx...
 
-    await spi_write(dut, REG_TX, [0x01, 0x00, 0x01, 0xcd])
-
-    await spi_write(dut, REG_TX_CTRL, [BIT_TX_START])
+    await spi_write(dut, REG_DAT, [0x01, 0x00, 0x01, 0xcd])
 
     await RisingEdge(dut.cdctl_bx_m.cdbus_m.rx_pending)
-    int_flag, rx_len = await spi_read(dut, REG_INT_FLAG, 2)
+    int_flag, rx_len = await spi_read(dut, REG_INT_FLAG_L, 2)
     dut._log.info(f"int_flag: {int_flag:02x}")
     dut._log.info(f"rx_len: {rx_len:02x}")
     
-    value = await spi_read(dut, REG_RX, 3 + rx_len)
+    value = await spi_read(dut, REG_DAT, 3 + rx_len)
     dut._log.info(" ".join([("%02x" % x) for x in value]))
     
-    int_flag = (await spi_read(dut, REG_INT_FLAG))[0]
+    int_flag = (await spi_read(dut, REG_INT_FLAG_L))[0]
     dut._log.info(f"int_flag: {int_flag:02x}")
     
-    int_flag = (await spi_read(dut, REG_INT_FLAG))[0]
+    int_flag = (await spi_read(dut, REG_INT_FLAG_L))[0]
     dut._log.info(f"int_flag: {int_flag:02x}")
-    if int_flag != 0x20:
+    if int_flag != 0x30:
         dut._log.error(f'wrong int_flag')
     
     
@@ -198,7 +193,7 @@ async def test_cdctl_bx(dut):
     await send_frame(dut, b'\x05\x00\x01\xcd', 39, 3)
     await Timer(15000000)
     
-    int_flag = (await spi_read(dut, REG_INT_FLAG, 2))
+    int_flag = (await spi_read(dut, REG_INT_FLAG_L, 2))
     dut._log.info(f"int_flag: {int_flag[0]:02x} {int_flag[1]:02x}")
     await Timer(50000000)
 

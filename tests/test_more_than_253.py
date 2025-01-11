@@ -37,7 +37,7 @@ async def test_cdbus(dut):
 
     await csr_write(dut, 0, REG_SETTING, BinaryValue('00010001'))
     await csr_write(dut, 1, REG_SETTING, BinaryValue('00010001'))
-    await csr_write(dut, 1, REG_INT_MASK, BinaryValue('11011110'))
+    await csr_write(dut, 1, REG_INT_MASK_L, BinaryValue('11001111'))
     
     await set_div(dut, 0, 39, 2) # 1Mbps, 13.333Mbps
     await set_div(dut, 1, 39, 2) # 1Mbps, 13.333Mbps
@@ -74,7 +74,7 @@ async def test_cdbus(dut):
     
     
     await write_tx(dut, 0, b'\x01\x02' + bytes([len(payload)]) + payload) # node 0x01 send to 0x02
-    await csr_write(dut, 0, REG_TX_CTRL, BIT_TX_START)
+    #await csr_write(dut, 0, REG_CTRL, BIT_TX_START)
     await Timer(250, units='us')
     
     if IS_32BITS:

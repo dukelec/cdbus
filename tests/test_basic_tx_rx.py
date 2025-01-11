@@ -37,7 +37,7 @@ async def test_cdbus(dut):
 
     await csr_write(dut, 0, REG_SETTING, BinaryValue('00010001'))
     await csr_write(dut, 1, REG_SETTING, BinaryValue('00010001'))
-    await csr_write(dut, 1, REG_INT_MASK, BinaryValue('11011110'))
+    await csr_write(dut, 1, REG_INT_MASK_L, BinaryValue('11001111'))
     
     await set_div(dut, 0, 39, 2) # 1Mbps, 13.333Mbps
     await set_div(dut, 1, 39, 2)
@@ -46,14 +46,14 @@ async def test_cdbus(dut):
     await csr_write(dut, 1, REG_FILTER, 0x02) # set local filter to 0x02
     
     await write_tx(dut, 0, b'\x01\x02\x01\xcd') # node 0x01 send to 0x02
-    await csr_write(dut, 0, REG_TX_CTRL, BIT_TX_START)
+    #await csr_write(dut, 0, REG_CTRL, BIT_TX_START)
 
     await RisingEdge(dut.irq1)
     len_ = await read_rx_len(dut, 1)
     val = await read_int_flag(dut, 1)
     dut._log.info(f'REG_INT_FLAG: 0x{int(val):02x}, len: 0x{int(len_):02x}')
-    val, len_ = await read_int_flag2(dut, 1)
-    dut._log.info(f'REG_INT_FLAG2: 0x{int(val):02x}, len: 0x{int(len_):02x}')
+    val, len_, val1 = await read_int_flag3(dut, 1)
+    dut._log.info(f'REG_INT_FLAG2: 0x{int(val):02x}, len: 0x{int(len_):02x}, val1: 0x{int(val1):02x}')
     
     str_ = (await read_rx(dut, 1, 6)).hex() # read 6 bytes (include crc)
     dut._log.info(f'idx1: received: {str_}')
@@ -61,7 +61,7 @@ async def test_cdbus(dut):
         dut._log.error(f'idx1: receive mismatch')
         await exit_err()
     
-    #await csr_write(dut, 1, REG_RX_CTRL, BIT_RX_CLR_PENDING)
+    #await csr_write(dut, 1, REG_CTRL, BIT_RX_CLR_PENDING)
     await FallingEdge(dut.irq1)
     
     
@@ -75,13 +75,13 @@ async def test_cdbus(dut):
     
     await Timer(10, units='us')
     await write_tx(dut, 0, tx_pkt) # node 0x01 send to 0x02
-    await csr_write(dut, 0, REG_TX_CTRL, BIT_TX_START)
+    #await csr_write(dut, 0, REG_CTRL, BIT_TX_START)
+    
+    await Timer(30, units='us')
+    await write_tx(dut, 0, tx_pkt) # node 0x01 send to 0x02
+    #await csr_write(dut, 0, REG_CTRL, BIT_TX_START)
     
     await Timer(200, units='us')
-    await write_tx(dut, 0, tx_pkt) # node 0x01 send to 0x02
-    await csr_write(dut, 0, REG_TX_CTRL, BIT_TX_START)
-    
-    await Timer(20, units='us')
     
     len_ = await read_rx_len(dut, 1)
     val = await read_int_flag(dut, 1)

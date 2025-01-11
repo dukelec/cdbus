@@ -38,7 +38,7 @@ async def test_cdbus(dut):
     await csr_write(dut, 0, REG_SETTING, BinaryValue('00010001'))
     await csr_write(dut, 1, REG_SETTING, BinaryValue('00010001'))
     await csr_write(dut, 2, REG_SETTING, BinaryValue('00010001'))
-    await csr_write(dut, 2, REG_INT_MASK, BinaryValue('11011110'))
+    await csr_write(dut, 2, REG_INT_MASK_L, BinaryValue('11001111'))
 
     await set_div(dut, 0, 39, 2) # 1Mbps, 13.333Mbps
     await set_div(dut, 1, 39, 2) # 1Mbps, 13.333Mbps
@@ -48,13 +48,11 @@ async def test_cdbus(dut):
     await csr_write(dut, 1, REG_FILTER, 0x00) # set local filter to 0xa5
     await csr_write(dut, 2, REG_FILTER, 0x03) # set local filter to 0x03
     
-    await write_tx(dut, 0, b'\x55\x03\x01\xc5') # node 0x55 send to 0x03
-    await write_tx(dut, 1, b'\x00\x03\x01\xca') # node 0xa5 send to 0x03
-    await csr_write(dut, 0, REG_TX_CTRL, BIT_TX_SEND_BREAK)
+    await csr_write(dut, 0, REG_CTRL, BIT_TX_SEND_BREAK)
     
     # start tx at same time
-    cocotb.start_soon(csr_write(dut, 0, REG_TX_CTRL, BIT_TX_START))
-    cocotb.start_soon(csr_write(dut, 1, REG_TX_CTRL, BIT_TX_START))
+    cocotb.start_soon(write_tx(dut, 0, b'\x55\x03\x01\xc5')) # node 0x55 send to 0x03
+    cocotb.start_soon(write_tx(dut, 1, b'\x00\x03\x01\xca')) # node 0xa5 send to 0x03
 
     await RisingEdge(dut.irq2)
     val = await read_int_flag(dut, 2)
@@ -75,7 +73,7 @@ async def test_cdbus(dut):
         dut._log.error(f'idx2: receive mismatch first frame')
         await exit_err()
     
-    #await csr_write(dut, 2, REG_RX_CTRL, BIT_RX_CLR_PENDING)
+    #await csr_write(dut, 2, REG_CTRL, BIT_RX_CLR_PENDING)
     await Timer(500, units='ns')
     
     await RisingEdge(dut.irq2)
@@ -88,7 +86,7 @@ async def test_cdbus(dut):
         dut._log.error(f'idx2: receive mismatch second frame')
         await exit_err()
     
-    #await csr_write(dut, 2, REG_RX_CTRL, BIT_RX_CLR_PENDING)
+    #await csr_write(dut, 2, REG_CTRL, BIT_RX_CLR_PENDING)
     await FallingEdge(dut.irq2)
     
     dut._log.info('test_cdbus done.')
