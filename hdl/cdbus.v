@@ -61,12 +61,15 @@ wire rx_error;
 wire rx_ram_lost;
 wire rx_break;
 wire rx_pending;
+wire [5:0] rx_pend_len;
 wire bus_idle;
 
 wire tx_ram_wr_en;
 wire [5:0] tx_ram_wr_addr;
-wire tx_ram_switch;
+wire tx_ram_full;
+wire tx_ram_wr_done;
 wire tx_abort;
+wire tx_drop;
 wire has_break;
 wire ack_break;
 wire tx_pending;
@@ -157,12 +160,15 @@ cd_csr #(
     .rx_ram_lost(rx_ram_lost),
     .rx_break(rx_break),
     .rx_pending(rx_pending),
+    .rx_pend_len(rx_pend_len),
     .bus_idle(bus_idle),
 
+    .tx_ram_full(tx_ram_full),
     .tx_ram_wr_en(tx_ram_wr_en),
     .tx_ram_wr_addr(tx_ram_wr_addr),
-    .tx_ram_switch(tx_ram_switch),
+    .tx_ram_wr_done(tx_ram_wr_done),
     .tx_abort(tx_abort),
+    .tx_drop(tx_drop),
     .has_break(has_break),
     .ack_break(ack_break),
     .tx_pending(tx_pending),
@@ -181,6 +187,7 @@ cd_rx_ram cd_rx_ram_m(
     .rd_done(rx_ram_rd_done),
     .rd_done_all(rx_clean_all),
     .unread(rx_pending),
+    .unread_len(rx_pend_len),
 
     .rd_len(rx_ram_rd_len),
     .rd_err(rx_ram_rd_err),
@@ -205,11 +212,12 @@ cd_tx_ram cd_tx_ram_m(
     .rd_done(tx_ram_rd_done),
     .unread(tx_pending),
 
+    .wr_full(tx_ram_full),
     .wr_word(csr_writedata),
     .wr_addr(tx_ram_wr_addr),
     .wr_en(tx_ram_wr_en),
-
-    .switch(tx_ram_switch)
+    .wr_done(tx_ram_wr_done),
+    .wr_drop(tx_drop)
 );
 
 cd_rx_bytes cd_rx_bytes_m(

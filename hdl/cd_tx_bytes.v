@@ -30,7 +30,7 @@ module cd_tx_bytes(
         output reg          ram_rd_done
     );
 
-assign has_data = ram_unread;
+assign has_data = ram_unread && !ram_rd_done;
 assign ram_rd_en = ram_unread;
 
 reg [8:0] byte_cnt;

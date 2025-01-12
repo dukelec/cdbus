@@ -20,11 +20,9 @@ This document only shows the modifications. For the protocol and original docume
 | DIV_LS        |  0x07   | RD/WR  | 0x015a                 |                                           |
 | DIV_HS        |  0x08   | RD/WR  | 0x015a                 |                                           |
 | INT_MASK      |  0x09   | RD/WR  | 0x00                   |                                           |
-| INT_FLAG      |  0x0a   | RD     | n/a                    | RX_LEN at byte1, INT_FLAG at byte0        |
-| RX            |  0x0b   | RD     | n/a                    | 32-bit width                              |
-| TX            |  0x0c   | WR     | n/a                    | 32-bit width                              |
-| RX_CTRL       |  0x0d   | WR     | n/a                    |                                           |
-| TX_CTRL       |  0x0e   | WR     | n/a                    |                                           |
+| INT_FLAG      |  0x0a   | RD     | n/a                    | RX_LEN at byte2; INT_FLAG at byte0, 1     |
+| DAT           |  0x0b   | RD/WR  | n/a                    | 32-bit width                              |
+| CTRL          |  0x0c   | WR     | n/a                    |                                           |
 | FILTER_M      |  0x0f   | RD/WR  | (0xff << 8) \| 0xff    | Two filters at low bytes                  |
 
 
@@ -64,6 +62,6 @@ with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
 Notice: The scope granted to MPL excludes the ASIC industry.
 The CDBUS protocol is royalty-free for everyone except chip manufacturers.
 
-Copyright (c) 2017 DUKELEC, All rights reserved.
+Copyright (c) 2025 DUKELEC, All rights reserved.
 ```
 
