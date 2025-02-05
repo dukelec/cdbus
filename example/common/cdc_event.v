@@ -1,53 +1,62 @@
-// Reference: http://zipcpu.com/blog/2017/10/20/cdc.html
-// Collator: Duke Fong
+/*
+ * This Source Code Form is subject to the terms of the Mozilla
+ * Public License, v. 2.0. If a copy of the MPL was not distributed
+ * with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ * Notice: The scope granted to MPL excludes the ASIC industry.
+ *
+ * Copyright (c) 2017 DUKELEC, All rights reserved.
+ *
+ * Author: Duke Fong <d@d-l.io>
+ *
+ * Reference:
+ *   https://zipcpu.com/blog/2017/10/20/cdc.html
+ */
 
 module cdc_event(
-        input clk,
-        input reset_n,
-        input src_event,
-        //output busy,
-        
-        input dst_clk,
-        input dst_reset_n,
-        output reg dst_event
+        input       clk,
+        input       reset_n,
+        input       src_event,
+        //output    busy,
+
+        input       dst_clk,
+        input       dst_reset_n,
+        output      dst_event
     );
 
-reg req;
-reg ack;
-reg xack_pipe;
+reg src_flag;
+reg [1:0] ack_d;
 
-//assign busy = req || ack;
+//assign busy = src_flag || ack_d[1];
 
-reg xreq_pipe;
-reg new_req;
-reg last_req;
+reg [1:0] dst_d;
+wire dst_flag = dst_d[1];
+reg dst_flag_bk;
+
+assign dst_event = !dst_flag_bk && dst_flag;
 
 
 always @(posedge clk or negedge reset_n)
     if (!reset_n) begin
-        req <= 0;
-        ack <= 0;
-        xack_pipe <= 0;
+        src_flag <= 0;
+        ack_d <= 0;
     end
     else begin
         // comment out the busy signal to increase the spi maximum frequency
         if (/*!busy &&*/ src_event)
-            req <= 1;
-        else if (ack)
-            req <= 0;
-        {ack, xack_pipe} <= {xack_pipe, new_req};
+            src_flag <= 1;
+        else if (ack_d[1])
+            src_flag <= 0;
+        ack_d <= {ack_d[0], dst_flag};
     end
 
 always @(posedge dst_clk or negedge dst_reset_n)
     if (!dst_reset_n) begin
-        xreq_pipe <= 0;
-        new_req <= 0;
-        last_req <= 0;
-        dst_event <= 0;
+        dst_d <= 0;
+        dst_flag_bk <= 0;
     end
     else begin
-        {last_req, new_req, xreq_pipe} <= {new_req, xreq_pipe, req};
-        dst_event <= !last_req && new_req;
+        dst_d <= {dst_d[0], src_flag};
+        dst_flag_bk <= dst_flag;
     end
 
 endmodule
