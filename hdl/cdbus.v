@@ -107,11 +107,14 @@ always @(posedge clk)
 
 wire tx_d;
 wire tx_en_d;
-wire tx_may_invert = tx_invert ? ~tx_d : tx_d;
+wire tx_en_a;
+wire tx_en_inner;
+wire tx_d2 = (tx_en_a | ~tx_en_inner) ? tx_d : 1'b0;
+wire tx_may_invert = tx_invert ? ~tx_d2 : tx_d2;
 
 // tx_en can act as tx pin, supports single-wire push-pull UART bus
 assign tx_en = reset_n ? (tx_push_pull ? tx_en_d : (tx_en_d ? tx_may_invert : 1'bz)) : 1'bz;
-assign tx = reset_n ? (tx_push_pull ? tx_may_invert : (tx_d ? 1'bz : tx_may_invert)) : 1'bz;
+assign tx = reset_n ? (tx_push_pull ? tx_may_invert : (tx_d2 ? 1'bz : tx_may_invert)) : 1'bz;
 
 
 cd_csr #(
@@ -131,6 +134,7 @@ cd_csr #(
     .csr_write(csr_write),
     .csr_writedata(csr_writedata),
 
+    .tx_en_inner(tx_en_inner),
     .rx_invert(rx_invert),
     .full_duplex(full_duplex),
     .break_sync(break_sync),
@@ -314,7 +318,8 @@ cd_tx_ser cd_tx_ser_m(
 
     .rx(rx_d[1]),
     .tx(tx_d),
-    .tx_en(tx_en_d)
+    .tx_en(tx_en_d),
+    .tx_en_a(tx_en_a)
 );
 
 endmodule
