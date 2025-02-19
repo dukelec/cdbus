@@ -118,6 +118,7 @@ The high byte can be omitted if it is 0.
 
 | FIELD   | DESCRIPTION                                       |
 |-------- |---------------------------------------------------|
+| [7]     | TX stays low for arbitration and break character  |
 | [6]     | RX pin inversion                                  |
 | [5:4]   | Mode selection                                    |
 | [3]     | Save broken frame                                 |

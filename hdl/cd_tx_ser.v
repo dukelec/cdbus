@@ -38,14 +38,16 @@ module cd_tx_ser(
 
         input               rx,
         output reg          tx,
-        output reg          tx_en
+        output reg          tx_en,
+        output reg          tx_en_a
     );
 
-reg [2:0] state;
+reg [3:0] state;
 localparam
-    WAIT            = 3'b001,
-    TX_PRE          = 3'b010,
-    DATA            = 3'b100;
+    WAIT            = 4'b0001,
+    BS_PRE          = 4'b0010,
+    TX_PRE          = 4'b0100,
+    DATA            = 4'b1000;
 
 reg [1:0] tx_permit_d;
 always @(posedge clk) tx_permit_d[1] <= tx_permit_d[0];
@@ -66,6 +68,10 @@ reg baud_sync;
 reg baud_sel;
 wire bit_inc;
 wire bit_cap;
+
+reg tx_en_a_d;
+reg tx_en_a_d2;
+reg [7:0] en_cnt = 0;
 
 
 // FSM
@@ -91,11 +97,12 @@ always @(posedge clk or negedge reset_n)
             end
             else if (break_sync && reach_max_idle && has_data) begin
                 is_break <= 1;
-                state <= DATA;
+                state <= BS_PRE;
+                baud_sync <= 1;
             end
         end
 
-        TX_PRE: begin
+        BS_PRE, TX_PRE: begin
             if (delay_cnt == tx_pre_len) begin
                 state <= DATA;
                 baud_sync <= 1;
@@ -168,6 +175,7 @@ always @(posedge clk or negedge reset_n)
 
         tx <= 1;
         tx_en <= 0;
+        tx_en_a_d <= 0;
     end
     else begin
         crc_clk <= 0;
@@ -181,6 +189,7 @@ always @(posedge clk or negedge reset_n)
             tx <= 1;
             tx_en <= (state == TX_PRE);
             arbitration_field <= 1;
+            tx_en_a_d <= 0;
         end
         else begin
 
@@ -211,10 +220,41 @@ always @(posedge clk or negedge reset_n)
                 end
             end
 
+            if (bit_cnt == 9)
+                tx_en_a_d <= 1;
+
             if (abort) begin
                 cd <= 0;
                 err <= 0;
             end
+        end
+    end
+
+
+// tx_en_a
+
+always @(posedge clk or negedge reset_n)
+    if (!reset_n) begin
+        tx_en_a <= 0;
+        tx_en_a_d2 <= 0;
+    end
+    else begin
+        tx_en_a_d2 <= arbitration ? tx_en_a_d : is_break;
+        if (en_cnt != 0)
+            en_cnt <= en_cnt - 1'b1;
+        if (arbitration) begin
+            if (tx_en_a_d2 != tx_en_a_d)
+                en_cnt <= div_ls[15:9] ? 8'hff : div_ls[8:1]; // 0.5-bit
+            if (en_cnt == 1)
+                tx_en_a <= tx_en_a_d;
+        end
+        else begin
+            if (is_break)
+                tx_en_a <= 0;
+            if (tx_en_a_d2 && !is_break)
+                en_cnt <= div_ls[15:7] ? 8'hff : {div_ls[6:0], 1'b1}; // 2-bit
+            if (en_cnt == 1)
+                tx_en_a <= 1;
         end
     end
 

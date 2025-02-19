@@ -28,6 +28,7 @@ module cd_csr
         input               csr_write,
         input       [7:0]   csr_writedata,
 
+        output reg          tx_en_inner,
         output reg          rx_invert,
         output              full_duplex,
         output              break_sync,
@@ -142,7 +143,7 @@ always @(*)
         REG_VERSION:
             csr_readdata = VERSION;
         REG_SETTING:
-            csr_readdata = {1'b0, rx_invert, mode_sel, not_drop, user_crc, tx_invert, tx_push_pull};
+            csr_readdata = {tx_en_inner, rx_invert, mode_sel, not_drop, user_crc, tx_invert, tx_push_pull};
         REG_IDLE_WAIT_LEN:
             csr_readdata = idle_wait_len;
         REG_TX_PERMIT_LEN_L:
@@ -197,6 +198,7 @@ always @(*)
 
 always @(posedge clk or negedge reset_n)
     if (!reset_n) begin
+        tx_en_inner <= 0;
         rx_invert <= 0;
         mode_sel <= 2'b01;
         not_drop <= 0;
@@ -306,6 +308,7 @@ always @(posedge clk or negedge reset_n)
         if (csr_write)
             case (csr_address)
                 REG_SETTING: begin
+                    tx_en_inner <= csr_writedata[7];
                     rx_invert <= csr_writedata[6];
                     mode_sel <= csr_writedata[5:4];
                     not_drop <= csr_writedata[3];
