@@ -14,27 +14,28 @@ from cocotb.triggers import RisingEdge, ReadOnly, Timer
 from cocotb.clock import Clock
 from common import *
 
-CLK_FREQ = 40000000
+CLK_FREQ = 50000000
 CLK_PERIOD = round(1000000000000 / CLK_FREQ)
 
-SPI_FREQ = 32000000
+SPI_FREQ = 25000000
 SPI_PERIOD = round(1000000000000 / SPI_FREQ)
 SPI_PERIOD_HALF = round(SPI_PERIOD / 2)
 
 
 async def spi_rw(dut, w_data = 0):
     r_data = 0
-    for i in range(0,8):
-        dut.sdi.value = 1 if (w_data & 0x80) else 0
-        w_data = w_data << 1
+    for i in range(0,2):
+        if w_data != None:
+            dut.sdio.value = w_data >> 4
+            w_data = (w_data << 4) & 0xff
         dut.sck.value = 0
         await Timer(SPI_PERIOD_HALF)
         dut.sck.value = 1
         #await ReadOnly()
-        if dut.sdo.value.binstr != 'z':
-            r_data = (r_data << 1) | dut.sdo.value.integer
+        if dut.sdio.value.binstr != 'zzzz':
+            r_data = (r_data << 4) | dut.sdio.value.integer
         else:
-            r_data = (r_data << 1) | 0
+            r_data = (r_data << 4) | 0
         await Timer(SPI_PERIOD_HALF)
         dut.sck.value = 0
     return r_data
@@ -43,35 +44,41 @@ async def spi_read(dut, address, len = 1):
     datas = []
     dut.nss.value = 0
     await Timer(SPI_PERIOD_HALF)
-    await spi_rw(dut, address << 1)
-    await Timer(SPI_PERIOD_HALF)
+    await spi_rw(dut, address)
+    #await Timer(SPI_PERIOD_HALF)
+    dut.sdio.value = BinaryValue("zzzz")
+    #await Timer(SPI_PERIOD_HALF)
+    await spi_rw(dut, None)
+    #await Timer(SPI_PERIOD_HALF)
     while len != 0:
-        ret_val = await spi_rw(dut)
+        ret_val = await spi_rw(dut, None)
         datas.append(ret_val)
-        await Timer(SPI_PERIOD_HALF)
         len -= 1
+        #await Timer(SPI_PERIOD_HALF)
+    await Timer(SPI_PERIOD_HALF)
     dut.nss.value = 1
-    await Timer(SPI_PERIOD_HALF + CLK_PERIOD)
+    await Timer((SPI_PERIOD_HALF + CLK_PERIOD) * 2)
     return datas
 
 async def spi_write(dut, address, datas):
     dut.nss.value = 0
     await Timer(SPI_PERIOD_HALF)
-    await spi_rw(dut, (address << 1) | 0x80)
+    await spi_rw(dut, address | 0x80)
     await Timer(SPI_PERIOD_HALF)
     for data in datas:
         await spi_rw(dut, data)
-        await Timer(SPI_PERIOD_HALF)
+        #await Timer(SPI_PERIOD_HALF)
+    await Timer(SPI_PERIOD_HALF)
     dut.nss.value = 1
-    await Timer(SPI_PERIOD_HALF + CLK_PERIOD)
+    await Timer((SPI_PERIOD_HALF + CLK_PERIOD) * 2)
 
 
 @cocotb.test(timeout_time=2500, timeout_unit='us')
-async def test_cdctl_spi(dut):
+async def test_cdctl_qspi(dut):
     """
-    test_cdctl_spi
+    test_cdctl_qspi
     """
-    dut._log.info("test_cdctl_spi start.")
+    dut._log.info("test_cdctl_qspi start.")
     dut.nss.value = 1
     dut.sck.value = 0
 
@@ -94,7 +101,7 @@ async def test_cdctl_spi(dut):
 
     await spi_write(dut, REG_DAT, [0x01, 0x00, 0x01, 0xcd])
 
-    await RisingEdge(dut.cdctl_spi_m.cdbus_m.rx_pending)
+    await RisingEdge(dut.cdctl_qspi_m.cdbus_m.rx_pending)
     int_flag, rx_len = await spi_read(dut, REG_INT_FLAG_L, 2)
     dut._log.info(f"int_flag: {int_flag:02x}")
     dut._log.info(f"rx_len: {rx_len:02x}")
@@ -111,8 +118,8 @@ async def test_cdctl_spi(dut):
         dut._log.error(f'wrong int_flag')
     
     
-    #await RisingEdge(dut.cdctl_spi_m.cdbus_m.bus_idle)
-    #await RisingEdge(dut.cdctl_spi_m.cdbus_m.bus_idle)
+    #await RisingEdge(dut.cdctl_qspi_m.cdbus_m.bus_idle)
+    #await RisingEdge(dut.cdctl_qspi_m.cdbus_m.bus_idle)
     await Timer(15000000)
 
     await send_frame(dut, b'\x05\x00\x01\xcd', CLK_FREQ, 39, 3)
@@ -122,6 +129,6 @@ async def test_cdctl_spi(dut):
     dut._log.info(f"int_flag: {int_flag[0]:02x} {int_flag[1]:02x}")
     await Timer(50000000)
 
-    dut._log.info("test_cdctl_spi done.")
+    dut._log.info("test_cdctl_qspi done.")
     await exit_ok()
 
