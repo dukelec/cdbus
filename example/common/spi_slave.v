@@ -19,9 +19,9 @@ module spi_slave
         input       advance, // sdo output advanced by 1/2 sck cycle
 
         output reg  [(A_WIDTH-1):0] csr_address,
-        output wire csr_read,
+        output      csr_read,
         input       [7:0] csr_readdata,
-        output wire csr_write,
+        output      csr_write,
         output reg  [7:0] csr_writedata,
 
         input       sck,
@@ -42,12 +42,11 @@ assign chip_select = !nss_d[1];
 
 wire spi_reset_n = reset_n && !nss;
 reg  [2:0] bit_cnt;
-reg  [7:0] rreg;
+reg  [6:0] rreg;
 reg  [7:0] treg;
 reg  is_first_byte;
+reg  is_first_byte_d;
 reg  is_write;
-reg  write_event;
-reg  read_event;
 reg  sdo_dat_en;
 reg  sdo_dat_en_d;
 reg  treg7_d;
@@ -62,6 +61,26 @@ wire _sdo = advance ? treg[7] : treg7_d;
     assign sdo_en = spi_reset_n && _sdo_en;
 `endif
 
+wire w_det = bit_cnt[2];
+wire r_det = bit_cnt[2] ^ (bit_cnt[0] | bit_cnt[1]);
+wire w_det_f = w_det & !is_first_byte_d & is_write;
+wire r_det_f = r_det & !is_first_byte_d & !is_write;
+reg  [2:0] event_wd;
+reg  [2:0] event_rd;
+assign csr_write = event_wd[2:1] == 2'b10;
+assign csr_read = event_rd[2:1] == 2'b01;
+
+
+always @(posedge clk or negedge reset_n)
+    if (!reset_n) begin
+        event_wd <= 0;
+        event_rd <= 0;
+    end
+    else begin
+        event_wd <= {event_wd[1:0], w_det_f};
+        event_rd <= {event_rd[1:0], r_det_f};
+    end
+
 
 // read from sdi
 always @(posedge sck or negedge spi_reset_n)
@@ -69,20 +88,15 @@ always @(posedge sck or negedge spi_reset_n)
         bit_cnt <= 0;
         rreg <= 0;
         is_first_byte <= 1;
+        is_first_byte_d <= 1;
         is_write <= 0;
-        write_event <= 0;
-        read_event <= 0;
     end
     else begin
-        read_event <= 0;
-        write_event <= 0;
-        rreg <= {rreg[6:0], sdi};
+        rreg <= {rreg[5:0], sdi};
         bit_cnt <= bit_cnt + 1'b1;
+        is_first_byte_d <= is_first_byte;
 
-        if (bit_cnt == 6 && !is_first_byte && is_write) // avoid OP byte
-            write_event <= 1;
-
-        if (bit_cnt == 6) begin // rising edge of the first byte's penultimate bit
+        if (bit_cnt == 6) begin // rising edge of penultimate bit
             if (is_first_byte) begin
                 is_write <= rreg[5]; // MSB
                 csr_address <= {rreg[(A_WIDTH-2):0], sdi};
@@ -90,13 +104,8 @@ always @(posedge sck or negedge spi_reset_n)
             is_first_byte <= 0;
         end
 
-        if (bit_cnt == 7) begin // rising edge of the first byte's last bit
-            csr_writedata <= {rreg[6:0], sdi};
-            if (is_first_byte)
-                read_event <= !rreg[6];
-            else if (!is_write)
-                read_event <= 1;
-        end
+        if (bit_cnt == 7) // rising edge of last bit
+            csr_writedata <= {rreg, sdi};
     end
 
 
@@ -109,6 +118,7 @@ always @(posedge sck or negedge spi_reset_n)
     else begin
         if (!is_write && !is_first_byte)
             sdo_dat_en <= 1; // rising edge of the first byte's last bit
+
         if (bit_cnt == 7)
             treg <= csr_readdata;
         else
@@ -125,25 +135,5 @@ always @(negedge sck or negedge spi_reset_n)
         treg7_d <= treg[7];
     end
 
-
-cdc_event cdc_write_m(
-    .clk(sck),
-    .reset_n(spi_reset_n),
-    .src_event(write_event),
-
-    .dst_clk(clk),
-    .dst_reset_n(reset_n),
-    .dst_event(csr_write)
-);
-
-cdc_event cdc_read_m(
-    .clk(sck),
-    .reset_n(spi_reset_n),
-    .src_event(read_event),
-
-    .dst_clk(clk),
-    .dst_reset_n(reset_n),
-    .dst_event(csr_read)
-);
 
 endmodule

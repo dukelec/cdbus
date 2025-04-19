@@ -8,11 +8,13 @@
 # Author: Duke Fong <d@d-l.io>
 #
 
+TOPLEVEL = $(TEST_WRAPPER)
+MODULE = $(TEST_CASE)
+
 CDCTL_HDL = $(PWD)/..
 CDBUS_HDL = $(PWD)/../../hdl
-VERILOG_SOURCES = $(PWD)/cdctl_bx_wrapper.v \
+VERILOG_SOURCES = $(PWD)/$(TOPLEVEL).v \
                   $(CDCTL_HDL)/top_spi/cdctl_spi.v \
-                  $(CDCTL_HDL)/common/cdc_event.v \
                   $(CDCTL_HDL)/common/spi_slave.v \
                   $(PWD)/cdctl_pll_sim.v \
                   $(CDBUS_HDL)/cdbus.v \
@@ -27,10 +29,6 @@ VERILOG_SOURCES = $(PWD)/cdctl_bx_wrapper.v \
                   $(CDBUS_HDL)/cd_crc.v \
                   $(CDBUS_HDL)/cd_tx_bytes.v \
                   $(CDBUS_HDL)/cd_tx_ser.v
-
-
-TOPLEVEL = cdctl_bx_wrapper
-MODULE = test_cdctl_bx
 
 include $(shell cocotb-config --makefiles)/Makefile.sim
 

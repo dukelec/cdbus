@@ -11,12 +11,12 @@
 
 `timescale 1 ns / 1 ps
 
-module cdctl_bx_wrapper(
+module cdctl_spi_wrapper(
         input       clk,
 
         input       sdi,
-        inout       sdo_sda,
-        input       sck_scl,
+        inout       sdo,
+        input       sck,
         input       nss,
 
         output      int_n,
@@ -29,12 +29,12 @@ wire tx_en;
 wire rx = tx_en ? tx : (bus_a !== 0);
 assign bus_a = tx_en ? tx : 1'bz;
 
-cdctl_spi cdctl_bx_m(
+cdctl_spi cdctl_spi_m(
           .clk_i(clk),
           
           .sdi(sdi),
-          .sdo(sdo_sda),
-          .sck(sck_scl),
+          .sdo(sdo),
+          .sck(sck),
           .nss(nss),
           
           .int_n(int_n),
@@ -45,7 +45,7 @@ cdctl_spi cdctl_bx_m(
       );
 
 initial begin
-    $dumpfile("cdctl_bx.vcd");
+    $dumpfile("cdctl_spi.vcd");
     $dumpvars();
 end
 

@@ -74,6 +74,16 @@ SPI_PERIOD = round(1000000000000 / SPI_FREQ)
 SPI_PERIOD_HALF = round(SPI_PERIOD / 2)
 
 
+async def exit_err():
+    await Timer(1000, units='ns')
+    exit(-1)
+
+async def exit_ok():
+    await Timer(10, units='us')
+    with open('.exit_ok', 'w') as f:
+        f.write('ok')
+
+
 async def send_bytes(dut, bytes, factor, is_z = True):
     await Timer(1000)
     factor += 1
@@ -102,16 +112,16 @@ async def spi_rw(dut, w_data = 0):
     for i in range(0,8):
         dut.sdi.value = 1 if (w_data & 0x80) else 0
         w_data = w_data << 1
-        dut.sck_scl.value = 0
+        dut.sck.value = 0
         await Timer(SPI_PERIOD_HALF)
-        dut.sck_scl.value = 1
+        dut.sck.value = 1
         #await ReadOnly()
-        if dut.sdo_sda.value.binstr != 'z':
-            r_data = (r_data << 1) | dut.sdo_sda.value.integer
+        if dut.sdo.value.binstr != 'z':
+            r_data = (r_data << 1) | dut.sdo.value.integer
         else:
             r_data = (r_data << 1) | 0
         await Timer(SPI_PERIOD_HALF)
-        dut.sck_scl.value = 0
+        dut.sck.value = 0
     return r_data
 
 async def spi_read(dut, address, len = 1):
@@ -142,13 +152,13 @@ async def spi_write(dut, address, datas):
 
 
 @cocotb.test(timeout_time=2500, timeout_unit='us')
-async def test_cdctl_bx(dut):
+async def test_cdctl_spi(dut):
     """
-    test_cdctl_bx
+    test_cdctl_spi
     """
-    dut._log.info("test_cdctl_bx start.")
+    dut._log.info("test_cdctl_spi start.")
     dut.nss.value = 1
-    dut.sck_scl.value = 0
+    dut.sck.value = 0
 
     cocotb.fork(Clock(dut.clk, CLK_PERIOD).start())
     await Timer(500000) # wait reset
@@ -169,7 +179,7 @@ async def test_cdctl_bx(dut):
 
     await spi_write(dut, REG_DAT, [0x01, 0x00, 0x01, 0xcd])
 
-    await RisingEdge(dut.cdctl_bx_m.cdbus_m.rx_pending)
+    await RisingEdge(dut.cdctl_spi_m.cdbus_m.rx_pending)
     int_flag, rx_len = await spi_read(dut, REG_INT_FLAG_L, 2)
     dut._log.info(f"int_flag: {int_flag:02x}")
     dut._log.info(f"rx_len: {rx_len:02x}")
@@ -186,8 +196,8 @@ async def test_cdctl_bx(dut):
         dut._log.error(f'wrong int_flag')
     
     
-    #await RisingEdge(dut.cdctl_bx_m.cdbus_m.bus_idle)
-    #await RisingEdge(dut.cdctl_bx_m.cdbus_m.bus_idle)
+    #await RisingEdge(dut.cdctl_spi_m.cdbus_m.bus_idle)
+    #await RisingEdge(dut.cdctl_spi_m.cdbus_m.bus_idle)
     await Timer(15000000)
 
     await send_frame(dut, b'\x05\x00\x01\xcd', 39, 3)
@@ -197,5 +207,6 @@ async def test_cdctl_bx(dut):
     dut._log.info(f"int_flag: {int_flag[0]:02x} {int_flag[1]:02x}")
     await Timer(50000000)
 
-    dut._log.info("test_cdctl_bx done.")
+    dut._log.info("test_cdctl_spi done.")
+    await exit_ok()
 
