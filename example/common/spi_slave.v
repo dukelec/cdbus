@@ -27,7 +27,7 @@ module spi_slave
         input       sck,
         input       nss,
         input       sdi,
-`ifndef SHARING_IO_PIN
+`ifndef CD_SHARING_IO
         output      sdo
 `else
         output      sdo,
@@ -54,7 +54,7 @@ reg  treg7_d;
 wire _sdo_en = advance ? sdo_dat_en : sdo_dat_en_d;
 wire _sdo = advance ? treg[7] : treg7_d;
 
-`ifndef SHARING_IO_PIN
+`ifndef CD_SHARING_IO
     assign sdo = (spi_reset_n && _sdo_en) ? _sdo : 1'bz;
 `else
     assign sdo = _sdo;

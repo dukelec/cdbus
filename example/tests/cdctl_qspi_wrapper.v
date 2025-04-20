@@ -43,7 +43,7 @@ cdctl_qspi cdctl_qspi_m(
       );
 
 initial begin
-    $dumpfile("cdctl_qspi.vcd");
+    $dumpfile("cdctl.vcd");
     $dumpvars();
 end
 

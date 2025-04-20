@@ -102,15 +102,13 @@ async def reset(dut, idx, duration=10000):
     dut._log.debug(f'idx{idx}: out of reset')
     getattr(dut, f'cs{idx}').value = 0
 
-async def csr_read(dut, idx, address, burst=False, burst_end=False):
+async def csr_read(dut, idx, address, burst=False):
     addr_len = len(getattr(dut, f'csr_addr{idx}'))
     
     await RisingEdge(getattr(dut, f'clk{idx}'))
     getattr(dut, f'cs{idx}').value = 1
     getattr(dut, f'csr_addr{idx}').value = address
     getattr(dut, f'csr_read{idx}').value = 1
-    if burst_end:
-        getattr(dut, f'csr_read{idx}').value = 0
     await ReadOnly()
     data = getattr(dut, f'csr_rdata{idx}').value
     if not burst:
@@ -162,21 +160,17 @@ async def write_tx(dut, idx, bytes_):
     if len(bytes_) == 0:
         return
     for i in range(len(bytes_)):
-        if i < len(bytes_) - 1: # or always false for SPRAM_ONLY test
-            await csr_write(dut, idx, REG_DAT, bytes_[i], True)
-        else:
-            await csr_write(dut, idx, REG_DAT, bytes_[i], False)
+        await csr_write(dut, idx, REG_DAT, bytes_[i], i < len(bytes_) - 1)
 
 async def read_rx(dut, idx, len_):
     ret = b''
     if len_ == 0:
         return ret
-    await csr_read(dut, idx, REG_DAT, True) # skip 1 clk ram output delay
+    await RisingEdge(getattr(dut, f'clk{idx}'))
+    getattr(dut, f'cs{idx}').value = 1
+    await RisingEdge(getattr(dut, f'clk{idx}'))
     for i in range(len_):
-        if i < len_ - 1:
-            val = await csr_read(dut, idx, REG_DAT, True)
-        else:
-            val = await csr_read(dut, idx, REG_DAT, False, True)
+        val = await csr_read(dut, idx, REG_DAT, i < len_ - 1)
         ret += bytes([int(val)])
     return ret
 
@@ -189,7 +183,7 @@ async def read_int_flag(dut, idx):
 async def read_int_flag3(dut, idx):
     val0 = await csr_read(dut, idx, REG_INT_FLAG_L, True)
     val1 = await csr_read(dut, idx, REG_INT_FLAG_L, True)
-    val2 = await csr_read(dut, idx, REG_INT_FLAG_L, False, True)
+    val2 = await csr_read(dut, idx, REG_INT_FLAG_L, False)
     return val0, val1, val2
 
 

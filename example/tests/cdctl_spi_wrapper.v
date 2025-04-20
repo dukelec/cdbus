@@ -45,7 +45,7 @@ cdctl_spi cdctl_spi_m(
       );
 
 initial begin
-    $dumpfile("cdctl_spi.vcd");
+    $dumpfile("cdctl.vcd");
     $dumpvars();
 end
 

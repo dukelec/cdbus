@@ -9,8 +9,9 @@
  * Author: Duke Fong <d@d-l.io>
  */
 
-`define HAS_CHIP_SELECT
-//`define ADVANCE_EN
+`define CD_CHIP_SELECT
+`define CD_RAM_PRE_READ
+//`define CD_QSPI_ADVANCE
 
 
 module cdctl_qspi(
@@ -55,7 +56,7 @@ qspi_slave qspi_slave_m(
     .clk(g_clk),
     .reset_n(reset_n),
     .chip_select(chip_select),
-`ifdef ADVANCE_EN
+`ifdef CD_QSPI_ADVANCE
     .advance(1'b0),
 `endif
     

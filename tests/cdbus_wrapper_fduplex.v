@@ -10,7 +10,8 @@
  */
 
 `timescale 1 ns / 1 ps
-`define HAS_CHIP_SELECT
+`define CD_CHIP_SELECT
+`define CD_RAM_PRE_READ
 
 module cdbus_wrapper_fduplex(
         input       clk0,

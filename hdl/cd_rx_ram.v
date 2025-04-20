@@ -61,7 +61,7 @@ reg switch_d;
 reg [F_WIDTH-1:0] wr_frag_amount;
 
 
-`ifdef SPRAM_ONLY
+`ifdef CD_SPRAM_ONLY
 reg dirty_rd_d;
 always @(posedge clk) begin
     dirty_rd_d <= dirty[rd_sel];

@@ -9,7 +9,8 @@
  * Author: Duke Fong <d@d-l.io>
  */
 
-`define HAS_CHIP_SELECT
+`define CD_CHIP_SELECT
+//`define CD_RAM_PRE_READ
 
 
 module cdctl_spi(

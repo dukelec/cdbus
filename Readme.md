@@ -234,9 +234,7 @@ while the TX page is automatically submitted after a transfer that writes to the
     input           chip_select,
     output          irq,            // interrupt output
 
-    // avalon-mm slave interface, read and write without latency
-    // support burst read and write (normally for REG_TX and REG_RX)
-    // reading REG_RX in burst mode has 1 clock latency
+    // supports zero-latency read/write and burst transfers
     input   [4:0]   csr_address,
     input           csr_read,
     output  [7:0]   csr_readdata,

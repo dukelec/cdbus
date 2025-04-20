@@ -16,7 +16,7 @@ module qspi_slave
         input       clk,
         input       reset_n,
         output      chip_select,
-`ifdef ADVANCE_EN
+`ifdef CD_QSPI_ADVANCE
         input       advance, // sdo output advanced by 1/2 sck cycle
 `endif
 
@@ -28,7 +28,7 @@ module qspi_slave
 
         input       sck,
         input       nss,
-`ifndef SHARING_IO_PIN
+`ifndef CD_SHARING_IO
         inout       [3:0] sdio
 `else
         input       [3:0] sdi,
@@ -50,7 +50,7 @@ reg  [1:0] byte_cnt;
 reg  is_write;
 reg  sdo_dat_en;
 
-`ifdef ADVANCE_EN
+`ifdef CD_QSPI_ADVANCE
 reg  sdo_dat_en_d;
 reg  [3:0] treg74_d;
 wire _sdo_en = advance ? sdo_dat_en : sdo_dat_en_d;
@@ -60,7 +60,7 @@ wire _sdo_en = sdo_dat_en;
 wire [3:0] _sdo = treg[7:4];
 `endif
 
-`ifndef SHARING_IO_PIN
+`ifndef CD_SHARING_IO
     assign sdio = (spi_reset_n && _sdo_en) ? _sdo : 4'bz;
     wire [3:0] sdi = sdio;
 `else
@@ -121,7 +121,7 @@ always @(posedge sck or negedge spi_reset_n)
 
 
 // write to sdo
-`ifndef ADVANCE_EN
+`ifndef CD_QSPI_ADVANCE
 
 always @(negedge sck or negedge spi_reset_n)
     if (!spi_reset_n) begin

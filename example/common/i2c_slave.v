@@ -23,7 +23,7 @@ module i2c_slave
         output reg csr_write,
         output reg [7:0] csr_writedata,
 
-`ifndef SHARING_IO_PIN
+`ifndef CD_SHARING_IO
         input [2:0] addr_sel,
         inout sda,
 `else
@@ -35,7 +35,7 @@ module i2c_slave
         input scl
     );
 
-`ifndef SHARING_IO_PIN
+`ifndef CD_SHARING_IO
     reg sda_out;
     assign sda = (reset_n & ~sda_out) ? 1'b0 : 1'bz;
     assign sda_in = (sda !== 1'b0);
