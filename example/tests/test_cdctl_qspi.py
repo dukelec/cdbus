@@ -14,10 +14,10 @@ from cocotb.triggers import RisingEdge, ReadOnly, Timer
 from cocotb.clock import Clock
 from common import *
 
-CLK_FREQ = 50000000
+CLK_FREQ = 40000000
 CLK_PERIOD = round(1000000000000 / CLK_FREQ)
 
-SPI_FREQ = 25000000
+SPI_FREQ = 32000000
 SPI_PERIOD = round(1000000000000 / SPI_FREQ)
 SPI_PERIOD_HALF = round(SPI_PERIOD / 2)
 
@@ -64,7 +64,7 @@ async def spi_write(dut, address, datas):
     dut.nss.value = 0
     await Timer(SPI_PERIOD_HALF)
     await spi_rw(dut, address | 0x80)
-    await Timer(SPI_PERIOD_HALF)
+    #await Timer(SPI_PERIOD_HALF)
     for data in datas:
         await spi_rw(dut, data)
         #await Timer(SPI_PERIOD_HALF)
@@ -82,7 +82,7 @@ async def test_cdctl_qspi(dut):
     dut.nss.value = 1
     dut.sck.value = 0
 
-    cocotb.fork(Clock(dut.clk, CLK_PERIOD).start())
+    cocotb.start_soon(Clock(dut.clk, CLK_PERIOD).start())
     await Timer(500000) # wait reset
 
     value = await spi_read(dut, REG_VERSION)
@@ -97,7 +97,6 @@ async def test_cdctl_qspi(dut):
     await spi_write(dut, REG_DIV_HS_H, [0])
     await spi_write(dut, REG_DIV_HS_L, [3])
     await spi_write(dut, REG_FILTER, [0x00])
-    # TODO: reset rx...
 
     await spi_write(dut, REG_DAT, [0x01, 0x00, 0x01, 0xcd])
 

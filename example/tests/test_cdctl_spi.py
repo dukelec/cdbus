@@ -75,7 +75,7 @@ async def test_cdctl_spi(dut):
     dut.nss.value = 1
     dut.sck.value = 0
 
-    cocotb.fork(Clock(dut.clk, CLK_PERIOD).start())
+    cocotb.start_soon(Clock(dut.clk, CLK_PERIOD).start())
     await Timer(500000) # wait reset
 
     value = await spi_read(dut, REG_VERSION)
@@ -90,7 +90,6 @@ async def test_cdctl_spi(dut):
     await spi_write(dut, REG_DIV_HS_H, [0])
     await spi_write(dut, REG_DIV_HS_L, [3])
     await spi_write(dut, REG_FILTER, [0x00])
-    # TODO: reset rx...
 
     await spi_write(dut, REG_DAT, [0x01, 0x00, 0x01, 0xcd])
 

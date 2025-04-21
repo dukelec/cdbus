@@ -10,7 +10,7 @@
  */
 
 `define CD_CHIP_SELECT
-//`define CD_RAM_PRE_READ
+//`define CD_CSR_NO_LATENCY
 
 
 module cdctl_spi(

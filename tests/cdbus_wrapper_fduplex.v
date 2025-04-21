@@ -11,7 +11,7 @@
 
 `timescale 1 ns / 1 ps
 `define CD_CHIP_SELECT
-`define CD_RAM_PRE_READ
+`define CD_CSR_NO_LATENCY
 
 module cdbus_wrapper_fduplex(
         input       clk0,
