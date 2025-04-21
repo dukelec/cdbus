@@ -3,7 +3,7 @@
 CDBUS IP Core (32-bit version)
 =======================================
 
-This document only shows the modifications. For the protocol and original documentation, please refer to the master branch.
+This document only describes the modifications. For the full protocol and documentation, please refer to the 8-bit version.
 
 
 ## Registers
@@ -20,10 +20,10 @@ This document only shows the modifications. For the protocol and original docume
 | DIV_LS        |  0x07   | RD/WR  | 0x015a                 |                                           |
 | DIV_HS        |  0x08   | RD/WR  | 0x015a                 |                                           |
 | INT_MASK      |  0x09   | RD/WR  | 0x00                   |                                           |
-| INT_FLAG      |  0x0a   | RD     | n/a                    | RX_LEN at byte2; INT_FLAG at byte0, 1     |
+| INT_FLAG      |  0x0a   | RD     | n/a                    | RX_LEN: byte 2, INT_FLAG: bytes 0-1       |
 | DAT           |  0x0b   | RD/WR  | n/a                    | 32-bit width                              |
 | CTRL          |  0x0c   | WR     | n/a                    |                                           |
-| FILTER_M      |  0x0f   | RD/WR  | (0xff << 8) \| 0xff    | Two filters at low bytes                  |
+| FILTER_M      |  0x0f   | RD/WR  | (0xff << 8) \| 0xff    | Two filters in lower 2 bytes              |
 
 
 
@@ -39,9 +39,7 @@ This document only shows the modifications. For the protocol and original docume
     input           chip_select,
     output          irq,            // interrupt output
 
-    // avalon-mm slave interface, read and write without latency
-    // support burst read and write (normally for REG_TX and REG_RX)
-    // reading REG_RX in burst mode has 1 clock latency
+    // supports zero-latency read/write and burst transfers
     input   [3:0]   csr_address,
     input           csr_read,
     output [31:0]   csr_readdata,

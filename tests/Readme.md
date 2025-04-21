@@ -1,7 +1,7 @@
 
 Copy test cases from 8-bit branch first:
 ```
-git checkout next test_*.py
+git checkout master test_*.py
 git restore --staged test_*.py
 ```
 

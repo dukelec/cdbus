@@ -99,15 +99,13 @@ async def reset(dut, idx, duration=10000):
     dut._log.debug(f'idx{idx}: out of reset')
     getattr(dut, f'cs{idx}').value = 0
 
-async def csr_read(dut, idx, address, burst=False, burst_end=False):
+async def csr_read(dut, idx, address, burst=False):
     addr_len = len(getattr(dut, f'csr_addr{idx}'))
     
     await RisingEdge(getattr(dut, f'clk{idx}'))
     getattr(dut, f'cs{idx}').value = 1
     getattr(dut, f'csr_addr{idx}').value = address
     getattr(dut, f'csr_read{idx}').value = 1
-    if burst_end:
-        getattr(dut, f'csr_read{idx}').value = 0
     await ReadOnly()
     data = getattr(dut, f'csr_rdata{idx}').value
     if not burst:
@@ -168,14 +166,16 @@ async def read_rx(dut, idx, len_):
     ret = b''
     if len_ == 0:
         return ret
-    await csr_read(dut, idx, REG_DAT, True) # skip 1 clk ram output delay
+    await RisingEdge(getattr(dut, f'clk{idx}'))
+    getattr(dut, f'cs{idx}').value = 1
+    await RisingEdge(getattr(dut, f'clk{idx}'))
     blk_cnt = int((len_+3)/4)
     left = len_%4
     for i in range(blk_cnt):
         if i < blk_cnt - 1:
             val = await csr_read(dut, idx, REG_DAT, True)
         else:
-            val = await csr_read(dut, idx, REG_DAT, False, True)
+            val = await csr_read(dut, idx, REG_DAT, False)
             if left != 0:
                 start = (4 - left) * 8
                 val = val[start : 31]

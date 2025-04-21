@@ -124,7 +124,7 @@ cd_csr #(
     .clk(clk),
     .reset_n(reset_n),
     .irq(irq),
-`ifdef HAS_CHIP_SELECT
+`ifdef CD_CHIP_SELECT
     .chip_select(chip_select),
 `endif
 

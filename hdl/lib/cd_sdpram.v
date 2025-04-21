@@ -20,7 +20,7 @@ module cd_sdpram
            input                    cen,    // chip enable, active low
 
            input      [A_WIDTH-1:0] ra,     // read addr
-`ifdef SPRAM_ONLY
+`ifdef CD_SPRAM_ONLY
            output     [D_WIDTH-1:0] rd,     // read data
 `else
            output reg [D_WIDTH-1:0] rd,
@@ -31,7 +31,7 @@ module cd_sdpram
            input                    wen     // write enable, active low
        );
 
-`ifdef SPRAM_ONLY
+`ifdef CD_SPRAM_ONLY
 // on read-write conflict, read delays 1 clock
 
 wire [D_WIDTH-1:0] rd_ori;

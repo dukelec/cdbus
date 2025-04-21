@@ -18,7 +18,7 @@ module cd_csr
         input               clk,
         input               reset_n,
         output              irq,
-`ifdef HAS_CHIP_SELECT
+`ifdef CD_CHIP_SELECT
         input               chip_select,
 `endif
 
@@ -102,11 +102,14 @@ wire [15:0] int_flag = {~bus_idle, bus_idle, rx_pend_len,
                         tx_error_flag, cd_flag, ~tx_pending, ~tx_ram_full,
                        (not_drop ? rx_ram_rd_err : rx_error_flag), rx_lost_flag, rx_break_flag, rx_pending};
 
-`ifdef HAS_CHIP_SELECT
+`ifdef CD_CHIP_SELECT
+ `ifdef CD_CSR_NO_LATENCY
+reg [31:0] ram_pre_read;
+ `endif
+reg [1:0] chip_select_d;
 reg has_read_rx;
 reg has_write_tx;
-reg chip_select_delayed;
-reg [23:0] int_flag_snapshot; // avoid metastability due to int_flag
+reg [23:0] int_flag_snapshot; // avoid metastability
 `endif
 
 assign tx_ram_wr_en = (csr_address == REG_DAT) ? csr_write : 1'b0;
@@ -140,13 +143,18 @@ always @(*)
         REG_INT_MASK:
             csr_readdata = {16'd0, int_mask};
         REG_INT_FLAG:
-`ifdef HAS_CHIP_SELECT
+`ifdef CD_CHIP_SELECT
             csr_readdata = {8'd0, int_flag_snapshot};
 `else
             csr_readdata = {8'd0, rx_ram_rd_len, int_flag};
 `endif
+`ifdef CD_CSR_NO_LATENCY
+        REG_DAT:
+            csr_readdata = csr_read ? rx_ram_rd_word : ram_pre_read;
+`else
         REG_DAT:
             csr_readdata = rx_ram_rd_word;
+`endif
         REG_FILTER_M:
             csr_readdata = {16'd0, filter_m1, filter_m0};
         default:
@@ -181,8 +189,8 @@ always @(posedge clk or negedge reset_n)
         rx_break_flag <= 0;
 
         int_mask <= 0;
-`ifdef HAS_CHIP_SELECT
-        chip_select_delayed <= 0;
+`ifdef CD_CHIP_SELECT
+        chip_select_d <= 0;
         int_flag_snapshot <= 0;
         has_read_rx <= 0;
         has_write_tx <= 0;
@@ -205,24 +213,30 @@ always @(posedge clk or negedge reset_n)
         tx_abort <= 0;
         tx_drop <= 0;
 
-`ifdef HAS_CHIP_SELECT
-        chip_select_delayed <= chip_select;
-        if (!chip_select) begin
+`ifdef CD_CHIP_SELECT
+        chip_select_d <= {chip_select_d[0], chip_select};
+        if (!chip_select_d[0]) begin
             int_flag_snapshot <= {rx_ram_rd_len, int_flag};
             rx_ram_rd_addr <= 0;
             tx_ram_wr_addr <= 0;
             has_read_rx <= 0;
             has_write_tx <= 0;
-            if (chip_select_delayed) begin
+            if (chip_select_d[1]) begin
                 rx_ram_rd_done <= has_read_rx;
                 tx_ram_wr_done <= has_write_tx;
             end
         end
+ `ifdef CD_CSR_NO_LATENCY
+        else if (chip_select_d == 2'b01) begin
+            ram_pre_read <= rx_ram_rd_word;
+            rx_ram_rd_addr <= rx_ram_rd_addr + 1'd1;
+        end
+ `endif
 `endif
 
         if (csr_read) begin
             if (csr_address == REG_INT_FLAG) begin
-`ifdef HAS_CHIP_SELECT
+`ifdef CD_CHIP_SELECT
                 if (int_flag_snapshot[3])
                     rx_error_flag <= 0; // not care when not_drop
                 if (int_flag_snapshot[2])
@@ -243,8 +257,11 @@ always @(posedge clk or negedge reset_n)
             end
             else if (csr_address == REG_DAT) begin
                 rx_ram_rd_addr <= rx_ram_rd_addr + 1'd1;
-`ifdef HAS_CHIP_SELECT
+`ifdef CD_CHIP_SELECT
                 has_read_rx <= 1;
+ `ifdef CD_CSR_NO_LATENCY
+                ram_pre_read <= rx_ram_rd_word;
+ `endif
 `endif
             end
         end
@@ -291,7 +308,7 @@ always @(posedge clk or negedge reset_n)
                     int_mask <= csr_writedata[15:0];
                 REG_DAT: begin
                     tx_ram_wr_addr <= tx_ram_wr_addr + 1'd1;
-`ifdef HAS_CHIP_SELECT
+`ifdef CD_CHIP_SELECT
                     has_write_tx <= 1;
 `endif
                 end
@@ -308,7 +325,7 @@ always @(posedge clk or negedge reset_n)
                         has_break <= 1;
                     if (csr_writedata[0])
                         tx_ram_wr_done <= 1;
-`ifndef HAS_CHIP_SELECT
+`ifndef CD_CHIP_SELECT
                     rx_ram_rd_addr <= 0;
                     tx_ram_wr_addr <= 0;
 `endif

@@ -10,7 +10,8 @@
  */
 
 `timescale 1 ns / 1 ps
-`define HAS_CHIP_SELECT
+`define CD_CHIP_SELECT
+`define CD_CSR_NO_LATENCY
 
 module cdbus_wrapper_dft(
         input       clk0,
