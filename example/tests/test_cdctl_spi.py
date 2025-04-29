@@ -50,6 +50,7 @@ async def spi_read(dut, address, len = 1):
         datas.append(ret_val)
         await Timer(SPI_PERIOD_HALF)
         len -= 1
+    #await Timer(CLK_PERIOD * 2)
     dut.nss.value = 1
     await Timer(SPI_PERIOD_HALF + CLK_PERIOD)
     return datas
@@ -62,6 +63,7 @@ async def spi_write(dut, address, datas):
     for data in datas:
         await spi_rw(dut, data)
         await Timer(SPI_PERIOD_HALF)
+    #await Timer(CLK_PERIOD * 2)
     dut.nss.value = 1
     await Timer(SPI_PERIOD_HALF + CLK_PERIOD)
 

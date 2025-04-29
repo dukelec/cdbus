@@ -49,6 +49,7 @@ async def spi_read(dut, address, len = 1):
     dut.sdio.value = BinaryValue("zzzz")
     #await Timer(SPI_PERIOD_HALF)
     await spi_rw(dut, None)
+    await spi_rw(dut, None)
     #await Timer(SPI_PERIOD_HALF)
     while len != 0:
         ret_val = await spi_rw(dut, None)
@@ -56,6 +57,7 @@ async def spi_read(dut, address, len = 1):
         len -= 1
         #await Timer(SPI_PERIOD_HALF)
     await Timer(SPI_PERIOD_HALF)
+    #await Timer(SPI_PERIOD * 2)
     dut.nss.value = 1
     await Timer((SPI_PERIOD_HALF + CLK_PERIOD) * 2)
     return datas
@@ -69,6 +71,7 @@ async def spi_write(dut, address, datas):
         await spi_rw(dut, data)
         #await Timer(SPI_PERIOD_HALF)
     await Timer(SPI_PERIOD_HALF)
+    #await Timer(SPI_PERIOD * 2)
     dut.nss.value = 1
     await Timer((SPI_PERIOD_HALF + CLK_PERIOD) * 2)
 

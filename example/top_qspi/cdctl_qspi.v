@@ -10,7 +10,6 @@
  */
 
 `define CD_CHIP_SELECT
-`define CD_CSR_NO_LATENCY
 //`define CD_QSPI_ADVANCE
 
 
@@ -57,7 +56,7 @@ qspi_slave qspi_slave_m(
     .reset_n(reset_n),
     .chip_select(chip_select),
 `ifdef CD_QSPI_ADVANCE
-    .advance(1'b0),
+    .advance(1'b1),
 `endif
     
     .csr_address(csr_address),

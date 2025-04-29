@@ -112,7 +112,7 @@ wire [15:0] int_flag = {~bus_idle, bus_idle, rx_pend_len,
 reg [7:0] h_val_bkup;
 
 `ifdef CD_CHIP_SELECT
- `ifdef CD_CSR_NO_LATENCY
+ `ifdef CD_CSR_NO_LATENCY // glitchy, unsafe for CDC
 reg [7:0] ram_pre_read;
 reg [7:0] flag_pre_read;
  `endif
@@ -252,14 +252,14 @@ always @(posedge clk or negedge reset_n)
 
 `ifdef CD_CHIP_SELECT
         chip_select_d <= {chip_select_d[0], chip_select};
-        if (!chip_select_d[0]) begin
+        if (!chip_select) begin
             int_flag_snapshot <= int_flag;
             int_flag_shift <= {int_flag[15:8], rx_ram_rd_len, int_flag[7:0]};
             rx_ram_rd_addr <= 0;
             tx_ram_wr_addr <= 0;
             has_read_rx <= 0;
             has_write_tx <= 0;
-            if (chip_select_d[1]) begin
+            if (chip_select_d[0]) begin
                 rx_ram_rd_done <= has_read_rx;
                 tx_ram_wr_done <= has_write_tx;
             end

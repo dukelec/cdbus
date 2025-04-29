@@ -35,10 +35,10 @@ module spi_slave
 `endif
     );
 
-reg [1:0] nss_d;
+reg [2:0] nss_d;
 always @(posedge clk)
-    nss_d <= {nss_d[0], nss};
-assign chip_select = !nss_d[1];
+    nss_d <= {nss_d[1:0], nss};
+assign chip_select = !nss_d[2];
 
 wire spi_reset_n = reset_n && !nss;
 reg  [2:0] bit_cnt;
