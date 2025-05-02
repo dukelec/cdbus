@@ -23,7 +23,7 @@ module qspi_slave
         output reg  [(A_WIDTH-1):0] csr_address,
         output      csr_read,
         input       [7:0] csr_readdata,
-        output      csr_write,
+        output reg  csr_write,
         output reg  [7:0] csr_writedata,
 
         input       sck,
@@ -37,10 +37,10 @@ module qspi_slave
 `endif
     );
 
-reg [2:0] nss_d;
+reg [3:0] nss_d;
 always @(posedge clk)
-    nss_d <= {nss_d[1:0], nss};
-assign chip_select = !nss_d[2];
+    nss_d <= {nss_d[2:0], nss};
+assign chip_select = !nss_d[3] || !nss_d[2];
 
 wire spi_reset_n = reset_n && !nss;
 reg  bit_cnt;
@@ -76,7 +76,7 @@ reg r_det_d;
 `endif
 reg  [2:0] event_wd;
 reg  [2:0] event_rd;
-assign csr_write = event_wd[2:1] == 2'b01;
+wire csr_write_ = event_wd[2:1] == 2'b01;
 assign csr_read = event_rd[2:1] == 2'b01;
 
 reg [7:0] csr_writedata_d0;
@@ -101,6 +101,7 @@ always @(posedge clk or negedge reset_n)
     if (!reset_n) begin
         event_rd <= 0;
         event_wd <= 0;
+        csr_write <= 0;
     end
     else begin
         event_wd <= {event_wd[1:0], w_det_f};
@@ -111,6 +112,7 @@ always @(posedge clk or negedge reset_n)
 `endif
         csr_writedata_d1 <= csr_writedata_d0;
         csr_writedata <= csr_writedata_d1;
+        csr_write <= csr_write_; // wait for csr_writedata stable
     end
 
 
