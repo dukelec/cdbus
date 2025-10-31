@@ -48,6 +48,8 @@ wire [1:0] tx_pre_len;
 wire [7:0] filter;
 wire [7:0] filter_m0;
 wire [7:0] filter_m1;
+wire [7:0] filter_msk0;
+wire [7:0] filter_msk1;
 wire [15:0] div_ls;
 wire [15:0] div_hs;
 
@@ -151,6 +153,8 @@ cd_csr #(
     .filter(filter),
     .filter_m0(filter_m0),
     .filter_m1(filter_m1),
+    .filter_msk0(filter_msk0),
+    .filter_msk1(filter_msk1),
     .div_ls(div_ls),
     .div_hs(div_hs),
 
@@ -231,6 +235,8 @@ cd_rx_bytes cd_rx_bytes_m(
     .filter(filter),
     .filter_m0(filter_m0),
     .filter_m1(filter_m1),
+    .filter_msk0(filter_msk0),
+    .filter_msk1(filter_msk1),
     .user_crc(user_crc),
     .not_drop(not_drop),
     .abort(rx_clean_all),

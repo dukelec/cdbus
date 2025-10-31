@@ -45,6 +45,8 @@ module cd_csr
         output reg  [7:0]   filter,
         output reg  [7:0]   filter_m0,
         output reg  [7:0]   filter_m1,
+        output reg  [7:0]   filter_msk0,
+        output reg  [7:0]   filter_msk1,
         output reg  [15:0]  div_ls,
         output reg  [15:0]  div_hs,
 
@@ -96,7 +98,9 @@ localparam
     REG_DAT             = 'h15,
     REG_CTRL            = 'h16,
     REG_FILTER_M0       = 'h1a,
-    REG_FILTER_M1       = 'h1b;
+    REG_FILTER_M1       = 'h1b,
+    REG_FILTER_MSK0     = 'h1c,
+    REG_FILTER_MSK1     = 'h1d;
 
 reg tx_error_flag;
 reg cd_flag;
@@ -194,6 +198,10 @@ always @(*)
             csr_readdata = filter_m0;
         REG_FILTER_M1:
             csr_readdata = filter_m1;
+        REG_FILTER_MSK0:
+            csr_readdata = filter_msk0;
+        REG_FILTER_MSK1:
+            csr_readdata = filter_msk1;
         default:
             csr_readdata = 0;
     endcase
@@ -216,6 +224,8 @@ always @(posedge clk or negedge reset_n)
         filter <= 8'hff;
         filter_m0 <= 8'hff;
         filter_m1 <= 8'hff;
+        filter_msk0 <= 8'hff;
+        filter_msk1 <= 8'hff;
         div_ls <= DIV_LS;
         div_hs <= DIV_HS;
 
@@ -391,6 +401,10 @@ always @(posedge clk or negedge reset_n)
                     filter_m0 <= csr_writedata;
                 REG_FILTER_M1:
                     filter_m1 <= csr_writedata;
+                REG_FILTER_MSK0:
+                    filter_msk0 <= csr_writedata;
+                REG_FILTER_MSK1:
+                    filter_msk1 <= csr_writedata;
             endcase
     end
 
