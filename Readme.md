@@ -60,6 +60,6 @@ with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
 Notice: The scope granted to MPL excludes the ASIC industry.
 The CDBUS protocol is royalty-free for everyone except chip manufacturers.
 
-Copyright (c) 2025 DUKELEC, All rights reserved.
+Copyright (c) 2026 DUKELEC, All rights reserved.
 ```
 

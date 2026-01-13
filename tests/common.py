@@ -10,8 +10,8 @@
 
 import struct
 import cocotb
-from cocotb.binary import BinaryValue
-from cocotb.triggers import RisingEdge, ReadOnly, Timer
+from cocotb.types import Logic, LogicArray
+from cocotb.triggers import RisingEdge, FallingEdge, ReadOnly, Timer
 from cocotb.clock import Clock
 
 # pip3 install pythoncrc
@@ -76,12 +76,12 @@ async def _send_bytes(dut, bytes_, sys_clk, factor, is_z=True):
             if byte & 0x01 == 0:
                 dut.bus_a.value = 0
             else:
-                dut.bus_a.value = BinaryValue('z') if is_z else 1
+                dut.bus_a.value = Logic('z') if is_z else 1
             await Timer(factor * clk_period)
             byte = byte >> 1
-        dut.bus_a.value = BinaryValue('z') if is_z else 1
+        dut.bus_a.value = Logic('z') if is_z else 1
         await Timer(factor * clk_period)
-        dut.bus_a.value = BinaryValue('z')
+        dut.bus_a.value = Logic('z')
 
 # Pass in a frame of data from the outside of the dut.
 async def send_frame(dut, bytes_, sys_clk, factor_l, factor_h):
@@ -111,15 +111,13 @@ async def csr_read(dut, idx, address, burst=False):
     if not burst:
         await RisingEdge(getattr(dut, f'clk{idx}'))
         getattr(dut, f'csr_read{idx}').value = 0
-        getattr(dut, f'csr_addr{idx}').value = BinaryValue('x' * addr_len)
+        getattr(dut, f'csr_addr{idx}').value = LogicArray('x' * addr_len)
         getattr(dut, f'cs{idx}').value = 0
     return data
 
 async def csr_write(dut, idx, address, data, burst=False):
     addr_len = len(getattr(dut, f'csr_addr{idx}'))
     wdata_len = len(getattr(dut, f'csr_wdata{idx}'))
-    if isinstance(data, BinaryValue): # padding to 32 bits
-        data = BinaryValue(value=int(data), n_bits=32, bigEndian=False)
     
     await RisingEdge(getattr(dut, f'clk{idx}'))
     getattr(dut, f'cs{idx}').value = 1
@@ -129,8 +127,8 @@ async def csr_write(dut, idx, address, data, burst=False):
     if not burst:
         await RisingEdge(getattr(dut, f'clk{idx}'))
         getattr(dut, f'csr_write{idx}').value = 0
-        getattr(dut, f'csr_addr{idx}').value = BinaryValue('x' * addr_len)
-        getattr(dut, f'csr_wdata{idx}').value = BinaryValue('x' * wdata_len)
+        getattr(dut, f'csr_addr{idx}').value = LogicArray('x' * addr_len)
+        getattr(dut, f'csr_wdata{idx}').value = LogicArray('x' * wdata_len)
         getattr(dut, f'cs{idx}').value = 0
 
 
@@ -156,7 +154,7 @@ async def write_tx(dut, idx, bytes_):
         return
     blk_cnt = int((len(bytes_)+3)/4)
     for i in range(blk_cnt):
-        val = struct.unpack('<I', (bytes_[i*4 : i*4+4] + b'\x00\x00\x00')[0:4])[0]
+        val = struct.unpack('<I', (bytes_[i*4:i*4+4] + b'\x00\x00\x00')[0:4])[0]
         if i < blk_cnt - 1:
             await csr_write(dut, idx, REG_DAT, val, True)
         else:
@@ -177,32 +175,31 @@ async def read_rx(dut, idx, len_):
         else:
             val = await csr_read(dut, idx, REG_DAT, False)
             if left != 0:
-                start = (4 - left) * 8
-                val = val[start : 31]
+                val = val[left*8-1:0]
         ret += struct.pack('<I', int(val))
-    return ret[0: len_]
+    return ret[0:len_]
 
 async def read_int_flag(dut, idx):
     val = await csr_read(dut, idx, REG_INT_FLAG)
-    val = val[24 : 31]
+    val = val[7:0]
     return int(val)
 
 async def read_rx_len(dut, idx):
     val = await csr_read(dut, idx, REG_INT_FLAG)
-    val = val[8 : 15]
+    val = val[23:16]
     return int(val)
 
 async def read_int_flag3(dut, idx):
     val = await csr_read(dut, idx, REG_INT_FLAG)
-    return val[24 : 31], val[8 : 15], val[16 : 23]
+    return val[7:0], val[23:16], val[15:8]
 
 
 async def exit_err():
-    await Timer(1000, units='ns')
+    await Timer(1000, unit='ns')
     exit(-1)
 
 async def exit_ok():
-    await Timer(10, units='us')
+    await Timer(10, unit='us')
     with open('.exit_ok', 'w') as f:
         f.write('ok')
 
