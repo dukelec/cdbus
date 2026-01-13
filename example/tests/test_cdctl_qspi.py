@@ -8,10 +8,6 @@
 # Author: Duke Fong <d@d-l.io>
 #
 
-import cocotb
-from cocotb.binary import BinaryValue
-from cocotb.triggers import RisingEdge, ReadOnly, Timer
-from cocotb.clock import Clock
 from common import *
 
 CLK_FREQ = 40000000
@@ -32,8 +28,8 @@ async def spi_rw(dut, w_data = 0):
         await Timer(SPI_PERIOD_HALF)
         dut.sck.value = 1
         #await ReadOnly()
-        if dut.sdio.value.binstr != 'zzzz':
-            r_data = (r_data << 4) | dut.sdio.value.integer
+        if dut.sdio.value != LogicArray('zzzz'):
+            r_data = (r_data << 4) | int(dut.sdio.value)
         else:
             r_data = (r_data << 4) | 0
         await Timer(SPI_PERIOD_HALF)
@@ -46,7 +42,7 @@ async def spi_read(dut, address, len = 1):
     await Timer(SPI_PERIOD_HALF)
     await spi_rw(dut, address)
     #await Timer(SPI_PERIOD_HALF)
-    dut.sdio.value = BinaryValue("zzzz")
+    dut.sdio.value = LogicArray('zzzz')
     #await Timer(SPI_PERIOD_HALF)
     await spi_rw(dut, None)
     await spi_rw(dut, None)
@@ -93,7 +89,7 @@ async def test_cdctl_qspi(dut):
     value = await spi_read(dut, REG_SETTING)
     dut._log.info("REG_SETTING: 0x%02x" % int(value[0]))
 
-    await spi_write(dut, REG_SETTING, [BinaryValue("00010001").integer])
+    await spi_write(dut, REG_SETTING, [0b00010001])
 
     await spi_write(dut, REG_DIV_LS_H, [0])
     await spi_write(dut, REG_DIV_LS_L, [39])

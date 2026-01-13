@@ -8,11 +8,6 @@
 # Author: Duke Fong <d@d-l.io>
 #
 
-import importlib
-import cocotb
-from cocotb.binary import BinaryValue
-from cocotb.triggers import RisingEdge, FallingEdge, ReadOnly, Timer
-from cocotb.clock import Clock
 from common import *
 
 @cocotb.test(timeout_time=500, timeout_unit='us')
@@ -35,9 +30,9 @@ async def test_cdbus(dut):
     val = await csr_read(dut, 0, REG_SETTING)
     dut._log.info(f'idx0 REG_SETTING: 0x{int(val):02x}')
 
-    await csr_write(dut, 0, REG_SETTING, BinaryValue('00010001'))
-    await csr_write(dut, 1, REG_SETTING, BinaryValue('00010001'))
-    await csr_write(dut, 1, REG_INT_MASK_L, BinaryValue('11001111'))
+    await csr_write(dut, 0, REG_SETTING, 0b00010001)
+    await csr_write(dut, 1, REG_SETTING, 0b00010001)
+    await csr_write(dut, 1, REG_INT_MASK_L, 0b11001111)
     
     await set_div(dut, 0, 39, 2) # 1Mbps, 13.333Mbps
     await set_div(dut, 1, 39, 2)
@@ -47,7 +42,7 @@ async def test_cdbus(dut):
     if 'REG_FILTER_M0' in globals():
         await csr_write(dut, 1, REG_FILTER_M0, 0xe0) # set mcast filter
     else:
-        await csr_write(dut, 1, REG_FILTER_M, 0xffe0) # for 23-bit branch
+        await csr_write(dut, 1, REG_FILTER_M, 0xffffffe0) # for 23-bit branch
     
     await write_tx(dut, 0, b'\x01\xe0\x01\xcd')
     #await csr_write(dut, 0, REG_CTRL, BIT_TX_START)
@@ -69,7 +64,7 @@ async def test_cdbus(dut):
     if 'REG_FILTER_M1' in globals():
         await csr_write(dut, 1, REG_FILTER_M1, 0xe1) # set mcast filter
     else:
-        await csr_write(dut, 1, REG_FILTER_M, 0xe1e0) # for 23-bit branch
+        await csr_write(dut, 1, REG_FILTER_M, 0xffffe1e0) # for 23-bit branch
     
     await write_tx(dut, 0, b'\x01\xe1\x01\xcd')
     #await csr_write(dut, 0, REG_CTRL, BIT_TX_START)
@@ -109,9 +104,9 @@ async def test_cdbus(dut):
     await write_tx(dut, 0, b'\x01\xf0\x01\xcd')
     #await csr_write(dut, 0, REG_CTRL, BIT_TX_START)
 
-    await Timer(60, units='us')
+    await Timer(60, unit='us')
     dut.dbg0.value = 1
-    if dut.irq1 != 0:
+    if int(dut.irq1.value) != 0:
         dut._log.error(f'idx1: should not receive')
         await exit_err()
     

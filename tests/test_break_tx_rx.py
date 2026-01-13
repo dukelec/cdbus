@@ -8,11 +8,6 @@
 # Author: Duke Fong <d@d-l.io>
 #
 
-import importlib
-import cocotb
-from cocotb.binary import BinaryValue
-from cocotb.triggers import RisingEdge, FallingEdge, ReadOnly, Timer
-from cocotb.clock import Clock
 from common import *
 
 @cocotb.test(timeout_time=500, timeout_unit='us')
@@ -35,10 +30,10 @@ async def test_cdbus(dut):
     val = await csr_read(dut, 0, REG_SETTING)
     dut._log.info(f'idx0 REG_SETTING: 0x{int(val):02x}')
 
-    await csr_write(dut, 0, REG_SETTING, BinaryValue('00010001'))
-    await csr_write(dut, 1, REG_SETTING, BinaryValue('00010001'))
-    await csr_write(dut, 2, REG_SETTING, BinaryValue('00010001'))
-    await csr_write(dut, 2, REG_INT_MASK_L, BinaryValue('11001111'))
+    await csr_write(dut, 0, REG_SETTING, 0b00010001)
+    await csr_write(dut, 1, REG_SETTING, 0b00010001)
+    await csr_write(dut, 2, REG_SETTING, 0b00010001)
+    await csr_write(dut, 2, REG_INT_MASK_L, 0b11001111)
 
     await set_div(dut, 0, 39, 2) # 1Mbps, 13.333Mbps
     await set_div(dut, 1, 39, 2) # 1Mbps, 13.333Mbps
@@ -58,7 +53,7 @@ async def test_cdbus(dut):
     val = await read_int_flag(dut, 2)
     dut._log.info(f'REG_INT_FLAG: 0x{int(val):02x}')
     
-    if not (val & BIT_FLAG_RX_BREAK):
+    if not (int(val) & BIT_FLAG_RX_BREAK):
         dut._log.error(f'idx2: not receive break')
         await exit_err()
     await FallingEdge(dut.irq2)
@@ -74,7 +69,7 @@ async def test_cdbus(dut):
         await exit_err()
     
     #await csr_write(dut, 2, REG_CTRL, BIT_RX_CLR_PENDING)
-    await Timer(500, units='ns')
+    await Timer(500, unit='ns')
     
     await RisingEdge(dut.irq2)
     val = await read_int_flag(dut, 2)

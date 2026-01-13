@@ -8,11 +8,6 @@
 # Author: Duke Fong <d@d-l.io>
 #
 
-import importlib
-import cocotb
-from cocotb.binary import BinaryValue
-from cocotb.triggers import RisingEdge, FallingEdge, ReadOnly, Timer
-from cocotb.clock import Clock
 from common import *
 
 @cocotb.test(timeout_time=500, timeout_unit='us')
@@ -35,9 +30,9 @@ async def test_cdbus(dut):
     val = await csr_read(dut, 0, REG_SETTING)
     dut._log.info(f'idx0 REG_SETTING: 0x{int(val):02x}')
 
-    await csr_write(dut, 0, REG_SETTING, BinaryValue('00010001'))
-    await csr_write(dut, 1, REG_SETTING, BinaryValue('00010001'))
-    await csr_write(dut, 1, REG_INT_MASK_L, BinaryValue('11001111'))
+    await csr_write(dut, 0, REG_SETTING, 0b00010001)
+    await csr_write(dut, 1, REG_SETTING, 0b00010001)
+    await csr_write(dut, 1, REG_INT_MASK_L, 0b11001111)
     
     await set_div(dut, 0, 39, 2) # 1Mbps, 13.333Mbps
     await set_div(dut, 1, 39, 2)
@@ -50,14 +45,14 @@ async def test_cdbus(dut):
     #await csr_write(dut, 0, REG_CTRL, BIT_TX_START)
     dut.dbg0.value = 0
     
-    await Timer(35, units='us')
+    await Timer(35, unit='us')
     dut.dbg0.value = 1
     await csr_write(dut, 0, REG_CTRL, BIT_TX_ABORT | BIT_TX_DROP)
     
     await write_tx(dut, 0, b'\x01\x02\x01\xc0') # node 0x01 send to 0x02
     #await csr_write(dut, 0, REG_CTRL, BIT_TX_START)
 
-    await Timer(50, units='us')
+    await Timer(50, unit='us')
     dut.dbg1.value = 0
     val = await read_int_flag(dut, 1)
     dut._log.info(f'REG_INT_FLAG: 0x{int(val):02x}')

@@ -1,8 +1,8 @@
 
 CDBUS IP Example
 =======================================
-This CDCTL-B (or CDCTL-H) module project includes an SPI (or I<sup>2</sup>C) interface and a CDBUS IP.  
-Below is the protocol for the SPI and I<sup>2</sup>C interfaces.
+This CDCTL-B (or CDCTL-H) module project integrates an SPI (or I<sup>2</sup>C) interface with the CDBUS IP core.  
+The following sections describe the communication protocol used by the SPI and I<sup>2</sup>C interfaces.
 
 <img src="pcb/cdctl_b1_dimension.svg" width="600px">  
 
