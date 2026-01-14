@@ -8,11 +8,6 @@
 # Author: Duke Fong <d@d-l.io>
 #
 
-import importlib
-import cocotb
-from cocotb.binary import BinaryValue
-from cocotb.triggers import RisingEdge, FallingEdge, ReadOnly, Timer
-from cocotb.clock import Clock
 from common import *
 
 @cocotb.test(timeout_time=500, timeout_unit='us')
@@ -22,9 +17,9 @@ async def test_cdbus(dut):
     sys_clk = 40000000
     clk_period = 1000000000000 / sys_clk
 
-    cocotb.fork(Clock(dut.clk0, clk_period).start())
-    cocotb.fork(Clock(dut.clk1, clk_period).start())
-    cocotb.fork(Clock(dut.clk2, clk_period).start())
+    cocotb.start_soon(Clock(dut.clk0, clk_period).start())
+    cocotb.start_soon(Clock(dut.clk1, clk_period).start())
+    cocotb.start_soon(Clock(dut.clk2, clk_period).start())
     await reset(dut, 0)
     await reset(dut, 1)
     await reset(dut, 2)
@@ -33,21 +28,21 @@ async def test_cdbus(dut):
     val = await csr_read(dut, 0, REG_SETTING)
     dut._log.info(f'idx0 REG_SETTING: 0x{int(val):02x}')
 
-    await csr_write(dut, 0, REG_SETTING, BinaryValue('00010001'))
+    await csr_write(dut, 0, REG_SETTING, 0b00010001)
     await set_div(dut, 0, 79, 2)
     
-    await Timer(4, units='us')
+    await Timer(4, unit='us')
     while True:
-        val = dut.cdbus_m0.cd_rx_des_m.cd_baud_rate_rx_m.cnt
+        val = dut.cdbus_m0.cd_rx_des_m.cd_baud_rate_rx_m.cnt.value
         dut._log.info(f'idx0 baud cnt: {int(val)}')
-        await Timer(50, units='ns')
+        await Timer(50, unit='ns')
         if int(val) > 50:
             break
     dut.dbg0.value = 0
     await set_div(dut, 0, 39, 2)
     
     dut.dbg0.value = 1
-    val = dut.cdbus_m0.cd_rx_des_m.cd_baud_rate_rx_m.cnt
+    val = dut.cdbus_m0.cd_rx_des_m.cd_baud_rate_rx_m.cnt.value
     dut._log.info(f'idx0 baud cnt after update: {int(val)}')
     if int(val) != 0:
         dut._log.error(f'baudrate is not updated in time')

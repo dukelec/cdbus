@@ -8,11 +8,6 @@
 # Author: Duke Fong <d@d-l.io>
 #
 
-import importlib
-import cocotb
-from cocotb.binary import BinaryValue
-from cocotb.triggers import RisingEdge, FallingEdge, ReadOnly, Timer
-from cocotb.clock import Clock
 from common import *
 
 @cocotb.test(timeout_time=500, timeout_unit='us')
@@ -22,8 +17,8 @@ async def test_cdbus(dut):
     sys_clk = 40000000
     clk_period = 1000000000000 / sys_clk
 
-    cocotb.fork(Clock(dut.clk0, clk_period).start())
-    cocotb.fork(Clock(dut.clk1, clk_period).start())
+    cocotb.start_soon(Clock(dut.clk0, clk_period).start())
+    cocotb.start_soon(Clock(dut.clk1, clk_period).start())
     await reset(dut, 0)
     await reset(dut, 1)
     await check_version(dut, 0)
@@ -32,10 +27,10 @@ async def test_cdbus(dut):
     val = await csr_read(dut, 0, REG_SETTING)
     dut._log.info(f'idx0 REG_SETTING: 0x{int(val):02x}')
 
-    await csr_write(dut, 0, REG_SETTING, BinaryValue('01000001'))
-    await csr_write(dut, 1, REG_SETTING, BinaryValue('01000001'))
-    await csr_write(dut, 0, REG_INT_MASK, BinaryValue('11011110'))
-    await csr_write(dut, 1, REG_INT_MASK, BinaryValue('11011110'))
+    await csr_write(dut, 0, REG_SETTING, 0b01000001)
+    await csr_write(dut, 1, REG_SETTING, 0b01000001)
+    await csr_write(dut, 0, REG_INT_MASK, 0b11011110)
+    await csr_write(dut, 1, REG_INT_MASK, 0b11011110)
     
     await set_div(dut, 0, 2, 2)
     await set_div(dut, 1, 2, 2)
@@ -46,10 +41,10 @@ async def test_cdbus(dut):
     await write_tx(dut, 0, b'\x01\x02\x01\x12') # node 0x01 send to 0x02
     await write_tx(dut, 1, b'\x02\x01\x01\x21') # node 0x02 send to 0x01
     await csr_write(dut, 0, REG_TX_CTRL, BIT_TX_START | BIT_TX_RST_POINTER)
-    await Timer(3, units='us')
+    await Timer(3, unit='us')
     await csr_write(dut, 1, REG_TX_CTRL, BIT_TX_START | BIT_TX_RST_POINTER)
     
-    await Timer(4, units='us')
+    await Timer(4, unit='us')
     dut.dbg0.value = 0
     val = await csr_read(dut, 1, REG_INT_FLAG)
     dut._log.info(f'REG_INT_FLAG: 0x{int(val):02x}')
@@ -64,7 +59,7 @@ async def test_cdbus(dut):
     await FallingEdge(dut.irq1)
     dut.dbg0.value = 1
     
-    await Timer(1, units='us')
+    await Timer(1, unit='us')
     dut.dbg0.value = 0
     val = await csr_read(dut, 0, REG_INT_FLAG)
     dut._log.info(f'REG_INT_FLAG: 0x{int(val):02x}')

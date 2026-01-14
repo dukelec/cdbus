@@ -29,7 +29,7 @@ VERILOG_SOURCES = $(PWD)/cdctl_bx_wrapper.v \
 
 
 TOPLEVEL = cdctl_bx_wrapper
-MODULE = test_cdctl_bx
+COCOTB_TEST_MODULES = test_cdctl_bx
 
 include $(shell cocotb-config --makefiles)/Makefile.sim
 

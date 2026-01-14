@@ -8,11 +8,6 @@
 # Author: Duke Fong <d@d-l.io>
 #
 
-import importlib
-import cocotb
-from cocotb.binary import BinaryValue
-from cocotb.triggers import RisingEdge, FallingEdge, ReadOnly, Timer
-from cocotb.clock import Clock
 from common import *
 
 @cocotb.test(timeout_time=500, timeout_unit='us')
@@ -22,9 +17,9 @@ async def test_cdbus(dut):
     sys_clk = 40000000
     clk_period = 1000000000000 / sys_clk
 
-    cocotb.fork(Clock(dut.clk0, clk_period).start())
-    cocotb.fork(Clock(dut.clk1, clk_period).start())
-    cocotb.fork(Clock(dut.clk2, clk_period).start())
+    cocotb.start_soon(Clock(dut.clk0, clk_period).start())
+    cocotb.start_soon(Clock(dut.clk1, clk_period).start())
+    cocotb.start_soon(Clock(dut.clk2, clk_period).start())
     await reset(dut, 0)
     await reset(dut, 1)
     await reset(dut, 2)
@@ -35,10 +30,10 @@ async def test_cdbus(dut):
     val = await csr_read(dut, 0, REG_SETTING)
     dut._log.info(f'idx0 REG_SETTING: 0x{int(val):02x}')
 
-    await csr_write(dut, 0, REG_SETTING, BinaryValue('00010001'))
-    await csr_write(dut, 1, REG_SETTING, BinaryValue('00010001'))
-    await csr_write(dut, 2, REG_SETTING, BinaryValue('00010001'))
-    await csr_write(dut, 2, REG_INT_MASK, BinaryValue('11011110'))
+    await csr_write(dut, 0, REG_SETTING, 0b00010001)
+    await csr_write(dut, 1, REG_SETTING, 0b00010001)
+    await csr_write(dut, 2, REG_SETTING, 0b00010001)
+    await csr_write(dut, 2, REG_INT_MASK, 0b11011110)
 
     await set_div(dut, 0, 39, 2) # 1Mbps, 13.333Mbps
     await set_div(dut, 1, 39, 2) # 1Mbps, 13.333Mbps
@@ -52,8 +47,8 @@ async def test_cdbus(dut):
     await write_tx(dut, 1, b'\xa5\x03\x01\xca') # node 0xa5 send to 0x03
     
     # start tx at same time
-    cocotb.fork(csr_write(dut, 0, REG_TX_CTRL, BIT_TX_START | BIT_TX_RST_POINTER))
-    cocotb.fork(csr_write(dut, 1, REG_TX_CTRL, BIT_TX_START | BIT_TX_RST_POINTER))
+    cocotb.start_soon(csr_write(dut, 0, REG_TX_CTRL, BIT_TX_START | BIT_TX_RST_POINTER))
+    cocotb.start_soon(csr_write(dut, 1, REG_TX_CTRL, BIT_TX_START | BIT_TX_RST_POINTER))
 
     await RisingEdge(dut.irq2)
     val = await csr_read(dut, 2, REG_INT_FLAG)
@@ -66,7 +61,7 @@ async def test_cdbus(dut):
         await exit_err()
     
     await csr_write(dut, 2, REG_RX_CTRL, BIT_RX_CLR_PENDING | BIT_RX_RST_POINTER)
-    await Timer(500, units='ns')
+    await Timer(500, unit='ns')
     
     await RisingEdge(dut.irq2)
     val = await csr_read(dut, 2, REG_INT_FLAG)

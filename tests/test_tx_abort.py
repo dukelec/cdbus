@@ -8,11 +8,6 @@
 # Author: Duke Fong <d@d-l.io>
 #
 
-import importlib
-import cocotb
-from cocotb.binary import BinaryValue
-from cocotb.triggers import RisingEdge, FallingEdge, ReadOnly, Timer
-from cocotb.clock import Clock
 from common import *
 
 @cocotb.test(timeout_time=500, timeout_unit='us')
@@ -22,9 +17,9 @@ async def test_cdbus(dut):
     sys_clk = 40000000
     clk_period = 1000000000000 / sys_clk
 
-    cocotb.fork(Clock(dut.clk0, clk_period).start())
-    cocotb.fork(Clock(dut.clk1, clk_period).start())
-    cocotb.fork(Clock(dut.clk2, clk_period).start())
+    cocotb.start_soon(Clock(dut.clk0, clk_period).start())
+    cocotb.start_soon(Clock(dut.clk1, clk_period).start())
+    cocotb.start_soon(Clock(dut.clk2, clk_period).start())
     await reset(dut, 0)
     await reset(dut, 1)
     await reset(dut, 2)
@@ -35,9 +30,9 @@ async def test_cdbus(dut):
     val = await csr_read(dut, 0, REG_SETTING)
     dut._log.info(f'idx0 REG_SETTING: 0x{int(val):02x}')
 
-    await csr_write(dut, 0, REG_SETTING, BinaryValue('00010001'))
-    await csr_write(dut, 1, REG_SETTING, BinaryValue('00010001'))
-    await csr_write(dut, 1, REG_INT_MASK, BinaryValue('11011110'))
+    await csr_write(dut, 0, REG_SETTING, 0b00010001)
+    await csr_write(dut, 1, REG_SETTING, 0b00010001)
+    await csr_write(dut, 1, REG_INT_MASK, 0b11011110)
     
     await set_div(dut, 0, 39, 2) # 1Mbps, 13.333Mbps
     await set_div(dut, 1, 39, 2)
@@ -49,14 +44,14 @@ async def test_cdbus(dut):
     await csr_write(dut, 0, REG_TX_CTRL, BIT_TX_START | BIT_TX_RST_POINTER)
     dut.dbg0.value = 0
     
-    await Timer(35, units='us')
+    await Timer(35, unit='us')
     dut.dbg0.value = 1
     await csr_write(dut, 0, REG_TX_CTRL, BIT_TX_ABORT)
     
     await write_tx(dut, 0, b'\x01\x02\x01\xc0') # node 0x01 send to 0x02
     await csr_write(dut, 0, REG_TX_CTRL, BIT_TX_START | BIT_TX_RST_POINTER)
 
-    await Timer(50, units='us')
+    await Timer(50, unit='us')
     dut.dbg1.value = 0
     val = await csr_read(dut, 1, REG_INT_FLAG)
     dut._log.info(f'REG_INT_FLAG: 0x{int(val):02x}')

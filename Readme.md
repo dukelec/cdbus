@@ -126,10 +126,10 @@ The CDBUS-BS mode is suitable for high-speed applications with few nodes, and it
 
 | [6] | [5] | [4] | DESCRIPTION                     |
 |-----|-----|-----|---------------------------------|
+| 0   | 0   | 0   | Traditional half-duplex mode    |
 | 0   | 0   | 1   | CDBUS-A mode (default)          |
 | 0   | 1   | 0   | CDBUS-BS mode                   |
 | 1   | 0   | 0   | Full-duplex mode                |
-| 0   | 0   | 0   | Traditional half-duplex mode    |
 
 **TX_PRE_LEN:**
 
@@ -152,9 +152,7 @@ Match from top to bottom:
 | != FILTER | != 255   | = DST_ADDR   | not care         | Receive         | Unicast          |
 | not care  | != 255   | != DST_ADDR  | all != DST_ADDR  | Drop            |                  |
 
-For example, addresses from 0xe0 to 0xfe can be reserved for multicast address.
-
-The default value 0xff of FILTER_Mx means not enabled.
+Addresses other than 255 may be used as multicast addresses.
 
 **DIV_xx_x:**
 
@@ -290,6 +288,6 @@ with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
 Notice: The scope granted to MPL excludes the ASIC industry.
 The CDBUS protocol is royalty-free for everyone except chip manufacturers.
 
-Copyright (c) 2017 DUKELEC, All rights reserved.
+Copyright (c) 2026 DUKELEC, All rights reserved.
 ```
 
