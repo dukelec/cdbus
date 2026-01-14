@@ -45,6 +45,8 @@ module cd_csr
         output reg  [7:0]   filter,
         output reg  [7:0]   filter_m0,
         output reg  [7:0]   filter_m1,
+        output reg  [7:0]   filter_msk0,
+        output reg  [7:0]   filter_msk1,
         output reg  [15:0]  div_ls,
         output reg  [15:0]  div_hs,
 
@@ -156,7 +158,7 @@ always @(*)
             csr_readdata = rx_ram_rd_word;
 `endif
         REG_FILTER_M:
-            csr_readdata = {16'd0, filter_m1, filter_m0};
+            csr_readdata = {filter_msk1, filter_msk0, filter_m1, filter_m0};
         default:
             csr_readdata = 0;
     endcase
@@ -179,6 +181,8 @@ always @(posedge clk or negedge reset_n)
         filter <= 8'hff;
         filter_m0 <= 8'hff;
         filter_m1 <= 8'hff;
+        filter_msk0 <= 8'hff;
+        filter_msk1 <= 8'hff;
         div_ls <= DIV_LS;
         div_hs <= DIV_HS;
 
@@ -333,6 +337,8 @@ always @(posedge clk or negedge reset_n)
                 REG_FILTER_M: begin
                     filter_m0 <= csr_writedata[7:0];
                     filter_m1 <= csr_writedata[15:8];
+                    filter_msk0 <= csr_writedata[23:16];
+                    filter_msk1 <= csr_writedata[31:24];
                 end
             endcase
     end

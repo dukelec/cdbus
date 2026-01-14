@@ -23,7 +23,7 @@ This document only describes the modifications. For the full protocol and docume
 | INT_FLAG      |  0x0a   | RD     | n/a                    | RX_LEN: byte 2, INT_FLAG: bytes 0-1       |
 | DAT           |  0x0b   | RD/WR  | n/a                    | 32-bit width                              |
 | CTRL          |  0x0c   | WR     | n/a                    |                                           |
-| FILTER_M      |  0x0f   | RD/WR  | (0xff << 8) \| 0xff    | Two filters in lower 2 bytes              |
+| FILTER_M      |  0x0f   | RD/WR  | 0xffffffff             | [MSK1, MSK0, M1, M0]                      |
 
 
 

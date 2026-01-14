@@ -17,6 +17,8 @@ module cd_rx_bytes(
         input       [7:0]   filter,
         input       [7:0]   filter_m0,
         input       [7:0]   filter_m1,
+        input       [7:0]   filter_msk0,
+        input       [7:0]   filter_msk1,
         input               user_crc,
         input               not_drop,
         input               abort,
@@ -107,7 +109,7 @@ always @(posedge clk or negedge reset_n)
         is_promiscuous <= (filter == 8'hff);
         is_data_gt_253 <= (data_len > 253);
 
-        if (des_data == filter_m0 || des_data == filter_m1)
+        if ((des_data & filter_msk0) == filter_m0 || (des_data & filter_msk1) == filter_m1)
             is_multicast <= 1;
         else
             is_multicast <= 0;
