@@ -58,6 +58,10 @@ Example waveforms for TX output and TX_EN pins:
 
 The RX data sampling point for reception is at 1/2 bit; for TX readback, it's at 3/4 bit.
 
+Lower-priority nodes back off during arbitration and retransmit after the bus is idle, until successful or cancelled by
+the user.
+
+
 ### Break Sync Mode (CDBUS-BS)
 
 In CDBUS-A mode, if the low-speed portion takes longer, it can become a bottleneck for communication efficiency.
