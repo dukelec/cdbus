@@ -7,7 +7,7 @@
    viewBox="0 0 478.74893 357.31364"
    id="svg2"
    version="1.1"
-   inkscape:version="1.2.2 (b0a8486541, 2022-12-01)"
+   inkscape:version="1.4.3 (0d15f75042, 2025-12-25)"
    sodipodi:docname="block_diagram.svg"
    inkscape:export-xdpi="200"
    inkscape:export-ydpi="200"
@@ -755,15 +755,15 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="2.9833947"
-     inkscape:cx="218.04021"
-     inkscape:cy="101.05937"
+     inkscape:zoom="2.5933438"
+     inkscape:cx="295.94997"
+     inkscape:cy="160.60347"
      inkscape:document-units="px"
-     inkscape:current-layer="layer1"
+     inkscape:current-layer="g10381"
      showgrid="false"
      inkscape:window-width="1652"
      inkscape:window-height="1037"
-     inkscape:window-x="520"
+     inkscape:window-x="258"
      inkscape:window-y="22"
      inkscape:window-maximized="0"
      inkscape:snap-text-baseline="true"
@@ -779,7 +779,10 @@
        type="xygrid"
        id="grid1098"
        originx="-153.26661"
-       originy="-134.19843" />
+       originy="-134.19843"
+       spacingy="1"
+       spacingx="1"
+       units="px" />
   </sodipodi:namedview>
   <metadata
      id="metadata7">
@@ -2244,7 +2247,7 @@
            style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:5px;font-family:'DejaVu Sans Mono';-inkscape-font-specification:'DejaVu Sans Mono';stroke-width:0.600891px"
            y="775.79968"
            x="515.625"
-           sodipodi:role="line">E.g. MAX3485</tspan></text>
+           sodipodi:role="line">e.g. MAX3485</tspan></text>
     </g>
     <rect
        style="opacity:1;fill:none;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:0.9375;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"

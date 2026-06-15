@@ -92,13 +92,13 @@ The CDBUS-BS mode is suitable for high-speed applications with few nodes, and it
 | Register Name     |  Addr   | Access | Default         | Description (8-bit width by default if not specified)|
 |-------------------|---------|--------|-----------------|------------------------------------------------------|
 | VERSION           |  0x00   | RD     | 0x0f            | Hardware version                                     |
-| SETTING           |  0x02   | RD/WR  | 0x10            | Configs                                              |
-| IDLE_WAIT_LEN     |  0x04   | RD/WR  | 0x0a            | Waiting time to enter idle                           |
-| TX_PERMIT_LEN_L   |  0x05   | RD/WR  | 0x14            | Waiting time to allows sending (10 bits)             |
+| SETTING           |  0x02   | RD/WR  | 0x10            | Configuration                                        |
+| IDLE_WAIT_LEN     |  0x04   | RD/WR  | 0x0a            | Idle entry wait time                                 |
+| TX_PERMIT_LEN_L   |  0x05   | RD/WR  | 0x14            | TX permit wait time (10 bits)                        |
 | TX_PERMIT_LEN_H   |  0x06   | RD/WR  | 0x00            |                                                      |
-| MAX_IDLE_LEN_L    |  0x07   | RD/WR  | 0xc8            | Max idle waiting time in BS mode (10 bits)           |
+| MAX_IDLE_LEN_L    |  0x07   | RD/WR  | 0xc8            | Max idle wait time, BS mode (10 bits)                |
 | MAX_IDLE_LEN_H    |  0x08   | RD/WR  | 0x00            |                                                      |
-| TX_PRE_LEN        |  0x09   | RD/WR  | 0x01            | Enable TX_EN how long ahead than TX output (2 bits)  |
+| TX_PRE_LEN        |  0x09   | RD/WR  | 0x01            | TX_EN pre-assert time (2 bits)                       |
 | FILTER            |  0x0b   | RD/WR  | 0xff            | Local address                                        |
 | DIV_LS_L          |  0x0c   | RD/WR  | 0x5a            | Low-speed rate setting (16 bits)                     |
 | DIV_LS_H          |  0x0d   | RD/WR  | 0x01            |                                                      |
@@ -108,7 +108,7 @@ The CDBUS-BS mode is suitable for high-speed applications with few nodes, and it
 | INT_MASK_H        |  0x11   | RD/WR  | 0x00            |                                                      |
 | INT_FLAG_L        |  0x12   | RD     | n/a             | Status (16 bits)                                     |
 | INT_FLAG_H        |  0x13   | RD     | n/a             |                                                      |
-| RX_LEN            |  0x14   | RD     | n/a             | Data length of the frame to be read, or frame_len -1 |
+| RX_LEN            |  0x14   | RD     | n/a             | Data length of the frame to be read, or frame_len - 1 |
 | DAT               |  0x15   | RD/WR  | n/a             | Read & Write RX page                                 |
 | CTRL              |  0x16   | WR     | n/a             | RX & TX control                                      |
 | FILTER_M0         |  0x1a   | RD/WR  | 0xff            | Multicast filter0                                    |
@@ -118,6 +118,8 @@ The CDBUS-BS mode is suitable for high-speed applications with few nodes, and it
 
 To write a register with more than 8 bits, first write the high byte followed by the low byte.
 The high byte can be omitted if it is 0.
+
+Time unit: one bit period at the low-speed baud rate.
 
 
 **SETTING:**
@@ -176,16 +178,16 @@ Output of irq = ((INT_FLAG & INT_MASK) != 0).
 | FIELD   | DESCRIPTION                                  |
 |-------- |----------------------------------------------|
 | [15]    | 1: Bus not idle                              |
-| [14]    | 1: Bus is idle                               |
-| [13:8]  | RX pages pending amount                      |
-| [7]     | 1: TX error: TX is 0, but RX is sampled as 1 |
+| [14]    | 1: Bus idle                                  |
+| [13:8]  | Number of RX pages to read                   |
+| [7]     | 1: TX error (TX low, RX sampled high)        |
 | [6]     | 1: TX collision detected                     |
 | [5]     | 1: TX page released by hardware              |
-| [4]     | 1: Empty TX page exist                       |
-| [3]     | 1: RX error: frame broken detected           |
-| [2]     | 1: RX lost: no empty page for RX             |
+| [4]     | 1: Empty TX page available                   |
+| [3]     | 1: RX error (frame broken)                   |
+| [2]     | 1: RX lost (no empty RX page)                |
 | [1]     | 1: Break character received                  |
-| [0]     | 1: RX page ready for read                    |
+| [0]     | 1: RX page ready to read                     |
 
 Reading this register will automatically clear bit7, bit6, bit3, bit2 and bit1.
 
@@ -276,7 +278,7 @@ Install `iverilog` (>= v10) and `cocotb`, goto `tests/` folder, run `./test_all.
 ## Ready To Use Devices
 
 The CDCTL controllers family incorporates the CDBUS IP Core, providing peripheral interfaces such as SPI, I<sup>2</sup>C, and PCIe.  
-E.g. The tiny CDCTL-Bx module supports SPI and I<sup>2</sup>C interfaces:  
+For example, the tiny CDCTL-Bx module supports SPI and I<sup>2</sup>C interfaces:  
 (The source code and gerber files for this module are fully open-source and located in the `example/` directory.)  
 <img alt="cdctl_bx" src="docs/img/cdctl_bx.jpg" width="600rem">
 

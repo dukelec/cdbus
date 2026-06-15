@@ -11,7 +11,7 @@ The following sections describe the communication protocol used by the SPI and I
 
 ## SPI
 
-Read or write depend by bit W/R̅ :  
+Read or write depends on bit W/R̅:  
  - 0: Read
  - 1: Write
 
@@ -33,14 +33,14 @@ Burst read or write:
 
 | FIELD   | DESCRIPTION                                                     |
 |-------- |-----------------------------------------------------------------|
-| DAx     | I<sup>2</sup>C device address, DA0 & 1 set by I2C_ADDR_x pins   |
+| DAx     | I<sup>2</sup>C device address, DA0 and DA1 set by I2C_ADDR_x pins |
 | Ax      | Register address                                                |
 | Wx      | Write data                                                      |
 | Rx      | Read data                                                       |
 | X       | Don't care                                                      |
 | D       | ACK by device                                                   |
 | H       | ACK by host                                                     |
-| N       | Host don’t ACK after read last byte                             |
+| N       | Host does not ACK after reading the last byte                   |
 
 ### Write
 

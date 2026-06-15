@@ -7,7 +7,7 @@
    viewBox="0 0 189.56692 194.88188"
    id="svg2"
    version="1.1"
-   inkscape:version="1.4 (e7c3feb100, 2024-10-09)"
+   inkscape:version="1.4.3 (0d15f75042, 2025-12-25)"
    sodipodi:docname="filter.svg"
    inkscape:export-xdpi="200"
    inkscape:export-ydpi="200"
@@ -810,14 +810,14 @@
      inkscape:pageshadow="2"
      inkscape:zoom="2.9958158"
      inkscape:cx="132.01746"
-     inkscape:cy="114.65992"
+     inkscape:cy="114.32612"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"
      inkscape:window-width="1652"
      inkscape:window-height="1037"
-     inkscape:window-x="477"
-     inkscape:window-y="170"
+     inkscape:window-x="560"
+     inkscape:window-y="76"
      inkscape:window-maximized="0"
      inkscape:snap-text-baseline="true"
      showguides="false"
@@ -869,18 +869,18 @@
          x="184.22435"
          y="569.58093"
          id="tspan4182-5-3"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:5px;line-height:1.25;font-family:'DejaVu Sans Mono';-inkscape-font-specification:'DejaVu Sans Mono';text-align:start;text-anchor:start;stroke-width:0.5">Rx Frame</tspan></text>
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:5px;line-height:1.25;font-family:'DejaVu Sans Mono';-inkscape-font-specification:'DejaVu Sans Mono';text-align:start;text-anchor:start;stroke-width:0.5">RX Frame</tspan></text>
     <text
        xml:space="preserve"
        style="font-style:normal;font-weight:normal;font-size:12px;line-height:0%;font-family:sans-serif;text-align:center;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.5;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
-       x="171.91661"
+       x="161.32811"
        y="596.22198"
        id="text4178-7-5-3"><tspan
          sodipodi:role="line"
-         x="171.91661"
+         x="161.32811"
          y="596.22198"
          id="tspan4182-5-3-6"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:5px;line-height:1.25;font-family:'DejaVu Sans Mono';-inkscape-font-specification:'DejaVu Sans Mono';text-align:start;text-anchor:start;stroke-width:0.5">REG FILTER = 255?</tspan></text>
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:5px;line-height:1.25;font-family:'DejaVu Sans Mono';-inkscape-font-specification:'DejaVu Sans Mono';text-align:start;text-anchor:start;stroke-width:0.5">FILTER (register) = 255?</tspan></text>
     <path
        style="vector-effect:none;fill:none;fill-opacity:1;fill-rule:evenodd;stroke:#030303;stroke-width:0.3;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;marker-end:url(#marker1801-7)"
        d="m 235.99998,593.83961 h 20"
