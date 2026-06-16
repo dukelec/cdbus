@@ -61,16 +61,20 @@ reg wr_err_d;
 reg switch_d;
 reg [F_WIDTH-1:0] wr_frag_amount;
 
+wire len_inc = switch_d && !wr_cancel;      // frame commit
+wire len_dec = rd_done && dirty[rd_sel];    // frame retire
+
+
 always @(posedge clk)
     unread <= dirty[rd_sel];
 
 always @(posedge clk)
     if (wr_en) begin
         case (wr_addr[1:0])
-            2'b00:   wr_word = {24'bx, wr_byte};
-            2'b01:   wr_word = {16'bx, wr_byte, wr_word[7:0]};
-            2'b10:   wr_word = {8'bx, wr_byte, wr_word[15:0]};
-            default: wr_word = {wr_byte, wr_word[23:0]};
+            2'b00:   wr_word <= {24'bx, wr_byte};
+            2'b01:   wr_word <= {16'bx, wr_byte, wr_word[7:0]};
+            2'b10:   wr_word <= {8'bx, wr_byte, wr_word[15:0]};
+            default: wr_word <= {wr_byte, wr_word[23:0]};
         endcase
     end
 
@@ -134,20 +138,24 @@ always @(posedge clk or negedge reset_n)
             if (wr_cancel) begin
                 switch_fail <= 1;
             end
-            else begin
+            else begin // len_inc
                 dirty[wr_sel] <= 1;
                 wr_sel <= wr_sel + wr_frag_amount + 1'b1; // wr_sel next may equal to rd_sel
-                unread_len <= unread_len + 1;
                 // write idx_table here
             end
             wr_cancel <= 0;
         end
 
-        if (rd_done && dirty[rd_sel]) begin
+        if (len_dec) begin
             dirty[rd_sel] <= 0;
             rd_sel <= rd_sel + 1'b1 + idx_frag_amount;
-            unread_len <= unread_len - 1;
         end
+
+        // len_inc and len_dec may fire in the same clock; keep unread_len intact
+        if (len_inc && !len_dec)
+            unread_len <= unread_len + 1'b1;
+        else if (len_dec && !len_inc)
+            unread_len <= unread_len - 1'b1;
 
         if (rd_done_all) begin
             switch_fail <= 0;
