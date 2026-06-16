@@ -166,7 +166,7 @@ always @(*)
         REG_INT_MASK_L:
             csr_readdata = int_mask[7:0];
         REG_INT_MASK_H:
-            csr_readdata = int_mask[15:0];
+            csr_readdata = int_mask[15:8];
 
 `ifdef CD_CHIP_SELECT
  `ifdef CD_CSR_NO_LATENCY
@@ -182,7 +182,7 @@ always @(*)
         REG_INT_FLAG_L:
             csr_readdata = int_flag[7:0];
         REG_INT_FLAG_H:
-            csr_readdata = int_flag[15:0];
+            csr_readdata = int_flag[15:8];
 `endif
 
         REG_RX_LEN:
