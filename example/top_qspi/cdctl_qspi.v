@@ -10,7 +10,6 @@
  */
 
 `define CD_CHIP_SELECT
-//`define CD_QSPI_ADVANCE
 
 
 module cdctl_qspi(
@@ -69,9 +68,7 @@ qspi_slave qspi_slave_m(
     .clk(g_clk),
     .reset_n(reset_n),
     .chip_select(chip_select),
-`ifdef CD_QSPI_ADVANCE
-    .advance(1'b1),
-`endif
+    .advance(1'b0),
     
     .csr_address(csr_address),
     .csr_read(csr_read),

@@ -65,12 +65,14 @@ wire w_det = bit_cnt[2];
 wire r_det = bit_cnt[2] ^ (bit_cnt[0] | bit_cnt[1]);
 wire w_det_f = w_det & !is_first_byte_d & is_write;
 wire r_det_f = r_det & !is_first_byte_d & !is_write;
-reg  w_det_d; // registered to filter glitches before crossing to clk domain
+reg  w_det_d; // delayed one negedge for edge detection
 reg  r_det_d;
+reg  w_tog;   // toggle once per event, immune to pulse-width loss across domains
+reg  r_tog;
 reg  [2:0] event_wd;
 reg  [2:0] event_rd;
-assign csr_write = event_wd[2:1] == 2'b10;
-assign csr_read = event_rd[2:1] == 2'b01;
+assign csr_write = event_wd[2] ^ event_wd[1];
+assign csr_read = event_rd[2] ^ event_rd[1];
 
 
 // use negedge, as there is no posedge after the last bit of the last byte
@@ -84,6 +86,20 @@ always @(negedge sck or negedge spi_reset_n)
         r_det_d <= r_det_f;
     end
 
+// toggles must survive the end of transfer, do not reset with spi_reset_n,
+// otherwise the clk domain would take the async clear as an extra event
+always @(negedge sck or negedge reset_n)
+    if (!reset_n) begin
+        w_tog <= 0;
+        r_tog <= 0;
+    end
+    else begin
+        if (w_det_d && !w_det_f) // falling edge: after the last bit of each byte
+            w_tog <= !w_tog;
+        if (r_det_f && !r_det_d) // rising edge: at bit 1 of each data byte
+            r_tog <= !r_tog;
+    end
+
 
 always @(posedge clk or negedge reset_n)
     if (!reset_n) begin
@@ -91,8 +107,8 @@ always @(posedge clk or negedge reset_n)
         event_rd <= 0;
     end
     else begin
-        event_wd <= {event_wd[1:0], w_det_d};
-        event_rd <= {event_rd[1:0], r_det_d};
+        event_wd <= {event_wd[1:0], w_tog};
+        event_rd <= {event_rd[1:0], r_tog};
     end
 
 

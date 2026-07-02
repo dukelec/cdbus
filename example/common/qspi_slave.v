@@ -16,9 +16,7 @@ module qspi_slave
         input       clk,
         input       reset_n,
         output      chip_select,
-`ifdef CD_QSPI_ADVANCE
         input       advance, // sdo output advanced by 1/2 sck cycle
-`endif
 
         output reg  [(A_WIDTH-1):0] csr_address,
         output      csr_read,
@@ -49,16 +47,11 @@ reg  [7:0] treg;
 reg  [1:0] byte_cnt;
 reg  is_write;
 reg  sdo_dat_en;
-
-`ifdef CD_QSPI_ADVANCE
 reg  sdo_dat_en_d;
 reg  [3:0] treg74_d;
+
 wire _sdo_en = advance ? sdo_dat_en : sdo_dat_en_d;
 wire [3:0] _sdo = advance ? treg[7:4] : treg74_d;
-`else
-wire _sdo_en = sdo_dat_en;
-wire [3:0] _sdo = treg[7:4];
-`endif
 
 `ifndef CD_SHARING_IO
     assign sdio = (spi_reset_n && _sdo_en) ? _sdo : 4'bz;
@@ -68,16 +61,12 @@ wire [3:0] _sdo = treg[7:4];
     assign sdo_en = spi_reset_n && _sdo_en;
 `endif
 
-reg rw_det;
-wire w_det_f = rw_det & is_write & byte_cnt[1];
-wire r_det_f = rw_det & !is_write;
-`ifndef CD_QSPI_ADVANCE
-reg r_det_d;
-`endif
+reg  w_tog; // toggle once per event, immune to pulse-width loss across domains
+reg  r_tog;
 reg  [2:0] event_wd;
 reg  [2:0] event_rd;
-wire csr_write_ = event_wd[2:1] == 2'b01;
-assign csr_read = event_rd[2:1] == 2'b01;
+wire csr_write_ = event_wd[2] ^ event_wd[1];
+assign csr_read = event_rd[2] ^ event_rd[1];
 
 reg [7:0] csr_writedata_d0;
 reg [7:0] csr_writedata_d1;
@@ -104,12 +93,8 @@ always @(posedge clk or negedge reset_n)
         csr_write <= 0;
     end
     else begin
-        event_wd <= {event_wd[1:0], w_det_f};
-`ifdef CD_QSPI_ADVANCE
-        event_rd <= {event_rd[1:0], r_det_f};
-`else
-        event_rd <= {event_rd[1:0], r_det_d};
-`endif
+        event_wd <= {event_wd[1:0], w_tog};
+        event_rd <= {event_rd[1:0], r_tog};
         csr_writedata_d1 <= csr_writedata_d0;
         csr_writedata <= csr_writedata_d1;
         csr_write <= csr_write_; // wait for csr_writedata stable
@@ -123,12 +108,10 @@ always @(posedge sck or negedge spi_reset_n)
         rreg <= 0;
         byte_cnt <= 0;
         is_write <= 0;
-        rw_det <= 0;
     end
     else begin
         rreg <= {rreg[3:0], sdi};
         bit_cnt <= !bit_cnt;
-        rw_det <= bit_cnt;
 
         if (bit_cnt) begin // rising edge of end of byte
             if (byte_cnt == 0)
@@ -139,39 +122,27 @@ always @(posedge sck or negedge spi_reset_n)
             csr_writedata_d0 <= {rreg[3:0], sdi};
         end
         else if (byte_cnt == 0) begin
-            // capture MSB half byte early, so r_det_f only depends on
-            // the registered rw_det at the byte-end edge (glitch-free)
-            is_write <= sdi[3];
+            is_write <= sdi[3]; // MSB, captured half byte early
         end
+    end
+
+
+// toggles must survive the end of transfer, do not reset with spi_reset_n,
+// otherwise the clk domain would take the async clear as an extra event
+always @(posedge sck or negedge reset_n)
+    if (!reset_n) begin
+        w_tog <= 0;
+        r_tog <= 0;
+    end
+    else if (bit_cnt) begin // rising edge of end of byte
+        if (!is_write)
+            r_tog <= !r_tog;
+        else if (byte_cnt != 0)
+            w_tog <= !w_tog;
     end
 
 
 // write to sdo
-`ifndef CD_QSPI_ADVANCE
-
-always @(negedge sck or negedge spi_reset_n)
-    if (!spi_reset_n) begin
-        treg <= 0;
-        sdo_dat_en <= 0;
-        r_det_d <= 0;
-        ra <= 0;
-    end
-    else begin
-        r_det_d <= r_det_f;
-
-        if (!is_write && byte_cnt == 2'b11 && !bit_cnt)
-            sdo_dat_en <= 1; // falling edge of the first byte's last bit
-
-        if (!bit_cnt && byte_cnt == 2'b11) begin
-            treg <= ram[ra];
-            ra <= !ra;
-        end
-        else begin
-            treg <= {treg[3:0], 4'b0};
-        end
-    end
-
-`else
 
 always @(posedge sck or negedge spi_reset_n)
     if (!spi_reset_n) begin
@@ -201,7 +172,6 @@ always @(negedge sck or negedge spi_reset_n)
         sdo_dat_en_d <= sdo_dat_en;
         treg74_d <= treg[7:4];
     end
-`endif
 
 
 endmodule
