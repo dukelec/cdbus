@@ -194,6 +194,9 @@ Reading this register will automatically clear bit7, bit6, bit3, bit2 and bit1.
 If `save broken frame` is set, bit3 indicates whether the current page to be read is broken
 (reading this register does not clear bit3).
 
+The [13:8] field wraps around at 64: if bit0 is 1 while [13:8] reads 0,
+there are 64 RX pages waiting to be read.
+
 
 **RX_LEN:**
 
