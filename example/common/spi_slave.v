@@ -65,10 +65,24 @@ wire w_det = bit_cnt[2];
 wire r_det = bit_cnt[2] ^ (bit_cnt[0] | bit_cnt[1]);
 wire w_det_f = w_det & !is_first_byte_d & is_write;
 wire r_det_f = r_det & !is_first_byte_d & !is_write;
+reg  w_det_d; // registered to filter glitches before crossing to clk domain
+reg  r_det_d;
 reg  [2:0] event_wd;
 reg  [2:0] event_rd;
 assign csr_write = event_wd[2:1] == 2'b10;
 assign csr_read = event_rd[2:1] == 2'b01;
+
+
+// use negedge, as there is no posedge after the last bit of the last byte
+always @(negedge sck or negedge spi_reset_n)
+    if (!spi_reset_n) begin
+        w_det_d <= 0;
+        r_det_d <= 0;
+    end
+    else begin
+        w_det_d <= w_det_f;
+        r_det_d <= r_det_f;
+    end
 
 
 always @(posedge clk or negedge reset_n)
@@ -77,8 +91,8 @@ always @(posedge clk or negedge reset_n)
         event_rd <= 0;
     end
     else begin
-        event_wd <= {event_wd[1:0], w_det_f};
-        event_rd <= {event_rd[1:0], r_det_f};
+        event_wd <= {event_wd[1:0], w_det_d};
+        event_rd <= {event_rd[1:0], r_det_d};
     end
 
 

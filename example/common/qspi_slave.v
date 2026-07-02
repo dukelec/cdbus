@@ -131,14 +131,17 @@ always @(posedge sck or negedge spi_reset_n)
         rw_det <= bit_cnt;
 
         if (bit_cnt) begin // rising edge of end of byte
-            if (byte_cnt == 0) begin
-                is_write <= rreg[3]; // MSB
+            if (byte_cnt == 0)
                 csr_address <= {rreg[(A_WIDTH-5):0], sdi};
-            end
             if (byte_cnt != 2'd3)
                 byte_cnt <= byte_cnt + 1'd1;
-            
+
             csr_writedata_d0 <= {rreg[3:0], sdi};
+        end
+        else if (byte_cnt == 0) begin
+            // capture MSB half byte early, so r_det_f only depends on
+            // the registered rw_det at the byte-end edge (glitch-free)
+            is_write <= sdi[3];
         end
     end
 

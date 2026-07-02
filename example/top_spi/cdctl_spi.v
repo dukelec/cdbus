@@ -30,6 +30,9 @@ module cdctl_spi(
 
 assign clk_o = ~clk_i;
 wire clk = clk_o;
+wire g_clk;
+wire pll_lock;
+wire chip_select;
 
 reg rst_sim = 0;
 always @(posedge clk)
@@ -39,8 +42,19 @@ cdctl_pll b2v_pll_m(
     .REFERENCECLK(clk),
     .PLLOUTGLOBAL(g_clk),
     //.PLLOUTCORE(g_clk),
-    .LOCK(reset_n),
+    .LOCK(pll_lock),
     .RESET(rst_sim));
+
+// reset synchronizer: assert asynchronously, release synchronously
+// init to 1 for simulation: create the initial falling edge of reset_n,
+// as sub-module async resets are edge-sensitive in simulation
+reg [1:0] reset_sync = 2'b11;
+always @(posedge g_clk or negedge pll_lock)
+    if (!pll_lock)
+        reset_sync <= 0;
+    else
+        reset_sync <= {reset_sync[0], 1'b1};
+wire reset_n = reset_sync[1];
 
 wire [4:0] csr_address;
 wire csr_read;

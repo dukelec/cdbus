@@ -17,7 +17,7 @@ module cd_csr
     )(
         input               clk,
         input               reset_n,
-        output              irq,
+        output reg          irq,
 `ifdef CD_CHIP_SELECT
         input               chip_select,
 `endif
@@ -129,7 +129,6 @@ reg [15:0] int_flag_snapshot;
 
 assign tx_ram_wr_en = (csr_address == REG_DAT) ? csr_write : 1'b0;
 
-assign irq = (int_flag & int_mask) != 0;
 assign full_duplex = mode_sel == 2'd3;
 assign break_sync = mode_sel == 2'd2;
 assign arbitration = mode_sel == 2'd1;
@@ -209,6 +208,7 @@ always @(*)
 
 always @(posedge clk or negedge reset_n)
     if (!reset_n) begin
+        irq <= 0;
         tx_en_inner <= 0;
         rx_invert <= 0;
         mode_sel <= 2'b01;
@@ -254,6 +254,7 @@ always @(posedge clk or negedge reset_n)
         has_break <= 0;
     end
     else begin
+        irq <= (int_flag & int_mask) != 0;
         rx_ram_rd_done <= 0;
         rx_clean_all <= 0;
         tx_ram_wr_done <= 0;
