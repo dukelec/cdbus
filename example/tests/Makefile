@@ -18,6 +18,8 @@ VERILOG_SOURCES = $(PWD)/$(TOPLEVEL).v \
                   $(CDCTL_HDL)/common/spi_slave.v \
                   $(CDCTL_HDL)/top_qspi/cdctl_qspi.v \
                   $(CDCTL_HDL)/common/qspi_slave.v \
+                  $(CDCTL_HDL)/top_i2c/cdctl_i2c.v \
+                  $(CDCTL_HDL)/common/i2c_slave.v \
                   $(PWD)/cdctl_pll_sim.v \
                   $(CDBUS_HDL)/cdbus.v \
                   $(CDBUS_HDL)/cd_csr.v \

@@ -12,6 +12,7 @@ for test_file in $LIST; do
     test_case=$(echo "$test_file" | cut -f 1 -d '.')
     test_wrapper="cdctl_spi_wrapper"
     [[ "$test_case" =~ "qspi" ]] && test_wrapper="cdctl_qspi_wrapper"
+    [[ "$test_case" =~ "i2c" ]] && test_wrapper="cdctl_i2c_wrapper"
     echo -e "\nTest ${test_case}, wrapper: ${test_wrapper}\n"
     rm -f .exit_ok
     rm -rf ./sim_build

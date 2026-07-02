@@ -24,7 +24,7 @@ module i2c_slave
         output reg [7:0] csr_writedata,
 
 `ifndef CD_SHARING_IO
-        input [2:0] addr_sel,
+        input [1:0] addr_sel,
         inout sda,
 `else
         input [1:0] addr_sel,
@@ -115,8 +115,13 @@ always @(posedge clk or negedge reset_n)
                     
                     if (is_addr_byte) begin
                         is_write <= !sda_in_d;
-                        is_skip <= rreg[6:0] != dev_addr;
                         ack <= 1;
+                        if (rreg[6:0] != dev_addr) begin
+                            is_skip <= 1;
+                            // release chip_select during other devices' transactions,
+                            // keep int_flag snapshot fresh for repeated start
+                            chip_select <= 0;
+                        end
                     end
                     else if (is_write) begin
                         is_cmd_byte <= 0;
