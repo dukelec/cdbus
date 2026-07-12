@@ -16,7 +16,7 @@ module spi_slave
         input       clk,
         input       reset_n,
         output      chip_select,
-        input       advance, // sdo output advanced by 1/2 sck cycle
+        input       sdo_early, // output sdo 1/2 sck cycle early
 
         output reg  [(A_WIDTH-1):0] csr_address,
         output      csr_read,
@@ -51,8 +51,8 @@ reg  sdo_dat_en;
 reg  sdo_dat_en_d;
 reg  treg7_d;
 
-wire _sdo_en = advance ? sdo_dat_en : sdo_dat_en_d;
-wire _sdo = advance ? treg[7] : treg7_d;
+wire _sdo_en = sdo_early ? sdo_dat_en : sdo_dat_en_d;
+wire _sdo = sdo_early ? treg[7] : treg7_d;
 
 `ifndef CD_SHARING_IO
     assign sdo = (spi_reset_n && _sdo_en) ? _sdo : 1'bz;
@@ -61,43 +61,29 @@ wire _sdo = advance ? treg[7] : treg7_d;
     assign sdo_en = spi_reset_n && _sdo_en;
 `endif
 
-wire w_det = bit_cnt[2];
-wire r_det = bit_cnt[2] ^ (bit_cnt[0] | bit_cnt[1]);
-wire w_det_f = w_det & !is_first_byte_d & is_write;
-wire r_det_f = r_det & !is_first_byte_d & !is_write;
-reg  w_det_d; // delayed one negedge for edge detection
-reg  r_det_d;
-reg  w_tog;   // toggle once per event, immune to pulse-width loss across domains
+reg  w_tog; // toggle once per event, immune to pulse-width loss across domains
 reg  r_tog;
 reg  [2:0] event_wd;
 reg  [2:0] event_rd;
 assign csr_write = event_wd[2] ^ event_wd[1];
 assign csr_read = event_rd[2] ^ event_rd[1];
 
-
-// use negedge, as there is no posedge after the last bit of the last byte
-always @(negedge sck or negedge spi_reset_n)
-    if (!spi_reset_n) begin
-        w_det_d <= 0;
-        r_det_d <= 0;
-    end
-    else begin
-        w_det_d <= w_det_f;
-        r_det_d <= r_det_f;
-    end
-
 // toggles must survive the end of transfer, do not reset with spi_reset_n,
 // otherwise the clk domain would take the async clear as an extra event
-always @(negedge sck or negedge reset_n)
+always @(posedge sck or negedge reset_n)
     if (!reset_n) begin
         w_tog <= 0;
         r_tog <= 0;
     end
-    else begin
-        if (w_det_d && !w_det_f) // falling edge: after the last bit of each byte
-            w_tog <= !w_tog;
-        if (r_det_f && !r_det_d) // rising edge: at bit 1 of each data byte
-            r_tog <= !r_tog;
+    else if (!is_first_byte_d) begin
+        if (is_write) begin
+            if (bit_cnt == 7) // rising edge of the last bit of each data byte
+                w_tog <= !w_tog;
+        end
+        else begin
+            if (bit_cnt == 0) // rising edge of bit 1 of each data byte
+                r_tog <= !r_tog;
+        end
     end
 
 

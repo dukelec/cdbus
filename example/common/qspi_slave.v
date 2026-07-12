@@ -16,7 +16,7 @@ module qspi_slave
         input       clk,
         input       reset_n,
         output      chip_select,
-        input       advance, // sdo output advanced by 1/2 sck cycle
+        input       sdo_early, // output sdo 1/2 sck cycle early
 
         output reg  [(A_WIDTH-1):0] csr_address,
         output      csr_read,
@@ -50,8 +50,8 @@ reg  sdo_dat_en;
 reg  sdo_dat_en_d;
 reg  [3:0] treg74_d;
 
-wire _sdo_en = advance ? sdo_dat_en : sdo_dat_en_d;
-wire [3:0] _sdo = advance ? treg[7:4] : treg74_d;
+wire _sdo_en = sdo_early ? sdo_dat_en : sdo_dat_en_d;
+wire [3:0] _sdo = sdo_early ? treg[7:4] : treg74_d;
 
 `ifndef CD_SHARING_IO
     assign sdio = (spi_reset_n && _sdo_en) ? _sdo : 4'bz;
