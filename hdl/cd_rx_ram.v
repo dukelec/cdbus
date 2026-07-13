@@ -124,11 +124,14 @@ always @(posedge clk or negedge reset_n)
         switch_d <= switch;
         wr_err_d <= wr_err;
 
-        if (wr_en & !wr_cancel) begin
+        // re-evaluate wr_cancel at frame start (wr_addr == 0) to clear
+        // the stale flag left by a previous non-committed frame
+        if (wr_en && (!wr_cancel || wr_addr == 0)) begin
             if (dirty[wr_sel + wr_addr[7:S_WIDTH]]) begin
                 wr_cancel <= 1;
             end
             else begin
+                wr_cancel <= 0;
                 wr_en_d <= 1;
                 wr_frag_amount <= wr_addr[7:S_WIDTH]; // 0 ~ 7
             end

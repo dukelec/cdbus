@@ -95,7 +95,7 @@ always @(posedge clk or negedge reset_n)
                 state <= arbitration ? DATA : TX_PRE;
                 baud_sync <= 1;
             end
-            else if (break_sync && reach_max_idle && has_data) begin
+            else if (break_sync && reach_max_idle && (has_data || has_break)) begin
                 is_break <= 1;
                 state <= BS_PRE;
                 baud_sync <= 1;
