@@ -52,7 +52,7 @@ reg drop_flag;
 reg finish;
 reg is_promiscuous;
 reg is_multicast;
-reg is_data_gt_253; // great than 253
+reg is_data_too_long;
 
 assign ram_wr_len = not_drop ? ram_wr_addr : data_len;
 
@@ -107,7 +107,7 @@ always @(posedge clk or negedge reset_n)
         ram_switch <= 0;
         finish <= 0;
         is_promiscuous <= (filter == 8'hff);
-        is_data_gt_253 <= (data_len > 253);
+        is_data_too_long <= (data_len > (user_crc ? 8'd251 : 8'd253));
 
         if ((des_data & filter_msk0) == filter_m0 || (des_data & filter_msk1) == filter_m1)
             is_multicast <= 1;
@@ -156,7 +156,7 @@ always @(posedge clk or negedge reset_n)
 
                 if (byte_cnt == data_len + 5 - 1) begin // last byte
                     if (!drop_flag) begin
-                        if ((des_crc_eq_zero || user_crc) && !is_data_gt_253) begin
+                        if ((des_crc_eq_zero || user_crc) && !is_data_too_long) begin
                             ram_switch <= 1;
                         end
                         else begin

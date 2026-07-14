@@ -269,7 +269,7 @@ while the TX page is automatically submitted after a transfer that writes to the
         val = read(REG_INT_FLAG_L, len=2)
         if (val[0] & 0x01) != 0:
             break
-    data = read(REG_DAT, len=val[2]+3)
+    data = read(REG_DAT, len=val[1]+3)
 ```
 
 
