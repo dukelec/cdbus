@@ -22,6 +22,7 @@ results.xml
 #
 !.gitignore
 !.gitkeep
+!.gitattributes
 !.mailmap
 
 *.orig

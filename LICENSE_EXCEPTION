@@ -1,0 +1,60 @@
+CDBUS Exception, Version 1.0
+
+
+This Exception is an additional permission granted by DUKELEC, as
+Licensor, supplementing the terms of the CERN Open Hardware Licence
+Version 2 - Strongly Reciprocal (CERN-OHL-S v2) applying to the CDBUS
+IP core and any accompanying files made available under CERN-OHL-S v2
+(the 'Covered Source'). Capitalised terms used below have the meanings
+given to them in CERN-OHL-S v2.
+
+
+1 Additional Permission for FPGAs and Programmable Logic
+
+  1.1 If You Make a Product by implementing the Covered Source, with
+      or without modification, as a soft core -- that is, solely by
+      post-manufacture programming or configuration of the
+      programmable logic fabric of a field-programmable gate array
+      (FPGA), complex programmable logic device (CPLD) or other
+      programmable logic device -- then,
+      notwithstanding the last sentence of subsection 3.2 of
+      CERN-OHL-S v2, those parts of the larger work or design that are
+      not derived from the Covered Source are not treated as modified
+      Covered Source, and sections 3 and 4 of CERN-OHL-S v2 do not
+      require You to Convey or make available their Source.
+
+  1.2 Modifications You make to the Covered Source itself remain
+      subject to CERN-OHL-S v2 (including subsections 3.2 and 3.3),
+      together with this Exception.
+
+  1.3 Use of the Covered Source under this Exception is free of
+      charge and royalty-free, including for commercial purposes.
+
+
+2 Exclusion of ASICs
+
+  2.1 This Exception does not apply to the design, verification,
+      integration, tape-out, manufacture or sale of any integrated
+      circuit, or portion thereof, in which the Covered Source, in
+      whole or in part, is implemented at the time of manufacture
+      rather than by post-manufacture programming of a programmable
+      logic device. This includes, without limitation,
+      application-specific integrated circuits (ASICs), structured
+      ASICs, hard-wired conversions of programmable logic designs,
+      and hardened IP blocks embedded in the silicon of FPGAs, SoCs
+      or other devices, and applies regardless of the fabrication
+      technique used (photomask-based lithography, maskless or
+      direct-write lithography, or any other process). All such
+      activities are governed solely by the unmodified terms of
+      CERN-OHL-S v2.
+
+  2.2 For commercial ASIC licensing on other terms, contact DUKELEC:
+      info@dukelec.com
+
+
+3 Conveyance
+
+  3.1 This Exception is a Notice within the meaning of subsection 1.10
+      of CERN-OHL-S v2. When You Convey the Covered Source or modified
+      Covered Source, You must retain this Exception, and each
+      recipient automatically receives its benefit.
