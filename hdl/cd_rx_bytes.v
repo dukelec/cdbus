@@ -1,10 +1,12 @@
 /*
- * This Source Code Form is subject to the terms of the Mozilla
- * Public License, v. 2.0. If a copy of the MPL was not distributed
- * with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
- * Notice: The scope granted to MPL excludes the ASIC industry.
+ * This Source Code Form is subject to the terms of the CERN Open
+ * Hardware Licence Version 2 - Strongly Reciprocal (CERN-OHL-S v2):
+ * https://ohwr.org/cern_ohl_s_v2.txt (see the LICENSE file).
+ * Notice: The CDBUS Exception (see the LICENSE_EXCEPTION file)
+ * grants free commercial use in FPGAs and other programmable logic
+ * devices; it does not extend to ASIC design or manufacturing.
  *
- * Copyright (c) 2017 DUKELEC, All rights reserved.
+ * Copyright (c) 2017-2026 DUKELEC, All rights reserved.
  *
  * Author: Duke Fong <d@d-l.io>
  */
@@ -52,7 +54,7 @@ reg drop_flag;
 reg finish;
 reg is_promiscuous;
 reg is_multicast;
-reg is_data_gt_253; // great than 253
+reg is_data_too_long;
 
 assign ram_wr_len = not_drop ? ram_wr_addr : data_len;
 
@@ -107,7 +109,7 @@ always @(posedge clk or negedge reset_n)
         ram_switch <= 0;
         finish <= 0;
         is_promiscuous <= (filter == 8'hff);
-        is_data_gt_253 <= (data_len > 253);
+        is_data_too_long <= (data_len > (user_crc ? 8'd251 : 8'd253));
 
         if ((des_data & filter_msk0) == filter_m0 || (des_data & filter_msk1) == filter_m1)
             is_multicast <= 1;
@@ -156,7 +158,7 @@ always @(posedge clk or negedge reset_n)
 
                 if (byte_cnt == data_len + 5 - 1) begin // last byte
                     if (!drop_flag) begin
-                        if ((des_crc_eq_zero || user_crc) && !is_data_gt_253) begin
+                        if ((des_crc_eq_zero || user_crc) && !is_data_too_long) begin
                             ram_switch <= 1;
                         end
                         else begin
