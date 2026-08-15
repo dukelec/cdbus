@@ -1,10 +1,12 @@
 /*
- * This Source Code Form is subject to the terms of the Mozilla
- * Public License, v. 2.0. If a copy of the MPL was not distributed
- * with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
- * Notice: The scope granted to MPL excludes the ASIC industry.
+ * This Source Code Form is subject to the terms of the CERN Open
+ * Hardware Licence Version 2 - Strongly Reciprocal (CERN-OHL-S v2):
+ * https://ohwr.org/cern_ohl_s_v2.txt (see the LICENSE file).
+ * Notice: The CDBUS Exception (see the LICENSE_EXCEPTION file)
+ * grants free commercial use in FPGAs and other programmable logic
+ * devices; it does not extend to ASIC design or manufacturing.
  *
- * Copyright (c) 2017 DUKELEC, All rights reserved.
+ * Copyright (c) 2017-2026 DUKELEC, All rights reserved.
  *
  * Author: Duke Fong <d@d-l.io>
  *
