@@ -44,6 +44,7 @@ REG_INT_FLAG_H      = 0x13
 REG_RX_LEN          = 0x14
 REG_DAT             = 0x15
 REG_CTRL            = 0x16
+REG_DAT_HOLD        = 0x17
 REG_FILTER_M0       = 0x1a
 REG_FILTER_M1       = 0x1b
 REG_FILTER_MSK0     = 0x1c
@@ -160,13 +161,13 @@ async def set_tx_permit_len(dut, idx, tx_permit_len):
     await csr_write(dut, idx, REG_TX_PERMIT_LEN_H, tx_permit_len >> 8, True)
     await csr_write(dut, idx, REG_TX_PERMIT_LEN_L, tx_permit_len & 0xff, False)
 
-async def write_tx(dut, idx, bytes_):
+async def write_tx(dut, idx, bytes_, reg=REG_DAT):
     if len(bytes_) == 0:
         return
     for i in range(len(bytes_)):
-        await csr_write(dut, idx, REG_DAT, bytes_[i], i < len(bytes_) - 1)
+        await csr_write(dut, idx, reg, bytes_[i], i < len(bytes_) - 1)
 
-async def read_rx(dut, idx, len_):
+async def read_rx(dut, idx, len_, reg=REG_DAT):
     ret = b''
     if len_ == 0:
         return ret
@@ -174,7 +175,7 @@ async def read_rx(dut, idx, len_):
     getattr(dut, f'cs{idx}').value = 1
     await RisingEdge(getattr(dut, f'clk{idx}'))
     for i in range(len_):
-        val = await csr_read(dut, idx, REG_DAT, i < len_ - 1)
+        val = await csr_read(dut, idx, reg, i < len_ - 1)
         ret += bytes([int(val)])
     return ret
 

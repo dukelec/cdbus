@@ -44,6 +44,7 @@ REG_INT_FLAG_H      = 0x13
 REG_RX_LEN          = 0x14
 REG_DAT             = 0x15
 REG_CTRL            = 0x16
+REG_DAT_HOLD        = 0x17
 REG_FILTER_M0       = 0x1a
 REG_FILTER_M1       = 0x1b
 REG_FILTER_MSK0     = 0x1c

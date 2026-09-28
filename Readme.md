@@ -111,6 +111,7 @@ The CDBUS-BS mode is suitable for high-speed applications with few nodes, and is
 | RX_LEN            |  0x14   | RD     | n/a             | Data length of the frame to be read, or frame_len - 1 |
 | DAT               |  0x15   | RD/WR  | n/a             | Read & Write RX page                                 |
 | CTRL              |  0x16   | WR     | n/a             | RX & TX control                                      |
+| DAT_HOLD          |  0x17   | RD/WR  | n/a             | Same as DAT, but keeps the page open                 |
 | FILTER_M0         |  0x1a   | RD/WR  | 0xff            | Multicast filter0                                    |
 | FILTER_M1         |  0x1b   | RD/WR  | 0xff            | Multicast filter1                                    |
 | FILTER_MSK0       |  0x1c   | RD/WR  | 0xff            | Multicast mask0                                      |
@@ -222,6 +223,16 @@ For interfaces like SPI, the RX page is automatically released after a transfer 
 while the TX page is automatically submitted after a transfer that writes to the DAT register.
 
 
+**DAT_HOLD:**
+
+An alias of DAT for interfaces like SPI: it reads and writes the same page at the same position,
+but the page is not released or submitted when the transfer ends, and the position is kept for the next transfer.
+This allows one page to be accessed across multiple transfers:
+access the first parts through DAT_HOLD, then either access the last part through DAT (automatic finish),
+or write bit4 or bit0 of the CTRL register (manual finish).
+Transfers to other registers in between do not affect the kept position.
+
+
 ## Interface
 
 ```verilog
@@ -246,6 +257,23 @@ while the TX page is automatically submitted after a transfer that writes to the
     output          tx,
     output          tx_en
 ```
+
+**chip_select:**
+
+Besides the transfer-based behaviour described above for interfaces like SPI (enabled by `CD_CHIP_SELECT`),
+`chip_select` gates the read port of the RX RAM to reduce power consumption:
+the RX RAM is only read while it is high, and the data is available one clock after it goes high.
+
+For SoC integration, drive it from the bus select of this peripheral, e.g. `psel` of APB or `hsel` of AHB,
+both of which are asserted one clock before the data is sampled.
+For a bus that samples read data in the same clock as the select, assert it one clock earlier (e.g. from the address decode),
+or simply tie it high at the cost of the RX RAM being read every clock.
+
+**CD_CSR_NO_LATENCY:**
+
+Without this define, DAT reads on consecutive clocks return the same byte, since the RX RAM needs one clock per byte.
+Define it to allow zero-wait-state bursts from a synchronous host such as a SoC bus or DMA.
+It is not safe for an asynchronous host such as SPI, since the read data can glitch when `csr_read` toggles.
 
 
 ## Examples

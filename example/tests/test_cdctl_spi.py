@@ -121,6 +121,45 @@ async def test_cdctl_spi(dut):
     dut._log.info(f"int_flag: {int_flag[0]:02x} {int_flag[1]:02x}")
     await Timer(50000000)
 
+    value = await spi_read(dut, REG_DAT, 3 + int_flag[1]) # release the pending frame
+    dut._log.info(" ".join([("%02x" % x) for x in value]))
+
+    # DAT_HOLD: access one page across multiple transfers
+    tx_pkt = [0x01, 0x00, 0x06, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15]
+    expect = tx_pkt # rx_len excludes crc
+    await spi_write(dut, REG_DAT_HOLD, tx_pkt[0:2])
+    int_flag = (await spi_read(dut, REG_INT_FLAG_L))[0] # other transfer in between
+    if int_flag & 0x20 == 0:
+        dut._log.error('TX page submitted too early')
+        await exit_err()
+    await spi_write(dut, REG_DAT_HOLD, tx_pkt[2:5])
+    await spi_write(dut, REG_DAT, tx_pkt[5:]) # auto submit
+
+    await RisingEdge(dut.cdctl_spi_m.cdbus_m.rx_pending)
+    int_flag, rx_len = await spi_read(dut, REG_INT_FLAG_L, 2)
+    dut._log.info(f"int_flag: {int_flag:02x}, rx_len: {rx_len:02x}")
+    value = await spi_read(dut, REG_DAT_HOLD, 1)
+    value += await spi_read(dut, REG_DAT_HOLD, 4)
+    int_flag = (await spi_read(dut, REG_INT_FLAG_L))[0]
+    if int_flag & 0x01 == 0:
+        dut._log.error('RX page released too early')
+        await exit_err()
+    value += await spi_read(dut, REG_DAT_HOLD, 3 + rx_len - 5)
+    dut._log.info("hold read: " + " ".join([("%02x" % x) for x in value]))
+    if value != expect:
+        dut._log.error('hold read mismatch')
+        await exit_err()
+    int_flag = (await spi_read(dut, REG_INT_FLAG_L))[0]
+    if int_flag & 0x01 == 0:
+        dut._log.error('RX page released without CTRL')
+        await exit_err()
+    await spi_write(dut, REG_CTRL, [0x10]) # manual release
+    await Timer(CLK_PERIOD * 10)
+    int_flag = (await spi_read(dut, REG_INT_FLAG_L))[0]
+    if int_flag & 0x01 != 0:
+        dut._log.error('RX page not released by CTRL')
+        await exit_err()
+
     dut._log.info("test_cdctl_spi done.")
     await exit_ok()
 
