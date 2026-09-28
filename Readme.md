@@ -23,7 +23,11 @@ This document only describes the modifications. For the full protocol and docume
 | INT_FLAG      |  0x0a   | RD     | n/a                    | RX_LEN: byte 2, INT_FLAG: bytes 0-1       |
 | DAT           |  0x0b   | RD/WR  | n/a                    | 32-bit width                              |
 | CTRL          |  0x0c   | WR     | n/a                    |                                           |
+| DAT_HOLD      |  0x0d   | RD/WR  | n/a                    | Same as DAT, but keeps the page open      |
+| RX_ADDR       |  0x0e   | WR     | n/a                    | Read position of the RX page, in words    |
 | FILTER_M      |  0x0f   | RD/WR  | 0xffffffff             | [MSK1, MSK0, M1, M0]                      |
+
+DAT_HOLD and RX_ADDR only differ from the 8-bit version in that the RX_ADDR value is a 32-bit word offset instead of a byte offset.
 
 
 
@@ -51,6 +55,24 @@ This document only describes the modifications. For the full protocol and docume
     output          tx,
     output          tx_en
 ```
+
+**chip_select:**
+
+Besides the transfer-based behaviour for interfaces like SPI (enabled by `CD_CHIP_SELECT`),
+`chip_select` gates the read port of the RX RAM to reduce power consumption:
+the RX RAM is only read while it is high, and the data is available one clock after it goes high.
+
+For SoC integration, drive it from the bus select of this peripheral, e.g. `psel` of APB or `hsel` of AHB,
+both of which are asserted one clock before the data is sampled.
+For a bus that samples read data in the same clock as the select, assert it one clock earlier (e.g. from the address decode),
+or simply tie it high at the cost of the RX RAM being read every clock.
+
+**CD_CSR_NO_LATENCY:**
+
+Without this define, DAT reads on consecutive clocks return the same word, since the RX RAM needs one clock per word.
+Define it to allow zero-wait-state bursts from a synchronous host such as a SoC bus or DMA.
+It is not safe for an asynchronous host such as SPI, since the read data can glitch when `csr_read` toggles.
+
 
 ## License
 ```

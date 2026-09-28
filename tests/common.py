@@ -39,6 +39,8 @@ REG_INT_MASK        = 0x09
 REG_INT_FLAG        = 0x0a
 REG_DAT             = 0x0b
 REG_CTRL            = 0x0c
+REG_DAT_HOLD        = 0x0d
+REG_RX_ADDR         = 0x0e
 REG_FILTER_M        = 0x0f
 
 REG_INT_MASK_L      = REG_INT_MASK
@@ -151,18 +153,21 @@ async def set_max_idle_len(dut, idx, max_idle_len):
 async def set_tx_permit_len(dut, idx, tx_permit_len):
     await csr_write(dut, idx, REG_TX_PERMIT_LEN, tx_permit_len)
 
-async def write_tx(dut, idx, bytes_):
+async def write_tx(dut, idx, bytes_, reg=REG_DAT):
     if len(bytes_) == 0:
         return
     blk_cnt = int((len(bytes_)+3)/4)
     for i in range(blk_cnt):
         val = struct.unpack('<I', (bytes_[i*4:i*4+4] + b'\x00\x00\x00')[0:4])[0]
         if i < blk_cnt - 1:
-            await csr_write(dut, idx, REG_DAT, val, True)
+            await csr_write(dut, idx, reg, val, True)
         else:
-            await csr_write(dut, idx, REG_DAT, val, False)
+            await csr_write(dut, idx, reg, val, False)
 
-async def read_rx(dut, idx, len_):
+async def seek_rx(dut, idx, offset): # byte offset, must be word-aligned
+    await csr_write(dut, idx, REG_RX_ADDR, offset // 4)
+
+async def read_rx(dut, idx, len_, reg=REG_DAT):
     ret = b''
     if len_ == 0:
         return ret
@@ -173,9 +178,9 @@ async def read_rx(dut, idx, len_):
     left = len_%4
     for i in range(blk_cnt):
         if i < blk_cnt - 1:
-            val = await csr_read(dut, idx, REG_DAT, True)
+            val = await csr_read(dut, idx, reg, True)
         else:
-            val = await csr_read(dut, idx, REG_DAT, False)
+            val = await csr_read(dut, idx, reg, False)
             if left != 0:
                 val = val[left*8-1:0]
         ret += struct.pack('<I', int(val))

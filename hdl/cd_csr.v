@@ -92,6 +92,8 @@ localparam
     REG_INT_FLAG        = 'h0a,
     REG_DAT             = 'h0b,
     REG_CTRL            = 'h0c,
+    REG_DAT_HOLD        = 'h0d,
+    REG_RX_ADDR         = 'h0e,
     REG_FILTER_M        = 'h0f;
 
 reg tx_error_flag;
@@ -111,12 +113,18 @@ wire [15:0] int_flag = {~bus_idle, bus_idle, rx_pend_len,
 reg [31:0] ram_pre_read;
  `endif
 reg [1:0] chip_select_d;
-reg has_read_rx;
+reg has_read_rx;    // DAT accessed in this transfer: auto finish at end
 reg has_write_tx;
+reg rx_open;        // set by DAT_HOLD or RX_ADDR, cleared by DAT or CTRL: keep page and address across transfers
+reg tx_open;
+ `ifdef CD_CSR_NO_LATENCY
+reg pre_read_done;  // rx_ram_rd_addr is one ahead of consumed words
+ `endif
 reg [23:0] int_flag_snapshot; // avoid metastability
 `endif
 
-assign tx_ram_wr_en = (csr_address == REG_DAT) ? csr_write : 1'b0;
+wire is_dat_addr = (csr_address == REG_DAT) || (csr_address == REG_DAT_HOLD);
+assign tx_ram_wr_en = is_dat_addr ? csr_write : 1'b0;
 
 assign full_duplex = mode_sel == 2'd3;
 assign break_sync = mode_sel == 2'd2;
@@ -152,10 +160,10 @@ always @(*)
             csr_readdata = {8'd0, rx_ram_rd_len, int_flag};
 `endif
 `ifdef CD_CSR_NO_LATENCY
-        REG_DAT:
+        REG_DAT, REG_DAT_HOLD:
             csr_readdata = csr_read ? rx_ram_rd_word : ram_pre_read;
 `else
-        REG_DAT:
+        REG_DAT, REG_DAT_HOLD:
             csr_readdata = rx_ram_rd_word;
 `endif
         REG_FILTER_M:
@@ -200,6 +208,11 @@ always @(posedge clk or negedge reset_n)
         int_flag_snapshot <= 0;
         has_read_rx <= 0;
         has_write_tx <= 0;
+        rx_open <= 0;
+        tx_open <= 0;
+ `ifdef CD_CSR_NO_LATENCY
+        pre_read_done <= 0;
+ `endif
 `endif
 
         rx_ram_rd_addr <= 0;
@@ -224,19 +237,29 @@ always @(posedge clk or negedge reset_n)
         chip_select_d <= {chip_select_d[0], chip_select};
         if (!chip_select_d[0]) begin
             int_flag_snapshot <= {rx_ram_rd_len, int_flag};
-            rx_ram_rd_addr <= 0;
-            tx_ram_wr_addr <= 0;
             has_read_rx <= 0;
             has_write_tx <= 0;
-            if (chip_select_d[1]) begin
+            if (!rx_open)
+                rx_ram_rd_addr <= 0;
+            if (!tx_open)
+                tx_ram_wr_addr <= 0;
+            if (chip_select_d[1]) begin // end of transfer
                 rx_ram_rd_done <= has_read_rx;
                 tx_ram_wr_done <= has_write_tx;
+ `ifdef CD_CSR_NO_LATENCY
+                if (rx_open && pre_read_done)
+                    rx_ram_rd_addr <= rx_ram_rd_addr - 1'd1; // undo pre-read
+ `endif
             end
+ `ifdef CD_CSR_NO_LATENCY
+            pre_read_done <= 0;
+ `endif
         end
  `ifdef CD_CSR_NO_LATENCY
         else if (chip_select_d == 2'b01) begin
             ram_pre_read <= rx_ram_rd_word;
             rx_ram_rd_addr <= rx_ram_rd_addr + 1'd1;
+            pre_read_done <= 1;
         end
  `endif
 `endif
@@ -262,10 +285,16 @@ always @(posedge clk or negedge reset_n)
                 tx_error_flag <= 0;
 `endif
             end
-            else if (csr_address == REG_DAT) begin
+            else if (is_dat_addr) begin
                 rx_ram_rd_addr <= rx_ram_rd_addr + 1'd1;
 `ifdef CD_CHIP_SELECT
-                has_read_rx <= 1;
+                if (csr_address == REG_DAT) begin
+                    has_read_rx <= 1;
+                    rx_open <= 0;
+                end
+                else begin
+                    rx_open <= 1;
+                end
  `ifdef CD_CSR_NO_LATENCY
                 ram_pre_read <= rx_ram_rd_word;
  `endif
@@ -313,10 +342,25 @@ always @(posedge clk or negedge reset_n)
                     div_hs <= csr_writedata[15:0];
                 REG_INT_MASK:
                     int_mask <= csr_writedata[15:0];
-                REG_DAT: begin
+                REG_DAT, REG_DAT_HOLD: begin
                     tx_ram_wr_addr <= tx_ram_wr_addr + 1'd1;
 `ifdef CD_CHIP_SELECT
-                    has_write_tx <= 1;
+                    if (csr_address == REG_DAT) begin
+                        has_write_tx <= 1;
+                        tx_open <= 0;
+                    end
+                    else begin
+                        tx_open <= 1;
+                    end
+`endif
+                end
+                REG_RX_ADDR: begin
+                    rx_ram_rd_addr <= csr_writedata[5:0];
+`ifdef CD_CHIP_SELECT
+                    rx_open <= 1; // keep the address for the next transfer
+ `ifdef CD_CSR_NO_LATENCY
+                    pre_read_done <= 0;
+ `endif
 `endif
                 end
                 REG_CTRL: begin
@@ -332,7 +376,16 @@ always @(posedge clk or negedge reset_n)
                         has_break <= 1;
                     if (csr_writedata[0])
                         tx_ram_wr_done <= 1;
-`ifndef CD_CHIP_SELECT
+`ifdef CD_CHIP_SELECT
+                    if (csr_writedata[7] || csr_writedata[4]) begin // manual rx finish
+                        rx_ram_rd_addr <= 0;
+                        rx_open <= 0;
+                    end
+                    if (csr_writedata[2] || csr_writedata[0]) begin // manual tx finish
+                        tx_ram_wr_addr <= 0;
+                        tx_open <= 0;
+                    end
+`else
                     rx_ram_rd_addr <= 0;
                     tx_ram_wr_addr <= 0;
 `endif
