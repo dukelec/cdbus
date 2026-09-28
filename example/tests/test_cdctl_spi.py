@@ -160,6 +160,22 @@ async def test_cdctl_spi(dut):
         dut._log.error('RX page not released by CTRL')
         await exit_err()
 
+    # RX_ADDR: skip to the middle of a frame
+    await spi_write(dut, REG_DAT, tx_pkt)
+    await RisingEdge(dut.cdctl_spi_m.cdbus_m.rx_pending)
+    int_flag, rx_len = await spi_read(dut, REG_INT_FLAG_L, 2)
+    await spi_write(dut, REG_RX_ADDR, [5])
+    value = await spi_read(dut, REG_DAT, 3 + rx_len - 5) # auto release
+    dut._log.info("seek read: " + " ".join([("%02x" % x) for x in value]))
+    if value != tx_pkt[5:]:
+        dut._log.error('seek read mismatch')
+        await exit_err()
+    await Timer(CLK_PERIOD * 10)
+    int_flag = (await spi_read(dut, REG_INT_FLAG_L))[0]
+    if int_flag & 0x01 != 0:
+        dut._log.error('RX page not released after seek read')
+        await exit_err()
+
     dut._log.info("test_cdctl_spi done.")
     await exit_ok()
 

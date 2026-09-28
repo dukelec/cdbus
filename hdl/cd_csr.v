@@ -100,6 +100,7 @@ localparam
     REG_DAT             = 'h15,
     REG_CTRL            = 'h16,
     REG_DAT_HOLD        = 'h17,
+    REG_RX_ADDR         = 'h18,
     REG_FILTER_M0       = 'h1a,
     REG_FILTER_M1       = 'h1b,
     REG_FILTER_MSK0     = 'h1c,
@@ -414,6 +415,15 @@ always @(posedge clk or negedge reset_n)
                     else begin
                         tx_open <= 1;
                     end
+`endif
+                end
+                REG_RX_ADDR: begin
+                    rx_ram_rd_addr <= csr_writedata;
+`ifdef CD_CHIP_SELECT
+                    rx_open <= 1; // keep the address for the next transfer
+ `ifdef CD_CSR_NO_LATENCY
+                    pre_read_done <= 0;
+ `endif
 `endif
                 end
                 REG_CTRL: begin

@@ -109,6 +109,29 @@ async def test_cdbus(dut):
     await csr_write(dut, 1, REG_CTRL, BIT_RX_CLR_PENDING)
     await FallingEdge(dut.irq1)
 
+    # --- RX_ADDR: skip to the middle of a frame ---
+    payload = bytes(range(0x30, 0x3c))
+    tx_pkt = b'\x01\x02' + bytes([len(payload)]) + payload
+    expect = (tx_pkt + modbus_crc(tx_pkt)).hex()
+    await write_tx(dut, 0, tx_pkt)
+
+    await RisingEdge(dut.irq1)
+    val, len_, _ = await read_int_flag3(dut, 1)
+    total = int(len_) + 5
+    await csr_write(dut, 1, REG_RX_ADDR, 7) # seek without reading first
+    str_ = (await read_rx(dut, 1, 3, REG_DAT_HOLD)).hex()
+    dut._log.info(f'idx1: received [7:10]: {str_}')
+    if str_ != expect[7*2:10*2]:
+        dut._log.error(f'idx1: seek read mismatch, expect: {expect[7*2:10*2]}')
+        await exit_err()
+    await csr_write(dut, 1, REG_RX_ADDR, 2) # seek backwards after a hold read
+    str_ = (await read_rx(dut, 1, total - 2, REG_DAT)).hex() # auto release
+    dut._log.info(f'idx1: received [2:]: {str_}')
+    if str_ != expect[2*2:]:
+        dut._log.error(f'idx1: seek read mismatch, expect: {expect[2*2:]}')
+        await exit_err()
+    await FallingEdge(dut.irq1)
+
     # --- back to normal: single transfer through DAT still works after hold usage ---
     tx_pkt = b'\x01\x02\x01\xcd'
     expect = (tx_pkt + modbus_crc(tx_pkt)).hex()

@@ -112,6 +112,7 @@ The CDBUS-BS mode is suitable for high-speed applications with few nodes, and is
 | DAT               |  0x15   | RD/WR  | n/a             | Read & Write RX page                                 |
 | CTRL              |  0x16   | WR     | n/a             | RX & TX control                                      |
 | DAT_HOLD          |  0x17   | RD/WR  | n/a             | Same as DAT, but keeps the page open                 |
+| RX_ADDR           |  0x18   | WR     | n/a             | Set the read position of the RX page                 |
 | FILTER_M0         |  0x1a   | RD/WR  | 0xff            | Multicast filter0                                    |
 | FILTER_M1         |  0x1b   | RD/WR  | 0xff            | Multicast filter1                                    |
 | FILTER_MSK0       |  0x1c   | RD/WR  | 0xff            | Multicast mask0                                      |
@@ -231,6 +232,14 @@ This allows one page to be accessed across multiple transfers:
 access the first parts through DAT_HOLD, then either access the last part through DAT (automatic finish),
 or write bit4 or bit0 of the CTRL register (manual finish).
 Transfers to other registers in between do not affect the kept position.
+
+
+**RX_ADDR:**
+
+Writing this register sets the byte offset for the next DAT or DAT_HOLD read within the current RX page,
+to skip the unwanted part of a frame.
+For interfaces like SPI, the page is kept open after the transfer that writes this register,
+so the following read starts from the set position.
 
 
 ## Interface
