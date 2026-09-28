@@ -10,7 +10,9 @@
 # Author: Duke Fong <d@d-l.io>
 #
 
-# Access one TX / RX page across multiple chip-select transfers through DAT_HOLD.
+# Access one TX / RX page across multiple chip-select transfers through DAT_HOLD,
+# and set the read position through RX_ADDR.
+# Segments are kept word-aligned so this test also runs on the 32-bit branch.
 
 from common import *
 
@@ -40,23 +42,23 @@ async def test_cdbus(dut):
     await csr_write(dut, 0, REG_FILTER, 0x01)
     await csr_write(dut, 1, REG_FILTER, 0x02)
 
-    payload = bytes(range(0x10, 0x1a))
-    tx_pkt = b'\x01\x02' + bytes([len(payload)]) + payload
+    payload = bytes(range(0x10, 0x1d))
+    tx_pkt = b'\x01\x02' + bytes([len(payload)]) + payload # 16 bytes
     expect = (tx_pkt + modbus_crc(tx_pkt)).hex()
 
     # --- TX: two parts through DAT_HOLD, last part through DAT (auto submit) ---
-    await write_tx(dut, 0, tx_pkt[0:3], REG_DAT_HOLD)
+    await write_tx(dut, 0, tx_pkt[0:4], REG_DAT_HOLD)
     val = await read_int_flag(dut, 0) # unrelated transfer in between must not disturb
     dut._log.info(f'idx0 REG_INT_FLAG: 0x{int(val):02x}')
     if int(val) & BIT_FLAG_TX_BUF_CLEAN == 0:
         dut._log.error('idx0: TX page submitted too early')
         await exit_err()
-    await write_tx(dut, 0, tx_pkt[3:8], REG_DAT_HOLD)
+    await write_tx(dut, 0, tx_pkt[4:12], REG_DAT_HOLD)
     await Timer(5, unit='us')
     if dut.tx_en0.value != 0: # nothing should be sent yet
         dut._log.error('idx0: bus not idle before submit')
         await exit_err()
-    await write_tx(dut, 0, tx_pkt[8:], REG_DAT)
+    await write_tx(dut, 0, tx_pkt[12:], REG_DAT)
 
     await RisingEdge(dut.irq1)
     val, len_, _ = await read_int_flag3(dut, 1)
@@ -69,8 +71,8 @@ async def test_cdbus(dut):
     if int(val) & BIT_FLAG_RX_PENDING == 0:
         dut._log.error('idx1: RX page released too early')
         await exit_err()
-    str_ += (await read_rx(dut, 1, 5, REG_DAT_HOLD)).hex()
-    str_ += (await read_rx(dut, 1, total - 9, REG_DAT)).hex()
+    str_ += (await read_rx(dut, 1, 8, REG_DAT_HOLD)).hex()
+    str_ += (await read_rx(dut, 1, total - 12, REG_DAT)).hex()
     dut._log.info(f'idx1: received: {str_}')
     if str_ != expect:
         dut._log.error(f'idx1: receive mismatch, expect: {expect}')
@@ -79,7 +81,7 @@ async def test_cdbus(dut):
 
     # --- TX: all through DAT_HOLD, then manual submit by CTRL ---
     payload = bytes(range(0x20, 0x27))
-    tx_pkt = b'\x01\x02' + bytes([len(payload)]) + payload
+    tx_pkt = b'\x01\x02' + bytes([len(payload)]) + payload # 10 bytes
     expect = (tx_pkt + modbus_crc(tx_pkt)).hex()
 
     await write_tx(dut, 0, tx_pkt[0:4], REG_DAT_HOLD)
@@ -96,8 +98,8 @@ async def test_cdbus(dut):
 
     # --- RX: all through DAT_HOLD, then manual release by CTRL ---
     total = int(len_) + 5
-    str_ = (await read_rx(dut, 1, 1, REG_DAT_HOLD)).hex() # single byte transfer
-    str_ += (await read_rx(dut, 1, total - 1, REG_DAT_HOLD)).hex()
+    str_ = (await read_rx(dut, 1, 4, REG_DAT_HOLD)).hex()
+    str_ += (await read_rx(dut, 1, total - 4, REG_DAT_HOLD)).hex()
     dut._log.info(f'idx1: received: {str_}')
     if str_ != expect:
         dut._log.error(f'idx1: receive mismatch, expect: {expect}')
@@ -110,25 +112,25 @@ async def test_cdbus(dut):
     await FallingEdge(dut.irq1)
 
     # --- RX_ADDR: skip to the middle of a frame ---
-    payload = bytes(range(0x30, 0x3c))
-    tx_pkt = b'\x01\x02' + bytes([len(payload)]) + payload
+    payload = bytes(range(0x30, 0x3d))
+    tx_pkt = b'\x01\x02' + bytes([len(payload)]) + payload # 16 bytes
     expect = (tx_pkt + modbus_crc(tx_pkt)).hex()
     await write_tx(dut, 0, tx_pkt)
 
     await RisingEdge(dut.irq1)
     val, len_, _ = await read_int_flag3(dut, 1)
     total = int(len_) + 5
-    await csr_write(dut, 1, REG_RX_ADDR, 7) # seek without reading first
-    str_ = (await read_rx(dut, 1, 3, REG_DAT_HOLD)).hex()
-    dut._log.info(f'idx1: received [7:10]: {str_}')
-    if str_ != expect[7*2:10*2]:
-        dut._log.error(f'idx1: seek read mismatch, expect: {expect[7*2:10*2]}')
+    await seek_rx(dut, 1, 8) # seek without reading first
+    str_ = (await read_rx(dut, 1, 4, REG_DAT_HOLD)).hex()
+    dut._log.info(f'idx1: received [8:12]: {str_}')
+    if str_ != expect[8*2:12*2]:
+        dut._log.error(f'idx1: seek read mismatch, expect: {expect[8*2:12*2]}')
         await exit_err()
-    await csr_write(dut, 1, REG_RX_ADDR, 2) # seek backwards after a hold read
-    str_ = (await read_rx(dut, 1, total - 2, REG_DAT)).hex() # auto release
-    dut._log.info(f'idx1: received [2:]: {str_}')
-    if str_ != expect[2*2:]:
-        dut._log.error(f'idx1: seek read mismatch, expect: {expect[2*2:]}')
+    await seek_rx(dut, 1, 4) # seek backwards after a hold read
+    str_ = (await read_rx(dut, 1, total - 4, REG_DAT)).hex() # auto release
+    dut._log.info(f'idx1: received [4:]: {str_}')
+    if str_ != expect[4*2:]:
+        dut._log.error(f'idx1: seek read mismatch, expect: {expect[4*2:]}')
         await exit_err()
     await FallingEdge(dut.irq1)
 

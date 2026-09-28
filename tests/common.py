@@ -168,6 +168,9 @@ async def write_tx(dut, idx, bytes_, reg=REG_DAT):
     for i in range(len(bytes_)):
         await csr_write(dut, idx, reg, bytes_[i], i < len(bytes_) - 1)
 
+async def seek_rx(dut, idx, offset): # byte offset
+    await csr_write(dut, idx, REG_RX_ADDR, offset)
+
 async def read_rx(dut, idx, len_, reg=REG_DAT):
     ret = b''
     if len_ == 0:
