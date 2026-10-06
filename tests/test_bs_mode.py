@@ -32,9 +32,12 @@ async def test_cdbus(dut):
     val = await csr_read(dut, 0, REG_SETTING, False)
     dut._log.info(f'idx0 REG_SETTING: 0x{int(val):02x}')
 
-    await csr_write(dut, 0, REG_SETTING, 0b00100001) # bs mode
-    await csr_write(dut, 1, REG_SETTING, 0b00100001)
-    await csr_write(dut, 2, REG_SETTING, 0b00100001)
+    await csr_write(dut, 0, REG_SETTING, 0b00000010) # bs mode
+    await csr_write(dut, 1, REG_SETTING, 0b00000010)
+    await csr_write(dut, 2, REG_SETTING, 0b00000010)
+    await csr_write(dut, 0, REG_PIN_CFG, 0b00000001) # push-pull
+    await csr_write(dut, 1, REG_PIN_CFG, 0b00000001)
+    await csr_write(dut, 2, REG_PIN_CFG, 0b00000001)
     await csr_write(dut, 2, REG_INT_MASK_L, 0b11001101) # not select break rx
     
     await set_max_idle_len(dut, 0, 40)

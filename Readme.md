@@ -78,6 +78,25 @@ To address this, single-rate peer-to-peer bus communication can be achieved usin
 The CDBUS-BS mode is suitable for high-speed applications with few nodes, and is also well-suited to software implementation.
 
 
+### Transparent Mode
+
+For protocols other than CDBUS over a plain UART (8N1 only), e.g. MODBUS RTU,
+the controller can pass raw frames through without header;
+it works with the traditional half-duplex mode and the full-duplex mode, set DIV_HS equal to DIV_LS and keep FILTER at 0xff.
+The CRC of CDBUS is the same as MODBUS, so the CRC is still appended and checked by hardware unless `CRC maintained by user` is set.
+
+RX: bytes are collected into a page (up to 256 bytes), which is committed when the bus is idle for IDLE_WAIT_LEN;
+RX_LEN is the byte count minus one. A frame with CRC error is dropped and flagged like a broken CDBUS frame,
+or saved with `save broken frame` set. A single byte is dropped as noise.
+In half-duplex mode, the echo of the own transmission is dropped unless the loopback bit is set.
+
+TX: the page layout is the same as a CDBUS frame, `[reserved, reserved, data_len, data...]`, only the data (up to 253 bytes)
+and the CRC are sent; with `CRC maintained by user`, the last two bytes come from the page as well,
+data_len can still be 253: the bytes beyond the end of the page wrap around to the reserved bytes at the start.
+The idle time between frames is IDLE_WAIT_LEN (half-duplex, if RX sees TX) plus TX_PERMIT_LEN plus TX_PRE_LEN,
+which must be longer than the IDLE_WAIT_LEN of the receiver.
+
+
 ## Block Diagram
 
 <img alt="block_diagram" src="docs/img/block_diagram.svg" width="100%">
@@ -92,7 +111,8 @@ The CDBUS-BS mode is suitable for high-speed applications with few nodes, and is
 | Register Name     |  Addr   | Access | Default         | Description (8-bit width by default if not specified)|
 |-------------------|---------|--------|-----------------|------------------------------------------------------|
 | VERSION           |  0x00   | RD     | 0x0f            | Hardware version                                     |
-| SETTING           |  0x02   | RD/WR  | 0x10            | Configuration                                        |
+| SETTING           |  0x02   | RD/WR  | 0x01            | Configuration                                        |
+| PIN_CFG           |  0x03   | RD/WR  | 0x00            | Pin configuration                                    |
 | IDLE_WAIT_LEN     |  0x04   | RD/WR  | 0x0a            | Idle entry wait time                                 |
 | TX_PERMIT_LEN_L   |  0x05   | RD/WR  | 0x14            | TX permit wait time (10 bits)                        |
 | TX_PERMIT_LEN_H   |  0x06   | RD/WR  | 0x00            |                                                      |
@@ -128,20 +148,30 @@ Time unit: one bit period at the low-speed baud rate.
 
 | FIELD   | DESCRIPTION                                       |
 |-------- |---------------------------------------------------|
-| [7]     | TX stays low for arbitration and break character  |
-| [6]     | RX pin inversion                                  |
-| [5:4]   | Mode selection                                    |
-| [3]     | Save broken frame                                 |
-| [2]     | CRC maintained by user                            |
-| [1]     | TX pin inversion                                  |
-| [0]     | Enable push-pull output for TX and TX_EN pin      |
+| [5]     | Save broken frame                                 |
+| [4]     | CRC maintained by user                            |
+| [3]     | Transparent mode: keep own TX echo (loopback)     |
+| [2]     | Transparent mode                                  |
+| [1:0]   | Mode selection                                    |
 
-| [5] | [4] | DESCRIPTION                     |
+| [1] | [0] | DESCRIPTION                     |
 |-----|-----|---------------------------------|
 | 0   | 0   | Traditional half-duplex mode    |
 | 0   | 1   | CDBUS-A mode (default)          |
 | 1   | 0   | CDBUS-BS mode                   |
 | 1   | 1   | Full-duplex mode                |
+
+Transparent mode only works with mode 00 and 11.
+
+
+**PIN_CFG:**
+
+| FIELD   | DESCRIPTION                                       |
+|-------- |---------------------------------------------------|
+| [3]     | RX pin inversion                                  |
+| [2]     | TX pin inversion                                  |
+| [1]     | TX stays low for arbitration and break character  |
+| [0]     | Enable push-pull output for TX and TX_EN pin      |
 
 
 **TX_PRE_LEN:**
@@ -204,6 +234,7 @@ there are 64 RX pages waiting to be read.
 
 The default value of this register corresponds to the data_len of the frame to be read.  
 If `save broken frame` is enabled, this register's value equals the size of the frame to be read minus one (including CRC).
+In transparent mode, it is the size of the page minus one (including CRC).
 
 For interfaces like SPI, when two or three bytes are read from the INT_FLAG_L register in a single transfer,
 the first byte represents INT_FLAG_L, the second byte represents RX_LEN, and the third byte represents INT_FLAG_H.
@@ -290,7 +321,7 @@ It is not safe for an asynchronous host such as SPI, since the read data can gli
 ```python
     # Configuration
     
-    write(REG_SETTING, [0x11])                # Enable push-pull output
+    write(REG_PIN_CFG, [0x01])                # Enable push-pull output
     
     
     # TX

@@ -30,7 +30,7 @@ async def test_cdbus(dut):
     val = await csr_read(dut, 0, REG_SETTING)
     dut._log.info(f'idx0 REG_SETTING: 0x{int(val):02x}')
 
-    await csr_write(dut, 0, REG_SETTING, 0b00010001)
+    await csr_write(dut, 0, REG_PIN_CFG, 0b00000001) # push-pull
     await set_div(dut, 0, 79, 2)
     
     await Timer(4, unit='us')

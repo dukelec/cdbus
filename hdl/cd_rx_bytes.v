@@ -23,6 +23,8 @@ module cd_rx_bytes(
         input       [7:0]   filter_msk1,
         input               user_crc,
         input               not_drop,
+        input               raw,        // transparent mode: no header, commit on idle
+        input               drop_echo,  // raw mode: drop own tx echo
         input               abort,
         output reg          error, // frame incomplete or crc error
 
@@ -56,7 +58,7 @@ reg is_promiscuous;
 reg is_multicast;
 reg is_data_too_long;
 
-assign ram_wr_len = not_drop ? ram_wr_addr : data_len;
+assign ram_wr_len = (not_drop || raw) ? ram_wr_addr : data_len;
 
 
 // FSM
@@ -71,7 +73,7 @@ always @(posedge clk or negedge reset_n)
 
         case (state)
             INIT: begin
-                if (!des_bus_idle)
+                if (!des_bus_idle && !raw)
                     des_force_wait_idle <= 1;
                 state <= DATA;
             end
@@ -126,8 +128,8 @@ always @(posedge clk or negedge reset_n)
             if (des_bus_idle) begin
                 if (byte_cnt != 0) begin
                     if (byte_cnt != 1 && !drop_flag) begin
-                        error <= 1;
-                        ram_switch <= not_drop;
+                        error <= raw ? !(des_crc_eq_zero || user_crc) : 1'b1; // raw: crc check only
+                        ram_switch <= not_drop || (raw && (des_crc_eq_zero || user_crc));
                     end
                     finish <= 1;
                     drop_flag <= 1; // avoid multi-clock ram_switch signal
@@ -156,7 +158,7 @@ always @(posedge clk or negedge reset_n)
                     data_len <= des_data;
                 end
 
-                if (byte_cnt == data_len + 5 - 1) begin // last byte
+                if (!raw && byte_cnt == data_len + 5 - 1) begin // last byte
                     if (!drop_flag) begin
                         if ((des_crc_eq_zero || user_crc) && !is_data_too_long) begin
                             ram_switch <= 1;
@@ -172,6 +174,9 @@ always @(posedge clk or negedge reset_n)
 
                 byte_cnt <= byte_cnt + 1'd1;
             end
+
+            if (raw && drop_echo)
+                drop_flag <= 1;
 
             if (abort) begin
                 error <= 0;

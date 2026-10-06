@@ -125,7 +125,7 @@ async def test_cdctl_i2c(dut):
     value = await i2c_read(dut, REG_SETTING)
     dut._log.info("REG_SETTING: 0x%02x" % int(value[0]))
 
-    await i2c_write(dut, REG_SETTING, [0b00010001])
+    await i2c_write(dut, REG_PIN_CFG, [0b00000001]) # push-pull
 
     await i2c_write(dut, REG_DIV_LS_H, [0])
     await i2c_write(dut, REG_DIV_LS_L, [39])

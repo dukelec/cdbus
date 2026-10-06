@@ -26,6 +26,7 @@ DFT_VERSION         = 0x0f
 
 REG_VERSION         = 0x00
 REG_SETTING         = 0x02
+REG_PIN_CFG         = 0x03
 REG_IDLE_WAIT_LEN   = 0x04
 REG_TX_PERMIT_LEN_L = 0x05
 REG_TX_PERMIT_LEN_H = 0x06
@@ -51,11 +52,19 @@ REG_FILTER_M1       = 0x1b
 REG_FILTER_MSK0     = 0x1c
 REG_FILTER_MSK1     = 0x1d
 
-BIT_SETTING_RX_INVERT       = 1 << 6
-BIT_SETTING_NO_DROP         = 1 << 3
-BIT_SETTING_USER_CRC        = 1 << 2
-BIT_SETTING_TX_INVERT       = 1 << 1
-BIT_SETTING_TX_PUSH_PULL    = 1 << 0
+BIT_SETTING_NO_DROP         = 1 << 5
+BIT_SETTING_USER_CRC        = 1 << 4
+BIT_SETTING_RAW_LOOPBACK    = 1 << 3
+BIT_SETTING_RAW             = 1 << 2
+BIT_SETTING_MODE_HALF       = 0 << 0
+BIT_SETTING_MODE_ARBIT      = 1 << 0
+BIT_SETTING_MODE_BS         = 2 << 0
+BIT_SETTING_MODE_FULL       = 3 << 0
+
+BIT_PIN_CFG_RX_INVERT       = 1 << 3
+BIT_PIN_CFG_TX_INVERT       = 1 << 2
+BIT_PIN_CFG_TX_KEEP_LOW     = 1 << 1
+BIT_PIN_CFG_TX_PUSH_PULL    = 1 << 0
 
 BIT_FLAG_TX_ERROR           = 1 << 7
 BIT_FLAG_TX_CD              = 1 << 6
@@ -167,6 +176,7 @@ async def write_tx(dut, idx, bytes_, reg=REG_DAT):
         return
     for i in range(len(bytes_)):
         await csr_write(dut, idx, reg, bytes_[i], i < len(bytes_) - 1)
+    await RisingEdge(getattr(dut, f'clk{idx}')) # let the auto submit finish before the next transfer
 
 async def seek_rx(dut, idx, offset): # byte offset
     await csr_write(dut, idx, REG_RX_ADDR, offset)

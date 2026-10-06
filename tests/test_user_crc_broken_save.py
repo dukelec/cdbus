@@ -32,8 +32,10 @@ async def test_cdbus(dut):
     val = await csr_read(dut, 0, REG_SETTING)
     dut._log.info(f'idx0 REG_SETTING: 0x{int(val):02x}')
 
-    await csr_write(dut, 0, REG_SETTING, 0b00010101) # user crc
-    await csr_write(dut, 1, REG_SETTING, 0b00011001) # save broken frame
+    await csr_write(dut, 0, REG_SETTING, 0b00010001) # user crc
+    await csr_write(dut, 1, REG_SETTING, 0b00100001) # save broken frame
+    await csr_write(dut, 0, REG_PIN_CFG, 0b00000001) # push-pull
+    await csr_write(dut, 1, REG_PIN_CFG, 0b00000001)
     await csr_write(dut, 1, REG_INT_MASK_L, 0b11000111)
     
     await set_div(dut, 0, 39, 2) # 1Mbps, 13.333Mbps
@@ -63,7 +65,7 @@ async def test_cdbus(dut):
     await FallingEdge(dut.irq1)
     
     
-    await csr_write(dut, 1, REG_SETTING, 0b00010101) # user crc
+    await csr_write(dut, 1, REG_SETTING, 0b00010001) # user crc
     
     await write_tx(dut, 0, b'\x01\x02\x01\xcd\x80\x81') # node 0x01 send to 0x02
     #await csr_write(dut, 0, REG_CTRL, BIT_TX_START)

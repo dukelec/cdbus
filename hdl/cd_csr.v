@@ -37,6 +37,8 @@ module cd_csr
         output              arbitration,
         output reg          not_drop,
         output reg          user_crc,
+        output reg          raw,        // transparent uart mode
+        output reg          loopback,   // raw mode: keep own tx echo
         output reg          tx_invert,
         output reg          tx_push_pull,
 
@@ -81,6 +83,7 @@ module cd_csr
 localparam
     REG_VERSION         = 'h00,
     REG_SETTING         = 'h02,
+    REG_PIN_CFG         = 'h03,
     REG_IDLE_WAIT_LEN   = 'h04,
     REG_TX_PERMIT_LEN_L = 'h05,
     REG_TX_PERMIT_LEN_H = 'h06,
@@ -149,7 +152,9 @@ always @(*)
         REG_VERSION:
             csr_readdata = VERSION;
         REG_SETTING:
-            csr_readdata = {tx_en_inner, rx_invert, mode_sel, not_drop, user_crc, tx_invert, tx_push_pull};
+            csr_readdata = {2'd0, not_drop, user_crc, loopback, raw, mode_sel};
+        REG_PIN_CFG:
+            csr_readdata = {4'd0, rx_invert, tx_invert, tx_en_inner, tx_push_pull};
         REG_IDLE_WAIT_LEN:
             csr_readdata = idle_wait_len;
         REG_TX_PERMIT_LEN_L:
@@ -224,6 +229,8 @@ always @(posedge clk or negedge reset_n)
         mode_sel <= 2'b01;
         not_drop <= 0;
         user_crc <= 0;
+        raw <= 0;
+        loopback <= 0;
         tx_invert <= 0;
         tx_push_pull <= 0;
 
@@ -371,12 +378,16 @@ always @(posedge clk or negedge reset_n)
         if (csr_write)
             case (csr_address)
                 REG_SETTING: begin
-                    tx_en_inner <= csr_writedata[7];
-                    rx_invert <= csr_writedata[6];
-                    mode_sel <= csr_writedata[5:4];
-                    not_drop <= csr_writedata[3];
-                    user_crc <= csr_writedata[2];
-                    tx_invert <= csr_writedata[1];
+                    not_drop <= csr_writedata[5];
+                    user_crc <= csr_writedata[4];
+                    loopback <= csr_writedata[3];
+                    raw <= csr_writedata[2];
+                    mode_sel <= csr_writedata[1:0];
+                end
+                REG_PIN_CFG: begin
+                    rx_invert <= csr_writedata[3];
+                    tx_invert <= csr_writedata[2];
+                    tx_en_inner <= csr_writedata[1];
                     tx_push_pull <= csr_writedata[0];
                 end
                 REG_IDLE_WAIT_LEN:
