@@ -18,16 +18,15 @@ async def raw_tx(dut, idx, data, user_crc=False):
     len_ = len(data) - 2 if user_crc else len(data)
     await write_tx(dut, idx, bytes([0, 0, len_]) + data)
 
-# bit3 is the flag of the pending page, undefined before the first page: check bit0 first
-def rx_pending(val):
-    return str(val)[-1] == '1'
-
 async def wait_rx(dut, idx):
     while True:
         await Timer(1, unit='us') # let the previous transfer settle
-        val = await read_int_flag(dut, idx)
-        if rx_pending(val):
-            return int(val)
+        try:
+            val = int(await read_int_flag(dut, idx))
+        except ValueError: # bit3 is undefined before the page arrives with save broken frame
+            continue
+        if val & BIT_FLAG_RX_PENDING:
+            return val
 
 # expect one rx page (including crc), flag bit3 means crc error
 async def raw_rx_check(dut, idx, expect, crc_err=False):
@@ -72,8 +71,8 @@ async def test_cdbus(dut):
     data = b'\x01\x03\x00\x00\x00\x0a'
     await raw_tx(dut, 0, data)
     await raw_rx_check(dut, 1, data + modbus_crc(data))
-    val = await read_int_flag(dut, 0)
-    if rx_pending(val):
+    val = int(await read_int_flag(dut, 0))
+    if val & BIT_FLAG_RX_PENDING:
         dut._log.error('idx0: echo not dropped')
         await exit_err()
 
@@ -90,8 +89,8 @@ async def test_cdbus(dut):
     await _send_bytes(dut, data + b'\x00\x00', sys_clk, 39, False) # bad crc: dropped, sticky flag
     await Timer(20, unit='us')
     for idx in [0, 1]:
-        val = await read_int_flag(dut, idx)
-        if rx_pending(val) or not (int(val) & BIT_FLAG_RX_ERROR):
+        val = int(await read_int_flag(dut, idx))
+        if (val & BIT_FLAG_RX_PENDING) or not (val & BIT_FLAG_RX_ERROR):
             dut._log.error(f'idx{idx}: bad crc frame not dropped or not flagged')
             await exit_err()
     await csr_write(dut, 1, REG_SETTING, BIT_SETTING_RAW | BIT_SETTING_NO_DROP) # save broken frame
