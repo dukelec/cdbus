@@ -23,6 +23,7 @@ module cd_tx_ser(
         output      [15:0]  crc_data,
         input               has_break,
         output reg          ack_break,
+        output              tx_busy,
 
         input               bus_idle,   // from rx_des
 
@@ -50,6 +51,8 @@ localparam
     BS_PRE          = 4'b0010,
     TX_PRE          = 4'b0100,
     DATA            = 4'b1000;
+
+assign tx_busy = (state != WAIT);
 
 reg [1:0] tx_permit_d;
 always @(posedge clk) tx_permit_d[1] <= tx_permit_d[0];

@@ -40,6 +40,8 @@ wire break_sync;
 wire arbitration;
 wire not_drop;
 wire user_crc;
+wire raw;
+wire loopback;
 wire tx_invert;
 wire tx_push_pull;
 
@@ -77,6 +79,7 @@ wire tx_drop;
 wire has_break;
 wire ack_break;
 wire tx_pending;
+wire tx_busy;
 wire cd;
 wire tx_err;
 
@@ -145,6 +148,8 @@ cd_csr #(
     .arbitration(arbitration),
     .not_drop(not_drop),
     .user_crc(user_crc),
+    .raw(raw),
+    .loopback(loopback),
     .tx_invert(tx_invert),
     .tx_push_pull(tx_push_pull),
 
@@ -241,6 +246,8 @@ cd_rx_bytes cd_rx_bytes_m(
     .filter_msk1(filter_msk1),
     .user_crc(user_crc),
     .not_drop(not_drop),
+    .raw(raw),
+    .drop_echo(tx_busy && !full_duplex && !loopback),
     .abort(rx_clean_all),
     .error(rx_error),
 
@@ -281,6 +288,7 @@ cd_tx_bytes cd_tx_bytes_m(
     .reset_n(reset_n),
 
     .user_crc(user_crc),
+    .raw(raw),
     .abort(tx_abort || tx_err),
 
     .data(ser_data),
@@ -291,6 +299,7 @@ cd_tx_bytes cd_tx_bytes_m(
     .crc_data(ser_crc_data),
 
     .ram_unread(tx_pending),
+    .ram_wr_en(tx_ram_wr_en),
     .ram_rd_byte(tx_ram_rd_byte),
     .ram_rd_addr(tx_ram_rd_addr),
     .ram_rd_en(tx_ram_rd_en),
@@ -309,6 +318,7 @@ cd_tx_ser cd_tx_ser_m(
     .crc_data(ser_crc_data),
     .has_break(has_break),
     .ack_break(ack_break),
+    .tx_busy(tx_busy),
 
     .bus_idle(bus_idle),
 

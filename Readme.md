@@ -11,7 +11,7 @@ This document only describes the modifications. For the full protocol and docume
 | Register Name |Addr     | Access | Default                | Remarks                                   |
 |---------------|---------|--------|------------------------|-------------------------------------------|
 | VERSION       |  0x00   | RD     | 0x0f                   |                                           |
-| SETTING       |  0x01   | RD/WR  | 0x10                   |                                           |
+| SETTING       |  0x01   | RD/WR  | 0x01                   | Byte 1: PIN_CFG of the 8-bit version      |
 | IDLE_WAIT_LEN |  0x02   | RD/WR  | 0x0a                   |                                           |
 | TX_PERMIT_LEN |  0x03   | RD/WR  | 0x14                   |                                           |
 | MAX_IDLE_LEN  |  0x04   | RD/WR  | 0xc8                   |                                           |
@@ -28,6 +28,10 @@ This document only describes the modifications. For the full protocol and docume
 | FILTER_M      |  0x0f   | RD/WR  | 0xffffffff             | [MSK1, MSK0, M1, M0]                      |
 
 DAT_HOLD and RX_ADDR only differ from the 8-bit version in that the RX_ADDR value is a 32-bit word offset instead of a byte offset.
+
+SETTING byte 0 is the SETTING of the 8-bit version, byte 1 is its PIN_CFG.
+In transparent mode with `CRC maintained by user`, a frame with data_len above 251 still fits in the 64 words of the page,
+since the bytes beyond the end of the page are placed at the reserved bytes at the start.
 
 
 

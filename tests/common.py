@@ -44,13 +44,22 @@ REG_RX_ADDR         = 0x0e
 REG_FILTER_M        = 0x0f
 
 REG_INT_MASK_L      = REG_INT_MASK
+REG_PIN_CFG         = 0x10 # pseudo address: byte 1 of SETTING, see csr_write
 
 
-BIT_SETTING_RX_INVERT       = 1 << 6
-BIT_SETTING_NO_DROP         = 1 << 3
-BIT_SETTING_USER_CRC        = 1 << 2
-BIT_SETTING_TX_INVERT       = 1 << 1
-BIT_SETTING_TX_PUSH_PULL    = 1 << 0
+BIT_SETTING_NO_DROP         = 1 << 5
+BIT_SETTING_USER_CRC        = 1 << 4
+BIT_SETTING_RAW_LOOPBACK    = 1 << 3
+BIT_SETTING_RAW             = 1 << 2
+BIT_SETTING_MODE_HALF       = 0 << 0
+BIT_SETTING_MODE_ARBIT      = 1 << 0
+BIT_SETTING_MODE_BS         = 2 << 0
+BIT_SETTING_MODE_FULL       = 3 << 0
+
+BIT_PIN_CFG_RX_INVERT       = 1 << 3
+BIT_PIN_CFG_TX_INVERT       = 1 << 2
+BIT_PIN_CFG_TX_KEEP_LOW     = 1 << 1
+BIT_PIN_CFG_TX_PUSH_PULL    = 1 << 0
 
 BIT_FLAG_TX_ERROR           = 1 << 7
 BIT_FLAG_TX_CD              = 1 << 6
@@ -120,6 +129,16 @@ async def csr_read(dut, idx, address, burst=False):
     return data
 
 async def csr_write(dut, idx, address, data, burst=False):
+    # SETTING byte 1 holds the PIN_CFG of the 8-bit version, keep the other byte
+    if address in (REG_SETTING, REG_PIN_CFG):
+        cur = int(await csr_read(dut, idx, REG_SETTING))
+        if address == REG_PIN_CFG:
+            address, data = REG_SETTING, (cur & 0xff) | (data << 8)
+        else:
+            data = (cur & 0xff00) | data
+    await _csr_write(dut, idx, address, data, burst)
+
+async def _csr_write(dut, idx, address, data, burst=False):
     addr_len = len(getattr(dut, f'csr_addr{idx}'))
     wdata_len = len(getattr(dut, f'csr_wdata{idx}'))
     
@@ -163,6 +182,7 @@ async def write_tx(dut, idx, bytes_, reg=REG_DAT):
             await csr_write(dut, idx, reg, val, True)
         else:
             await csr_write(dut, idx, reg, val, False)
+    await RisingEdge(getattr(dut, f'clk{idx}')) # let the auto submit finish before the next transfer
 
 async def seek_rx(dut, idx, offset): # byte offset, must be word-aligned
     await csr_write(dut, idx, REG_RX_ADDR, offset // 4)

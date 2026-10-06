@@ -16,6 +16,7 @@ module cd_tx_bytes(
         input               reset_n,
 
         input               user_crc,
+        input               raw,        // transparent mode: skip the first 3 bytes
         input               abort,
 
         output reg  [7:0]   data,
@@ -26,32 +27,41 @@ module cd_tx_bytes(
         input       [15:0]  crc_data,
 
         input               ram_unread,
+        input               ram_wr_en,
         input       [7:0]   ram_rd_byte,
         output      [7:0]   ram_rd_addr,
         output              ram_rd_en,
         output reg          ram_rd_done
     );
 
-assign has_data = ram_unread && !ram_rd_done;
+assign has_data = ram_unread && !ram_rd_done && hdr_done;
 assign ram_rd_en = ram_unread;
 
 reg [8:0] byte_cnt;
 assign ram_rd_addr = byte_cnt[7:0];
 reg [7:0] data_len; // backup 3rd byte
+reg hdr_done;       // raw mode: header prefetched, 2 clocks per byte for ram latency
+reg pf_tick;
 
 
 always @(posedge clk)
     if (!ram_unread || ram_rd_done) begin
         byte_cnt <= 0;
         data_len <= 0;
+        hdr_done <= !raw;
+        pf_tick <= 0;
         is_crc_byte <= 0;
         is_last_byte <= 0;
     end
     else begin
         data <= ram_rd_byte;
+        pf_tick <= !pf_tick && !ram_wr_en; // read lost to write in single port ram
 
-        if (byte_cnt == 2)
+        if (byte_cnt == 2) begin
             data_len <= ram_rd_byte;
+            if (pf_tick)
+                hdr_done <= 1;
+        end
 
         // we have enough time to change the byte which send at second bit
         else if (byte_cnt == data_len + 3) begin
@@ -65,7 +75,7 @@ always @(posedge clk)
             is_last_byte <= 1;
         end
 
-        if (ack_data)
+        if (ack_data || (pf_tick && !hdr_done))
             byte_cnt <= byte_cnt + 1'd1;
     end
 
