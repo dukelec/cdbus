@@ -86,8 +86,9 @@ it works with the traditional half-duplex mode and the full-duplex mode, set DIV
 The CRC of CDBUS is the same as MODBUS, so the CRC is still appended and checked by hardware unless `CRC maintained by user` is set.
 
 RX: bytes are collected into a page (up to 256 bytes), which is committed when the bus is idle for IDLE_WAIT_LEN;
-RX_LEN is the byte count minus one. A frame with CRC error is dropped and flagged like a broken CDBUS frame,
-or saved with `save broken frame` set. A single byte is dropped as noise.
+RX_LEN is the byte count minus one. A frame with CRC error or longer than 256 bytes is dropped and flagged
+like a broken CDBUS frame, or saved with `save broken frame` set (the page of an over-long frame is incomplete).
+A single byte is dropped as noise.
 In half-duplex mode, the echo of the own transmission is dropped unless the loopback bit is set.
 
 TX: the page layout is the same as a CDBUS frame, `[reserved, reserved, data_len, data...]`, only the data (up to 253 bytes)

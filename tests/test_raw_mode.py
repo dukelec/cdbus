@@ -42,7 +42,7 @@ async def raw_rx_check(dut, idx, expect, crc_err=False):
         await exit_err()
 
 
-@cocotb.test(timeout_time=20000, timeout_unit='us')
+@cocotb.test(timeout_time=40000, timeout_unit='us')
 async def test_cdbus(dut):
     dut._log.info('test_cdbus start.')
 
@@ -96,6 +96,25 @@ async def test_cdbus(dut):
     await csr_write(dut, 1, REG_SETTING, BIT_SETTING_RAW | BIT_SETTING_NO_DROP) # save broken frame
     await _send_bytes(dut, data + b'\x00\x00', sys_clk, 39, False)
     await raw_rx_check(dut, 1, data + b'\x00\x00', True)
+
+    # frames longer than 256 bytes are broken even if the crc is right: dropped on idx0,
+    # saved and flagged on idx1 (600 bytes wrap around the page, only the flag is checked)
+    for n in [300, 600]:
+        data = bytes([i & 0xff for i in range(n)])
+        await _send_bytes(dut, data + modbus_crc(data), sys_clk, 39, False)
+        await Timer(20, unit='us')
+        val = int(await read_int_flag(dut, 0))
+        if (val & BIT_FLAG_RX_PENDING) or not (val & BIT_FLAG_RX_ERROR):
+            dut._log.error(f'idx0: {n}-byte frame not dropped or not flagged')
+            await exit_err()
+        if n <= 512:
+            await raw_rx_check(dut, 1, data[:256], True)
+        else:
+            val = await wait_rx(dut, 1)
+            if not (val & BIT_FLAG_RX_ERROR):
+                dut._log.error(f'idx1: {n}-byte frame not flagged')
+                await exit_err()
+            await csr_write(dut, 1, REG_CTRL, BIT_RX_CLR_PENDING)
 
     # user crc: any content passes through, rx page up to 256 bytes
     await csr_write(dut, 0, REG_SETTING, BIT_SETTING_RAW | BIT_SETTING_USER_CRC)

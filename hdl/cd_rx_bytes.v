@@ -57,6 +57,7 @@ reg finish;
 reg is_promiscuous;
 reg is_multicast;
 reg is_data_too_long;
+reg raw_too_long;   // raw: more than 256 bytes received, the frame is broken
 
 assign ram_wr_len = (not_drop || raw) ? ram_wr_addr : data_len;
 
@@ -101,6 +102,7 @@ always @(posedge clk or negedge reset_n)
 
         byte_cnt <= 0;
         data_len <= 0;
+        raw_too_long <= 0;
 
         drop_flag <= 0;
         finish <= 0;
@@ -121,6 +123,7 @@ always @(posedge clk or negedge reset_n)
         if (state == INIT) begin
             byte_cnt <= 0;
             data_len <= 0;
+            raw_too_long <= 0;
             drop_flag <= 0;
         end
         else begin
@@ -128,8 +131,8 @@ always @(posedge clk or negedge reset_n)
             if (des_bus_idle) begin
                 if (byte_cnt != 0) begin
                     if (byte_cnt != 1 && !drop_flag) begin
-                        error <= raw ? !(des_crc_eq_zero || user_crc) : 1'b1; // raw: crc check only
-                        ram_switch <= not_drop || (raw && (des_crc_eq_zero || user_crc));
+                        error <= raw ? (!(des_crc_eq_zero || user_crc) || raw_too_long) : 1'b1; // raw: crc and length only
+                        ram_switch <= not_drop || (raw && (des_crc_eq_zero || user_crc) && !raw_too_long);
                     end
                     finish <= 1;
                     drop_flag <= 1; // avoid multi-clock ram_switch signal
@@ -142,6 +145,9 @@ always @(posedge clk or negedge reset_n)
                 if (!byte_cnt[8]) begin
                     ram_wr_addr <= byte_cnt[7:0];
                     ram_wr_en <= 1;
+                end
+                else if (raw) begin
+                    raw_too_long <= 1;
                 end
 
                 if (byte_cnt == 0) begin

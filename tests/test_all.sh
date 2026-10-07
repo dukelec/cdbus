@@ -12,6 +12,7 @@ for test_file in $LIST; do
     test_case=$(echo "$test_file" | cut -f 1 -d '.')
     test_wrapper="cdbus_wrapper_dft"
     [[ "$test_case" =~ "full_duplex" ]] && test_wrapper="cdbus_wrapper_fduplex"
+    [[ "$test_case" =~ "no_chip_select" ]] && test_wrapper="cdbus_wrapper_nocs"
     echo -e "\nTest ${test_case}, wrapper: ${test_wrapper}\n"
     rm -f .exit_ok
     rm -rf ./sim_build
