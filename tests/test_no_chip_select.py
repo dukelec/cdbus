@@ -16,8 +16,7 @@
 from common import *
 
 async def write_tx_submit(dut, idx, bytes_):
-    for i in range(len(bytes_)):
-        await csr_write(dut, idx, REG_DAT, bytes_[i], i < len(bytes_) - 1)
+    await write_tx(dut, idx, bytes_)
     await csr_write(dut, idx, REG_CTRL, BIT_TX_START)
 
 async def wait_rx(dut, idx):
@@ -65,14 +64,14 @@ async def test_cdbus(dut):
         await exit_err()
 
     # frame 2: the addresses were reset by CTRL; read in two bursts, the second after RX_ADDR
-    frame = b'\x01\x02\x03\xaa\xbb\xcc'
+    frame = b'\x01\x02\x05\xaa\xbb\xcc\xdd\xee' # seek offset word-aligned for the 32-bit version
     await write_tx_submit(dut, 0, frame)
     await wait_rx(dut, 1)
     rx = await read_rx(dut, 1, 2)
-    await seek_rx(dut, 1, 3)
-    rx += await read_rx(dut, 1, 3)
+    await seek_rx(dut, 1, 4)
+    rx += await read_rx(dut, 1, 4)
     dut._log.info(f'idx1: received: {rx.hex()}')
-    if rx != frame[0:2] + frame[3:6]:
+    if rx != frame[0:2] + frame[4:8]:
         dut._log.error('idx1: receive mismatch')
         await exit_err()
     await csr_write(dut, 1, REG_CTRL, BIT_RX_CLR_PENDING)

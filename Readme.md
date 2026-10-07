@@ -286,7 +286,7 @@ so the following read starts from the set position.
     input           chip_select,
     output          irq,            // interrupt output
 
-    // supports zero-latency read/write and burst transfers
+    // read data is valid in the clock after csr_read, one byte per clock in a burst
     input   [4:0]   csr_address,
     input           csr_read,
     output  [7:0]   csr_readdata,
@@ -303,18 +303,18 @@ so the following read starts from the set position.
 
 Besides the transfer-based behaviour described above for interfaces like SPI (enabled by `CD_CHIP_SELECT`),
 `chip_select` gates the read port of the RX RAM to reduce power consumption:
-the RX RAM is only read while it is high, and the data is available one clock after it goes high.
-
+the RX RAM is only read while it is high, so it must be high in the clock of a DAT read.
 For SoC integration, drive it from the bus select of this peripheral, e.g. `psel` of APB or `hsel` of AHB,
-both of which are asserted one clock before the data is sampled.
-For a bus that samples read data in the same clock as the select, assert it one clock earlier (e.g. from the address decode),
 or simply tie it high at the cost of the RX RAM being read every clock.
 
-**CD_CSR_NO_LATENCY:**
+**Read timing:**
 
-Without this define, DAT reads on consecutive clocks return the same byte, since the RX RAM needs one clock per byte.
-Define it to allow zero-wait-state bursts from a synchronous host such as a SoC bus or DMA.
-It is not safe for an asynchronous host such as SPI, since the read data can glitch when `csr_read` toggles.
+A read is taken at the clock edge where `csr_read` is high, and the data is valid in the clock after it,
+as on a synchronous bus with one clock of read latency; `csr_address` must be kept until then.
+`csr_read` is sampled every clock: each clock it is high is one read, so holding it high for N clocks
+is a burst of N reads, one byte per clock. Since reading DAT advances the address and reading INT_FLAG_L
+clears the flags, a host that stretches one access over several clocks (e.g. wait states) must assert
+`csr_read` in only one of them.
 
 
 ## Examples

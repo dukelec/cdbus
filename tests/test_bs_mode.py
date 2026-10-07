@@ -29,7 +29,7 @@ async def test_cdbus(dut):
     await check_version(dut, 1)
     await check_version(dut, 2)
     
-    val = await csr_read(dut, 0, REG_SETTING, False)
+    val = await csr_read(dut, 0, REG_SETTING)
     dut._log.info(f'idx0 REG_SETTING: 0x{int(val):02x}')
 
     await csr_write(dut, 0, REG_SETTING, 0b00000010) # bs mode

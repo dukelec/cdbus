@@ -12,7 +12,6 @@
  */
 
 `timescale 1 ns / 1 ps
-`define CD_CSR_NO_LATENCY
 
 module cdbus_wrapper_nocs(
         input       clk0,

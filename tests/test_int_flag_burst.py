@@ -29,10 +29,11 @@ async def read_in_transfer(dut, idx, address):
     await RisingEdge(getattr(dut, f'clk{idx}'))
     getattr(dut, f'csr_addr{idx}').value = address
     getattr(dut, f'csr_read{idx}').value = 1
+    await RisingEdge(getattr(dut, f'clk{idx}'))
+    getattr(dut, f'csr_read{idx}').value = 0
     await ReadOnly()
     data = getattr(dut, f'csr_rdata{idx}').value
     await RisingEdge(getattr(dut, f'clk{idx}'))
-    getattr(dut, f'csr_read{idx}').value = 0
     return data
 
 @cocotb.test(timeout_time=2000, timeout_unit='us')
@@ -56,16 +57,15 @@ async def test_cdbus(dut):
     # transfer 1: 3-byte burst read of INT_FLAG_L, break #2 arrives between the bytes
     await RisingEdge(dut.clk0)
     dut.cs0.value = 1
-    val0 = await read_in_transfer(dut, 0, REG_INT_FLAG_L)
-    dut._log.info(f'idx0: INT_FLAG_L: 0x{int(val0):02x}')
-    if not (int(val0) & BIT_FLAG_RX_BREAK):
+    val0 = int((await read_in_transfer(dut, 0, REG_INT_FLAG_L))[7:0]) # low byte: the 32-bit version adds RX_LEN
+    dut._log.info(f'idx0: INT_FLAG_L: 0x{val0:02x}')
+    if not (val0 & BIT_FLAG_RX_BREAK):
         dut._log.error('idx0: break #1 not reported')
         await exit_err()
     await send_break(dut, sys_clk, 39) # break #2
     await Timer(2, unit='us')
-    val1 = await read_in_transfer(dut, 0, REG_INT_FLAG_L) # RX_LEN
-    val2 = await read_in_transfer(dut, 0, REG_INT_FLAG_L) # INT_FLAG_H
-    dut._log.info(f'idx0: RX_LEN: {val1}, INT_FLAG_H: {val2}')
+    await read_in_transfer(dut, 0, REG_INT_FLAG_L) # RX_LEN
+    await read_in_transfer(dut, 0, REG_INT_FLAG_L) # INT_FLAG_H
     await RisingEdge(dut.clk0)
     dut.cs0.value = 0
     await Timer(1, unit='us')

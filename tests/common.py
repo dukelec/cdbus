@@ -117,21 +117,23 @@ async def reset(dut, idx, duration=10000):
     dut._log.debug(f'idx{idx}: out of reset')
     getattr(dut, f'cs{idx}').value = 0
 
-async def csr_read(dut, idx, address, burst=False):
-    addr_len = len(getattr(dut, f'csr_addr{idx}'))
-    
+# the read is taken at the clock edge, the data is valid in the clock after it
+# (csr_address is kept until then); a burst takes one byte per clock
+async def csr_read(dut, idx, address, len_=1):
     await RisingEdge(getattr(dut, f'clk{idx}'))
     getattr(dut, f'cs{idx}').value = 1
     getattr(dut, f'csr_addr{idx}').value = address
     getattr(dut, f'csr_read{idx}').value = 1
-    await ReadOnly()
-    data = getattr(dut, f'csr_rdata{idx}').value
-    if not burst:
+    ret = []
+    for i in range(len_):
         await RisingEdge(getattr(dut, f'clk{idx}'))
-        getattr(dut, f'csr_read{idx}').value = 0
-        getattr(dut, f'csr_addr{idx}').value = LogicArray('x' * addr_len)
-        getattr(dut, f'cs{idx}').value = 0
-    return data
+        if i == len_ - 1:
+            getattr(dut, f'csr_read{idx}').value = 0
+            getattr(dut, f'cs{idx}').value = 0
+        await ReadOnly()
+        ret.append(getattr(dut, f'csr_rdata{idx}').value)
+    await RisingEdge(getattr(dut, f'clk{idx}')) # leave the read-only phase
+    return ret if len_ > 1 else ret[0]
 
 async def csr_write(dut, idx, address, data, burst=False):
     addr_len = len(getattr(dut, f'csr_addr{idx}'))
@@ -182,16 +184,10 @@ async def seek_rx(dut, idx, offset): # byte offset
     await csr_write(dut, idx, REG_RX_ADDR, offset)
 
 async def read_rx(dut, idx, len_, reg=REG_DAT):
-    ret = b''
     if len_ == 0:
-        return ret
-    await RisingEdge(getattr(dut, f'clk{idx}'))
-    getattr(dut, f'cs{idx}').value = 1
-    await RisingEdge(getattr(dut, f'clk{idx}'))
-    for i in range(len_):
-        val = await csr_read(dut, idx, reg, i < len_ - 1)
-        ret += bytes([int(val)])
-    return ret
+        return b''
+    vals = await csr_read(dut, idx, reg, len_)
+    return bytes([int(v) for v in (vals if len_ > 1 else [vals])])
 
 async def read_rx_len(dut, idx):
     return await csr_read(dut, idx, REG_RX_LEN)
@@ -200,10 +196,7 @@ async def read_int_flag(dut, idx):
     return await csr_read(dut, idx, REG_INT_FLAG_L)
 
 async def read_int_flag3(dut, idx):
-    val0 = await csr_read(dut, idx, REG_INT_FLAG_L, True)
-    val1 = await csr_read(dut, idx, REG_INT_FLAG_L, True)
-    val2 = await csr_read(dut, idx, REG_INT_FLAG_L, False)
-    return val0, val1, val2
+    return await csr_read(dut, idx, REG_INT_FLAG_L, 3)
 
 
 async def exit_err():
