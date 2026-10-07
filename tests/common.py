@@ -44,6 +44,7 @@ REG_RX_ADDR         = 0x0e
 REG_FILTER_M        = 0x0f
 
 REG_INT_MASK_L      = REG_INT_MASK
+REG_INT_FLAG_L      = REG_INT_FLAG
 REG_PIN_CFG         = 0x10 # pseudo address: byte 1 of SETTING, see csr_write
 
 
@@ -112,21 +113,23 @@ async def reset(dut, idx, duration=10000):
     dut._log.debug(f'idx{idx}: out of reset')
     getattr(dut, f'cs{idx}').value = 0
 
-async def csr_read(dut, idx, address, burst=False):
-    addr_len = len(getattr(dut, f'csr_addr{idx}'))
-    
+# the read is taken at the clock edge, the data is valid in the clock after it
+# (csr_address is kept until then); a burst takes one word per clock
+async def csr_read(dut, idx, address, len_=1):
     await RisingEdge(getattr(dut, f'clk{idx}'))
     getattr(dut, f'cs{idx}').value = 1
     getattr(dut, f'csr_addr{idx}').value = address
     getattr(dut, f'csr_read{idx}').value = 1
-    await ReadOnly()
-    data = getattr(dut, f'csr_rdata{idx}').value
-    if not burst:
+    ret = []
+    for i in range(len_):
         await RisingEdge(getattr(dut, f'clk{idx}'))
-        getattr(dut, f'csr_read{idx}').value = 0
-        getattr(dut, f'csr_addr{idx}').value = LogicArray('x' * addr_len)
-        getattr(dut, f'cs{idx}').value = 0
-    return data
+        if i == len_ - 1:
+            getattr(dut, f'csr_read{idx}').value = 0
+            getattr(dut, f'cs{idx}').value = 0
+        await ReadOnly()
+        ret.append(getattr(dut, f'csr_rdata{idx}').value)
+    await RisingEdge(getattr(dut, f'clk{idx}')) # leave the read-only phase
+    return ret if len_ > 1 else ret[0]
 
 async def csr_write(dut, idx, address, data, burst=False):
     # SETTING byte 1 holds the PIN_CFG of the 8-bit version, keep the other byte
@@ -191,18 +194,12 @@ async def read_rx(dut, idx, len_, reg=REG_DAT):
     ret = b''
     if len_ == 0:
         return ret
-    await RisingEdge(getattr(dut, f'clk{idx}'))
-    getattr(dut, f'cs{idx}').value = 1
-    await RisingEdge(getattr(dut, f'clk{idx}'))
     blk_cnt = int((len_+3)/4)
     left = len_%4
-    for i in range(blk_cnt):
-        if i < blk_cnt - 1:
-            val = await csr_read(dut, idx, reg, True)
-        else:
-            val = await csr_read(dut, idx, reg, False)
-            if left != 0:
-                val = val[left*8-1:0]
+    vals = await csr_read(dut, idx, reg, blk_cnt)
+    for i, val in enumerate(vals if blk_cnt > 1 else [vals]):
+        if i == blk_cnt - 1 and left != 0:
+            val = val[left*8-1:0]
         ret += struct.pack('<I', int(val))
     return ret[0:len_]
 
