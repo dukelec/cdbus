@@ -22,6 +22,10 @@ module cdbus
         input               reset_n,
         input               chip_select, // reduce ram_rx power consumption
         output              irq,
+`ifdef CD_CSR_CRC
+        input               csr_crc_en, // crc mode of the host interface: reads have no side effects
+        input               csr_cancel, // do not submit the tx page of this transfer, sampled at its end
+`endif
 
         input       [4:0]   csr_address,
         input               csr_read,
@@ -134,6 +138,10 @@ cd_csr #(
     .irq(irq),
 `ifdef CD_CHIP_SELECT
     .chip_select(chip_select),
+`endif
+`ifdef CD_CSR_CRC
+    .csr_crc_en(csr_crc_en),
+    .csr_cancel(csr_cancel),
 `endif
 
     .csr_address(csr_address),

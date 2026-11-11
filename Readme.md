@@ -127,7 +127,7 @@ which must be longer than the IDLE_WAIT_LEN of the receiver.
 | DIV_HS_H          |  0x0f   | RD/WR  | 0x01            |                                                      |
 | INT_MASK_L        |  0x10   | RD/WR  | 0x00            | Interrupt mask (16 bits)                             |
 | INT_MASK_H        |  0x11   | RD/WR  | 0x00            |                                                      |
-| INT_FLAG_L        |  0x12   | RD     | n/a             | Status (16 bits)                                     |
+| INT_FLAG_L        |  0x12   | RD/WR  | n/a             | Status (16 bits)                                     |
 | INT_FLAG_H        |  0x13   | RD     | n/a             |                                                      |
 | RX_LEN            |  0x14   | RD     | n/a             | Data length of the frame to be read, or frame_len - 1 |
 | DAT               |  0x15   | RD/WR  | n/a             | Read & Write RX page                                 |
@@ -140,7 +140,6 @@ which must be longer than the IDLE_WAIT_LEN of the receiver.
 | FILTER_MSK1       |  0x1d   | RD/WR  | 0xff            | Multicast mask1                                      |
 
 To write a register with more than 8 bits, first write the high byte followed by the low byte.
-The high byte can be omitted if it is 0.
 
 Time unit: one bit period at the low-speed baud rate.
 
@@ -230,6 +229,9 @@ Output of irq = ((INT_FLAG & INT_MASK) != 0).
 | [0]     | 1: RX page ready to read                     |
 
 Reading this register will automatically clear bit7, bit6, bit3, bit2 and bit1.
+Writing 1 to these bits of INT_FLAG_L clears them as well.
+
+While bit4 is 0, writes to DAT and DAT_HOLD are dropped: start writing a frame only after it is 1.
 
 If `save broken frame` is set, bit3 indicates whether the current page to be read is broken
 (reading this register does not clear bit3).
@@ -293,6 +295,10 @@ so the following read starts from the set position.
     input           chip_select,
     output          irq,            // interrupt output
 
+    // only with `CD_CSR_CRC`, for host interfaces with CRC
+    input           csr_crc_en,     // CRC mode: a read has no side effect
+    input           csr_cancel,     // do not submit the TX page of this transfer
+
     // read data is valid in the clock after csr_read, one byte per clock in a burst
     input   [4:0]   csr_address,
     input           csr_read,
@@ -313,6 +319,24 @@ Besides the transfer-based behaviour described above for interfaces like SPI (en
 the RX RAM is only read while it is high, so it must be high in the clock of a DAT read.
 For SoC integration, drive it from the bus select of this peripheral, e.g. `psel` of APB or `hsel` of AHB,
 or simply tie it high at the cost of the RX RAM being read every clock.
+
+**csr_crc_en:**
+
+For host interfaces which protect every transfer by a CRC.
+While it is high, a read neither clears nor releases anything, so a transfer disturbed on the way can be repeated:
+
+ - Reading INT_FLAG_L does not clear any bit: write 1 to the bits to be cleared.
+ - Reading DAT does not release the RX page: release it by bit4 of CTRL.
+   To read again after a read of DAT_HOLD, write RX_ADDR first.
+
+The SPI, QSPI and I<sup>2</sup>C interfaces of the examples drive it from a chip-level register,
+add a length and a CRC to every transfer, and let a write take effect only if its CRC is correct,
+see [example/Readme.md](example/Readme.md).
+
+**csr_cancel:**
+
+Sampled at the end of a transfer, in the clock after `chip_select` goes low.
+If it is high, the TX page written through DAT in this transfer is not submitted.
 
 **Read timing:**
 

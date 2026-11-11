@@ -23,6 +23,10 @@ module cd_csr
 `ifdef CD_CHIP_SELECT
         input               chip_select,
 `endif
+`ifdef CD_CSR_CRC
+        input               csr_crc_en, // crc mode of the host interface: reads have no side effects
+        input               csr_cancel, // do not submit the tx page of this transfer, sampled at its end
+`endif
 
         input       [4:0]   csr_address,
         input               csr_read,
@@ -137,8 +141,17 @@ reg [23:0] int_flag_shift;
 reg [15:0] int_flag_snapshot;
 `endif
 
+`ifdef CD_CSR_CRC
+wire crc_mode = csr_crc_en;
+wire cancel = csr_cancel;
+`else
+wire crc_mode = 1'b0;
+wire cancel = 1'b0;
+`endif
+
 wire is_dat_addr = (csr_address == REG_DAT) || (csr_address == REG_DAT_HOLD);
-assign tx_ram_wr_en = is_dat_addr ? csr_write : 1'b0;
+// when no page is free, the write page is the one waiting to be sent
+assign tx_ram_wr_en = is_dat_addr && csr_write && !tx_ram_full;
 
 assign full_duplex = mode_sel == 2'd3;
 assign break_sync = mode_sel == 2'd2;
@@ -274,7 +287,7 @@ always @(posedge clk or negedge reset_n)
 
         if (flag_rd_d) begin
 `ifdef CD_CHIP_SELECT
-            if (!flag_cleared) begin
+            if (!flag_cleared && !crc_mode) begin
                 if (int_flag_snapshot[3])
                     rx_error_flag <= 0; // not care when not_drop
                 if (int_flag_snapshot[2])
@@ -289,12 +302,28 @@ always @(posedge clk or negedge reset_n)
             flag_cleared <= 1;
             int_flag_shift <= {8'd0, int_flag_shift[23:8]};
 `else
-            rx_error_flag <= 0;
-            rx_lost_flag <= 0;
-            rx_break_flag <= 0;
-            cd_flag <= 0;
-            tx_error_flag <= 0;
+            if (!crc_mode) begin
+                rx_error_flag <= 0;
+                rx_lost_flag <= 0;
+                rx_break_flag <= 0;
+                cd_flag <= 0;
+                tx_error_flag <= 0;
+            end
 `endif
+        end
+
+        // write 1 to clear, placed before the set conditions below: a new event wins
+        if (csr_write && csr_address == REG_INT_FLAG_L) begin
+            if (csr_writedata[7])
+                tx_error_flag <= 0;
+            if (csr_writedata[6])
+                cd_flag <= 0;
+            if (csr_writedata[3])
+                rx_error_flag <= 0;
+            if (csr_writedata[2])
+                rx_lost_flag <= 0;
+            if (csr_writedata[1])
+                rx_break_flag <= 0;
         end
 
 `ifdef CD_CHIP_SELECT
@@ -310,8 +339,8 @@ always @(posedge clk or negedge reset_n)
             if (!tx_open)
                 tx_ram_wr_addr <= 0;
             if (chip_select_d[0]) begin // end of transfer
-                rx_ram_rd_done <= has_read_rx;
-                tx_ram_wr_done <= has_write_tx;
+                rx_ram_rd_done <= has_read_rx && !crc_mode;
+                tx_ram_wr_done <= has_write_tx && !cancel;
             end
         end
 `endif
@@ -341,7 +370,7 @@ always @(posedge clk or negedge reset_n)
             tx_error_flag <= 1;
         if (ack_break)
             has_break <= 0;
-        if (csr_read || csr_write)
+        if (csr_write)
             h_val_bkup <= 0; // optional
 
         if (csr_write)

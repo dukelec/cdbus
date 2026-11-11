@@ -22,6 +22,16 @@ def modbus_crc(data):
     return CRC16(modbus_flag=True).calculate(data).to_bytes(2, byteorder='little')
 
 
+# crc mode of spi, qspi and i2c: crc-16/ccitt-false over the bytes before it
+def spi_crc16(data):
+    crc = 0xffff
+    for b in data:
+        crc ^= b << 8
+        for _ in range(8):
+            crc = ((crc << 1) ^ 0x1021) & 0xffff if crc & 0x8000 else (crc << 1) & 0xffff
+    return crc
+
+
 DFT_VERSION         = 0x0f
 
 REG_VERSION         = 0x00
@@ -51,11 +61,18 @@ REG_FILTER_M0       = 0x1a
 REG_FILTER_M1       = 0x1b
 REG_FILTER_MSK0     = 0x1c
 REG_FILTER_MSK1     = 0x1d
+REG_INTF_CFG        = 0x38 # chip-level registers
+REG_PIN_RE_CTRL     = 0x39
 
 BIT_SETTING_NO_DROP         = 1 << 5
 BIT_SETTING_USER_CRC        = 1 << 4
 BIT_SETTING_RAW_LOOPBACK    = 1 << 3
 BIT_SETTING_RAW             = 1 << 2
+BIT_INTF_INT_PULL_UP        = 1 << 5
+BIT_INTF_INT_PUSH_PULL      = 1 << 4
+BIT_INTF_SDO_EARLY          = 1 << 1
+BIT_INTF_CRC_MODE           = 1 << 0
+
 BIT_SETTING_MODE_HALF       = 0 << 0
 BIT_SETTING_MODE_ARBIT      = 1 << 0
 BIT_SETTING_MODE_BS         = 2 << 0

@@ -12,6 +12,7 @@
  */
 
 `define CD_CHIP_SELECT
+`define CD_CSR_CRC // remove it to leave out the crc mode
 
 
 module cdctl_spi(
@@ -58,20 +59,32 @@ always @(posedge g_clk or negedge pll_lock)
         reset_sync <= {reset_sync[0], 1'b1};
 wire reset_n = reset_sync[1];
 
-wire [4:0] csr_address;
+wire [5:0] csr_address;
 wire csr_read;
 wire [7:0] csr_readdata;
 wire csr_write;
 wire [7:0] csr_writedata;
 
-wire irq;
-assign int_n = reset_n && irq ? 1'b0 : 1'bz;
+wire core_read;
+wire [7:0] core_readdata;
+wire core_write;
 
-spi_slave spi_slave_m(
+wire crc_en;
+wire sdo_early;
+wire csr_cancel;
+
+wire irq;
+wire int_push_pull;
+assign int_n = !reset_n ? 1'bz : int_push_pull ? !irq : (irq ? 1'b0 : 1'bz);
+
+spi_slave #(.A_WIDTH(6)) spi_slave_m(
     .clk(g_clk),
     .reset_n(reset_n),
     .chip_select(chip_select),
-    .sdo_early(1'b0),
+    .sdo_early(sdo_early),
+    
+    .crc_en(crc_en),
+    .csr_cancel(csr_cancel),
     
     .csr_address(csr_address),
     .csr_read(csr_read),
@@ -85,15 +98,41 @@ spi_slave spi_slave_m(
     .sdo(sdo)
 );
 
-cdbus cdbus_m(
+cdctl_regs cdctl_regs_m(
     .clk(g_clk),
     .reset_n(reset_n),
-    .chip_select(chip_select),
     
     .csr_address(csr_address),
     .csr_read(csr_read),
     .csr_readdata(csr_readdata),
     .csr_write(csr_write),
+    .csr_writedata(csr_writedata),
+    
+    .core_read(core_read),
+    .core_readdata(core_readdata),
+    .core_write(core_write),
+    
+    .int_push_pull(int_push_pull),
+    .int_pull_up(),     // no such pad option and no re pin on this module
+    .re_out_en(),
+    .re_out(),
+    .crc_en(crc_en),
+    .sdo_early(sdo_early)
+);
+
+cdbus cdbus_m(
+    .clk(g_clk),
+    .reset_n(reset_n),
+    .chip_select(chip_select),
+`ifdef CD_CSR_CRC
+    .csr_crc_en(crc_en),
+    .csr_cancel(csr_cancel),
+`endif
+    
+    .csr_address(csr_address[4:0]),
+    .csr_read(core_read),
+    .csr_readdata(core_readdata),
+    .csr_write(core_write),
     .csr_writedata(csr_writedata),
     
     .irq(irq),

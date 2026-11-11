@@ -176,6 +176,38 @@ async def test_cdctl_spi(dut):
         dut._log.error('RX page not released after seek read')
         await exit_err()
 
+    # chip-level registers: int pin and re pin control
+    regs = dut.cdctl_spi_m.cdctl_regs_m
+    if dut.int_n.value != Logic('z'):
+        dut._log.error('int_n not released')
+        await exit_err()
+    await spi_write(dut, REG_INTF_CFG, [BIT_INTF_INT_PUSH_PULL | BIT_INTF_INT_PULL_UP])
+    value = await spi_read(dut, REG_INTF_CFG)
+    if value != [0x30] or dut.int_n.value != Logic('1') or not regs.int_pull_up.value:
+        dut._log.error(f'wrong INTF_CFG: {value}, int_n: {dut.int_n.value}')
+        await exit_err()
+    await spi_write(dut, REG_INT_MASK_L, [0x10]) # empty tx page available
+    await Timer(CLK_PERIOD * 10)
+    if dut.int_n.value != Logic('0'):
+        dut._log.error('int_n not low')
+        await exit_err()
+    await spi_write(dut, REG_INT_MASK_L, [0x00])
+    await spi_write(dut, REG_INTF_CFG, [0x00])
+    await Timer(CLK_PERIOD * 10)
+    if dut.int_n.value != Logic('z') or regs.int_pull_up.value:
+        dut._log.error('int_n not back to open-drain')
+        await exit_err()
+    await spi_write(dut, REG_PIN_RE_CTRL, [0x11]) # push-pull, high
+    value = await spi_read(dut, REG_PIN_RE_CTRL)
+    if value != [0x11] or not regs.re_out_en.value or not regs.re_out.value:
+        dut._log.error(f'wrong PIN_RE_CTRL: {value}')
+        await exit_err()
+    await spi_write(dut, REG_PIN_RE_CTRL, [0x10]) # low
+    value = await spi_read(dut, REG_PIN_RE_CTRL)
+    if value != [0x10] or not regs.re_out_en.value or regs.re_out.value:
+        dut._log.error(f'wrong PIN_RE_CTRL: {value}')
+        await exit_err()
+
     dut._log.info("test_cdctl_spi done.")
     await exit_ok()
 

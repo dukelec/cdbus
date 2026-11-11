@@ -1,5 +1,5 @@
-# Family & Device:    iCE40UL1K
-# Package:            CM36A
+# Family & Device:    iCE5LP2K (iCE5LP4K: same pins)
+# Package:            CM36
 
 set_io clk_i F2 -io_std SB_LVCMOS -pullup no
 set_io clk_o F1 -io_std SB_LVCMOS -pullup no
