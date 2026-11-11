@@ -31,7 +31,8 @@ module cd_tx_ser(
         input       [15:0]  div_hs,
         input       [9:0]   tx_permit_len,
         input       [9:0]   max_idle_len,
-        input       [1:0]   tx_pre_len,
+        input       [2:0]   tx_pre_len,
+        input       [3:0]   break_ext_len,
         input               full_duplex,
         input               break_sync,
         input               arbitration,
@@ -59,7 +60,7 @@ always @(posedge clk) tx_permit_d[1] <= tx_permit_d[0];
 wire tx_permit = break_sync ? (tx_permit_d == 2'b01) : tx_permit_d[0];
 reg reach_max_idle;
 reg [9:0] tx_wait_cnt;
-reg [1:0] delay_cnt;
+reg [3:0] delay_cnt; // TX_EN pre-assert bits, then extra break bits
 
 reg is_break;
 wire [9:0] tx_data = is_break ? 10'd0 : {1'b1, data, 1'b0};
@@ -108,7 +109,7 @@ always @(posedge clk or negedge reset_n)
         end
 
         BS_PRE, TX_PRE: begin
-            if (delay_cnt == tx_pre_len) begin
+            if (delay_cnt[2:0] == tx_pre_len) begin
                 state <= DATA;
                 baud_sync <= 1;
             end
@@ -159,7 +160,7 @@ always @(posedge clk or negedge reset_n)
 // delay_cnt
 
 always @(posedge clk) begin
-    if (state == WAIT)
+    if (state == WAIT || (state == DATA && bit_cnt != 9))
         delay_cnt <= 0;
     else if (bit_inc)
         delay_cnt <= delay_cnt + 1'b1;
@@ -214,8 +215,9 @@ always @(posedge clk or negedge reset_n)
                 if (bit_cnt == 9) begin
                     bit_cnt <= 0;
                     if (is_break) begin
-                        ack_break <= 1;
-                        bit_cnt <= 9; // tx remains 1 before exiting DATA state
+                        bit_cnt <= 9; // tx stays low for the extra bits
+                        if (delay_cnt == break_ext_len)
+                            ack_break <= 1;
                     end
                     else begin
                         ack_data <= 1;

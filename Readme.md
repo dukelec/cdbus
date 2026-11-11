@@ -94,7 +94,7 @@ In half-duplex mode, the echo of the own transmission is dropped unless the loop
 TX: the page layout is the same as a CDBUS frame, `[reserved, reserved, data_len, data...]`, only the data (up to 253 bytes)
 and the CRC are sent; with `CRC maintained by user`, the last two bytes come from the page as well,
 data_len can still be 253: the bytes beyond the end of the page wrap around to the reserved bytes at the start.
-The idle time between frames is IDLE_WAIT_LEN (half-duplex, if RX sees TX) plus TX_PERMIT_LEN plus TX_PRE_LEN,
+The idle time between frames is IDLE_WAIT_LEN (half-duplex, if RX sees TX) plus TX_PERMIT_LEN plus the TX_EN pre-assert time,
 which must be longer than the IDLE_WAIT_LEN of the receiver.
 
 
@@ -119,7 +119,7 @@ which must be longer than the IDLE_WAIT_LEN of the receiver.
 | TX_PERMIT_LEN_H   |  0x06   | RD/WR  | 0x00            |                                                      |
 | MAX_IDLE_LEN_L    |  0x07   | RD/WR  | 0xc8            | Max idle wait time, BS mode (10 bits)                |
 | MAX_IDLE_LEN_H    |  0x08   | RD/WR  | 0x00            |                                                      |
-| TX_PRE_LEN        |  0x09   | RD/WR  | 0x01            | TX_EN pre-assert time (2 bits)                       |
+| TX_CFG            |  0x09   | RD/WR  | 0x01            | TX_EN pre-assert time and break character length     |
 | FILTER            |  0x0b   | RD/WR  | 0xff            | Local address                                        |
 | DIV_LS_L          |  0x0c   | RD/WR  | 0x5a            | Low-speed rate setting (16 bits)                     |
 | DIV_LS_H          |  0x0d   | RD/WR  | 0x01            |                                                      |
@@ -175,13 +175,20 @@ Transparent mode only works with mode 00 and 11.
 | [0]     | Enable push-pull output for TX and TX_EN pin      |
 
 
-**TX_PRE_LEN:**
+**TX_CFG:**
 
-Example waveforms for TX output and TX_EN pins (TX_PRE_LEN = 1 bit):
+| FIELD   | DESCRIPTION                                                  |
+|-------- |--------------------------------------------------------------|
+| [7:4]   | Extra length of the break character: 10 + n bits             |
+| [2:0]   | TX_EN pre-assert time, in bits                               |
+
+Example waveforms for TX output and TX_EN pins (pre-assert time = 1 bit):
 
 <img alt="arbitration" src="docs/img/to_te_wave_pre.svg" width="75%">
 
-Not used in arbitration mode, nor for the break character automatically generated in BS mode.
+The pre-assert time is not used in arbitration mode, nor for the break character automatically generated in BS mode.
+
+The extra length applies to all break characters sent, the receiver accepts any break of 10 bits or longer.
 
 
 **FILTERS:**

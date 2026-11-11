@@ -45,7 +45,8 @@ module cd_csr
         output reg  [7:0]   idle_wait_len,
         output reg  [9:0]   tx_permit_len,
         output reg  [9:0]   max_idle_len,
-        output reg  [1:0]   tx_pre_len,
+        output reg  [2:0]   tx_pre_len,
+        output reg  [3:0]   break_ext_len,
         output reg  [7:0]   filter,
         output reg  [7:0]   filter_m0,
         output reg  [7:0]   filter_m1,
@@ -89,7 +90,7 @@ localparam
     REG_TX_PERMIT_LEN_H = 'h06,
     REG_MAX_IDLE_LEN_L  = 'h07,
     REG_MAX_IDLE_LEN_H  = 'h08,
-    REG_TX_PRE_LEN      = 'h09,
+    REG_TX_CFG          = 'h09,
     REG_FILTER          = 'h0b,
     REG_DIV_LS_L        = 'h0c,
     REG_DIV_LS_H        = 'h0d,
@@ -162,8 +163,8 @@ always @(*)
             csr_readdata = max_idle_len[7:0];
         REG_MAX_IDLE_LEN_H:
             csr_readdata = {6'd0, max_idle_len[9:8]};
-        REG_TX_PRE_LEN:
-            csr_readdata = {6'd0, tx_pre_len};
+        REG_TX_CFG:
+            csr_readdata = {break_ext_len, 1'd0, tx_pre_len};
         REG_FILTER:
             csr_readdata = filter;
         REG_DIV_LS_L:
@@ -225,6 +226,7 @@ always @(posedge clk or negedge reset_n)
         tx_permit_len <= 20;
         max_idle_len <= 200;
         tx_pre_len <= 1;
+        break_ext_len <= 0;
         filter <= 8'hff;
         filter_m0 <= 8'hff;
         filter_m1 <= 8'hff;
@@ -367,8 +369,10 @@ always @(posedge clk or negedge reset_n)
                     max_idle_len <= {h_val_bkup[1:0], csr_writedata};
                 REG_MAX_IDLE_LEN_H:
                     h_val_bkup <= csr_writedata;
-                REG_TX_PRE_LEN:
-                    tx_pre_len <= csr_writedata[1:0];
+                REG_TX_CFG: begin
+                    tx_pre_len <= csr_writedata[2:0];
+                    break_ext_len <= csr_writedata[7:4];
+                end
                 REG_FILTER:
                     filter <= csr_writedata;
                 REG_DIV_LS_L:
