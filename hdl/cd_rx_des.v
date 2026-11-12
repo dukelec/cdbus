@@ -117,8 +117,13 @@ always @(posedge clk or negedge reset_n)
             default: state <= WAIT_IDLE;
         endcase
 
-        if (force_wait_idle || bit_err || rx_break)
+        if (force_wait_idle || rx_break || (bit_err && bit_cnt != 1)) begin
             state <= WAIT_IDLE;
+        end
+        else if (bit_err) begin // start bit high at its sample point (bit_cnt 1): noise, stay ready to receive
+            state <= WAIT_DATA;
+            baud_sel <= 0;
+        end
     end
 
 
