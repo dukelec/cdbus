@@ -77,21 +77,19 @@ async def test_cdbus(dut):
         #await csr_write(dut, 0, REG_CTRL, BIT_TX_START)
         await RisingEdge(dut.irq0)
         
-        dirty = dut.cdbus_m1.cd_rx_ram_m.dirty.value
         wr_sel = int(dut.cdbus_m1.cd_rx_ram_m.wr_sel.value)
         rd_sel = int(dut.cdbus_m1.cd_rx_ram_m.rd_sel.value)
         rx_pend_len = int(dut.cdbus_m1.cd_csr_m.rx_pend_len.value)
-        dut._log.info(f'dirty flag: {dirty}, {int(dirty):016x}, w:{wr_sel} r:{rd_sel}, pend_len: {rx_pend_len}')
+        dut._log.info(f'rx buffer: w:{wr_sel} r:{rd_sel}, pend_len: {rx_pend_len}')
     
     
     await Timer(10, unit='us')
-    dirty = dut.cdbus_m1.cd_rx_ram_m.dirty.value
     wr_sel = int(dut.cdbus_m1.cd_rx_ram_m.wr_sel.value)
     rd_sel = int(dut.cdbus_m1.cd_rx_ram_m.rd_sel.value)
     rx_pend_len = int(dut.cdbus_m1.cd_csr_m.rx_pend_len.value)
-    dut._log.info(f'dirty flag: {dirty}, {int(dirty):016x}, w:{wr_sel} r:{rd_sel}, pend_len: {rx_pend_len} (before first read)')
-    if int(dirty) != 0x04b01012f0216035:
-        dut._log.error(f'wrong dirty value')
+    dut._log.info(f'rx buffer: w:{wr_sel} r:{rd_sel}, pend_len: {rx_pend_len} (before first read)')
+    if (wr_sel, rd_sel, rx_pend_len) != (60, 0, 19): # the last two frames do not fit
+        dut._log.error(f'wrong rx buffer state')
         await exit_err()
     
     
@@ -118,11 +116,10 @@ async def test_cdbus(dut):
     #await csr_write(dut, 1, REG_CTRL, BIT_RX_CLR_PENDING)
     
     await Timer(1, unit='us')
-    dirty = dut.cdbus_m1.cd_rx_ram_m.dirty.value
     wr_sel = int(dut.cdbus_m1.cd_rx_ram_m.wr_sel.value)
     rd_sel = int(dut.cdbus_m1.cd_rx_ram_m.rd_sel.value)
     rx_pend_len = int(dut.cdbus_m1.cd_csr_m.rx_pend_len.value)
-    dut._log.info(f'dirty flag: {dirty}, {int(dirty):016x}, w:{wr_sel} r:{rd_sel}, pend_len: {rx_pend_len} (after first read)')
+    dut._log.info(f'rx buffer: w:{wr_sel} r:{rd_sel}, pend_len: {rx_pend_len} (after first read)')
     
     
     # send one more package:
@@ -141,11 +138,10 @@ async def test_cdbus(dut):
     #await csr_write(dut, 0, REG_CTRL, BIT_TX_START)
     await RisingEdge(dut.irq0)
     
-    dirty = dut.cdbus_m1.cd_rx_ram_m.dirty.value
     wr_sel = int(dut.cdbus_m1.cd_rx_ram_m.wr_sel.value)
     rd_sel = int(dut.cdbus_m1.cd_rx_ram_m.rd_sel.value)
     rx_pend_len = int(dut.cdbus_m1.cd_csr_m.rx_pend_len.value)
-    dut._log.info(f'dirty flag: {dirty}, {int(dirty):016x}, w:{wr_sel} r:{rd_sel}, pend_len: {rx_pend_len}')
+    dut._log.info(f'rx buffer: w:{wr_sel} r:{rd_sel}, pend_len: {rx_pend_len}')
     
     
     # read all packages except last one:
@@ -169,11 +165,10 @@ async def test_cdbus(dut):
         #await csr_write(dut, 1, REG_CTRL, BIT_RX_CLR_PENDING)
         
         await Timer(1, unit='us')
-        dirty = dut.cdbus_m1.cd_rx_ram_m.dirty.value
         wr_sel = int(dut.cdbus_m1.cd_rx_ram_m.wr_sel.value)
         rd_sel = int(dut.cdbus_m1.cd_rx_ram_m.rd_sel.value)
         rx_pend_len = int(dut.cdbus_m1.cd_csr_m.rx_pend_len.value)
-        dut._log.info(f'dirty flag: {dirty}, {int(dirty):016x}, w:{wr_sel} r:{rd_sel}, pend_len: {rx_pend_len}')
+        dut._log.info(f'rx buffer: w:{wr_sel} r:{rd_sel}, pend_len: {rx_pend_len}')
 
     
     # read last package:
@@ -195,11 +190,10 @@ async def test_cdbus(dut):
     #await csr_write(dut, 1, REG_CTRL, BIT_RX_CLR_PENDING)
     
     await Timer(1, unit='us')
-    dirty = dut.cdbus_m1.cd_rx_ram_m.dirty.value
     wr_sel = int(dut.cdbus_m1.cd_rx_ram_m.wr_sel.value)
     rd_sel = int(dut.cdbus_m1.cd_rx_ram_m.rd_sel.value)
     rx_pend_len = int(dut.cdbus_m1.cd_csr_m.rx_pend_len.value)
-    dut._log.info(f'dirty flag: {dirty}, {int(dirty):016x}, w:{wr_sel} r:{rd_sel}, pend_len: {rx_pend_len} (after last read)')
+    dut._log.info(f'rx buffer: w:{wr_sel} r:{rd_sel}, pend_len: {rx_pend_len} (after last read)')
     
     
     # send one more package at last:
@@ -224,13 +218,13 @@ async def test_cdbus(dut):
     await FallingEdge(dut.irq1)
     
     await Timer(1, unit='us')
-    dirty = dut.cdbus_m1.cd_rx_ram_m.dirty.value
     wr_sel = int(dut.cdbus_m1.cd_rx_ram_m.wr_sel.value)
     rd_sel = int(dut.cdbus_m1.cd_rx_ram_m.rd_sel.value)
-    dut._log.info(f'dirty flag: {dirty}, {int(dirty):016x}, w:{wr_sel} r:{rd_sel}, (end)')
+    rx_pend_len = int(dut.cdbus_m1.cd_csr_m.rx_pend_len.value)
+    dut._log.info(f'rx buffer: w:{wr_sel} r:{rd_sel}, pend_len: {rx_pend_len} (end)')
     
-    if int(dirty) != 0:
-        dut._log.error(f'wrong dirty value')
+    if wr_sel != rd_sel or rx_pend_len != 0:
+        dut._log.error(f'rx buffer not empty')
         await exit_err()
     
     dut._log.info('test_cdbus done.')

@@ -347,6 +347,14 @@ is a burst of N reads, one byte per clock. Since reading DAT advances the addres
 clears the flags, a host that stretches one access over several clocks (e.g. wait states) must assert
 `csr_read` in only one of them.
 
+**RX release:**
+
+A release of the RX page (bit4 of CTRL, or the end of a transfer that read DAT) takes the size of the page
+from an index RAM, which is read in the clock after the page became the current one.
+Release a page only when bit0 of INT_FLAG is set for it, and keep two releases at least 2 clocks apart
+(3 with `CD_SPRAM_ONLY`). Otherwise the pages still waiting are read from a wrong position,
+until all of them are released.
+
 
 ## Examples
 

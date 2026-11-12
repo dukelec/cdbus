@@ -25,7 +25,7 @@ module cd_rx_ram
            input                 rd_done,
            input                 rd_done_all,
            output reg            unread,
-           output reg [I_WIDTH-1:0] unread_len,
+           output  [I_WIDTH-1:0] unread_len,
 
            // user data len (0: 0 bytes, 253: 253 bytes), or: frame len, include crc (0: 1bytes, 255: 256bytes)
            output       [7:0]    rd_len,
@@ -46,7 +46,11 @@ parameter F_WIDTH = 8 - S_WIDTH;        // frag amount size width, 8-(11-6) = 3,
 
 reg    [I_WIDTH-1:0] wr_sel;
 reg    [I_WIDTH-1:0] rd_sel;
-reg [2**I_WIDTH-1:0] dirty;
+reg      [I_WIDTH:0] unread_cnt;
+assign unread_len = unread_cnt[I_WIDTH-1:0];
+// frames follow one another from rd_sel to wr_sel: the block at rd_sel is the only one a write can run into
+wire pending = (unread_cnt != 0);
+wire [I_WIDTH-1:0] wr_blk = wr_sel + wr_addr[7:S_WIDTH];
 
 reg  [B_WIDTH-1:0] buf_wr_addr;
 wire [B_WIDTH-1:0] buf_rd_addr = (rd_sel << S_WIDTH) + rd_addr; // {rd_sel, {S_WIDTH{1'b0}}}
@@ -63,18 +67,18 @@ reg switch_d;
 reg [F_WIDTH-1:0] wr_frag_amount;
 
 wire len_inc = switch_d && !wr_cancel;      // frame commit
-wire len_dec = rd_done && dirty[rd_sel];    // frame retire
+wire len_dec = rd_done && pending;          // frame retire
 
 
 `ifdef CD_SPRAM_ONLY
-reg dirty_rd_d;
+reg pending_d;
 always @(posedge clk) begin
-    dirty_rd_d <= dirty[rd_sel];
-    unread <= dirty[rd_sel] && dirty_rd_d; // delay one clock
+    pending_d <= pending;
+    unread <= pending && pending_d; // delay one clock
 end
 `else
 always @(posedge clk)
-    unread <= dirty[rd_sel];
+    unread <= pending;
 `endif
 
 
@@ -92,7 +96,7 @@ cd_sdpram #(.A_WIDTH(B_WIDTH)) cd_rx_ram_buf_m(
 
 cd_sdpram #(.A_WIDTH(I_WIDTH), .D_WIDTH(F_WIDTH+9)) cd_rx_idx_table_m(
     .clk(clk),
-    .cen(~dirty[rd_sel] & ~(switch_d & ~wr_cancel)),
+    .cen(~pending & ~(switch_d & ~wr_cancel)),
 
     .ra(rd_sel),
     .rd(idx_rd_val),
@@ -108,13 +112,12 @@ always @(posedge clk or negedge reset_n)
         switch_fail <= 0;
         rd_sel <= 0;
         wr_sel <= 0;
-        dirty <= 0;
         wr_cancel <= 0;
         wr_en_d <= 0;
         wr_frag_amount <= 0;
         switch_d <= 0;
         wr_err_d <= 0;
-        unread_len <= 0;
+        unread_cnt <= 0;
     end
     else begin
         switch_fail <= 0;
@@ -126,7 +129,7 @@ always @(posedge clk or negedge reset_n)
         // re-evaluate wr_cancel at frame start (wr_addr == 0) to clear
         // the stale flag left by a previous non-committed frame
         if (wr_en && (!wr_cancel || wr_addr == 0)) begin
-            if (dirty[wr_sel + wr_addr[7:S_WIDTH]]) begin
+            if (pending && wr_blk == rd_sel) begin
                 wr_cancel <= 1;
             end
             else begin
@@ -141,7 +144,6 @@ always @(posedge clk or negedge reset_n)
                 switch_fail <= 1;
             end
             else begin // len_inc
-                dirty[wr_sel] <= 1;
                 wr_sel <= wr_sel + wr_frag_amount + 1'b1; // wr_sel next may equal to rd_sel
                 // write idx_table here
             end
@@ -149,24 +151,25 @@ always @(posedge clk or negedge reset_n)
         end
 
         if (len_dec) begin
-            dirty[rd_sel] <= 0;
             rd_sel <= rd_sel + 1'b1 + idx_frag_amount;
         end
+        else if (!pending) begin
+            rd_sel <= wr_sel; // the same already, unless a bit was flipped: get in step again
+        end
 
-        // len_inc and len_dec may fire in the same clock; keep unread_len intact
+        // len_inc and len_dec may fire in the same clock; keep unread_cnt intact
         if (len_inc && !len_dec)
-            unread_len <= unread_len + 1'b1;
+            unread_cnt <= unread_cnt + 1'b1;
         else if (len_dec && !len_inc)
-            unread_len <= unread_len - 1'b1;
+            unread_cnt <= unread_cnt - 1'b1;
 
         if (rd_done_all) begin
             switch_fail <= 0;
             rd_sel <= 0;
             wr_sel <= 0;
-            dirty <= 0;
             wr_cancel <= 0;
             switch_d <= 0;
-            unread_len <= 0;
+            unread_cnt <= 0;
         end
     end
 
