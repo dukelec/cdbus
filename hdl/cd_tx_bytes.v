@@ -16,7 +16,7 @@ module cd_tx_bytes(
         input               reset_n,
 
         input               user_crc,
-        input               raw,        // transparent mode: skip the first 3 bytes
+        input               raw,        // transparent mode: skip the first 3 bytes, the crc comes from the page
         input               abort,
 
         output reg  [7:0]   data,
@@ -42,6 +42,7 @@ assign ram_rd_addr = byte_cnt[7:0];
 reg [7:0] data_len; // backup 3rd byte
 reg hdr_done;       // raw mode: header prefetched, 2 clocks per byte for ram latency
 reg pf_tick;
+wire hw_crc = !user_crc && !raw;
 
 
 always @(posedge clk)
@@ -65,12 +66,12 @@ always @(posedge clk)
 
         // we have enough time to change the byte which send at second bit
         else if (byte_cnt == data_len + 3) begin
-            if (!user_crc)
+            if (hw_crc)
                 data <= crc_data[7:0];
             is_crc_byte <= 1;
         end
         else if (byte_cnt == data_len + 4) begin
-            if (!user_crc)
+            if (hw_crc)
                 data <= crc_data[15:8];
             is_last_byte <= 1;
         end

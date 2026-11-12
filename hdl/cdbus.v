@@ -322,6 +322,7 @@ cd_tx_ser cd_tx_ser_m(
 
     .data(ser_data),
     .has_data(ser_has_data),
+    .has_page(raw && tx_pending),
     .ack_data(ser_ack_data),
     .is_crc_byte(ser_is_crc_byte),
     .is_last_byte(ser_is_last_byte),

@@ -17,6 +17,7 @@ module cd_tx_ser(
 
         input       [7:0]   data,
         input               has_data,
+        input               has_page,   // raw: a page is queued, the frame goes on with it
         output reg          ack_data,
         input               is_crc_byte,
         input               is_last_byte,
@@ -67,6 +68,7 @@ wire [9:0] tx_data = is_break ? 10'd0 : {1'b1, data, 1'b0};
 
 reg [3:0] bit_cnt; // range: [0, 9]
 reg arbitration_field;
+reg page_wait; // stop bit held until the next page is prefetched, its first byte not sent yet
 
 reg crc_clk;
 
@@ -116,7 +118,7 @@ always @(posedge clk or negedge reset_n)
         end
 
         DATA: begin
-            if (cd || err || (!has_data && !is_break))
+            if (cd || err || (!has_data && !has_page && !is_break))
                 state <= WAIT;
 
             if (ack_data)
@@ -178,6 +180,7 @@ always @(posedge clk or negedge reset_n)
         ack_break <= 0;
         bit_cnt <= 0;
         arbitration_field <= 1;
+        page_wait <= 0;
 
         tx <= 1;
         tx_en <= 0;
@@ -195,6 +198,7 @@ always @(posedge clk or negedge reset_n)
             tx <= 1;
             tx_en <= (state == TX_PRE);
             arbitration_field <= 1;
+            page_wait <= 0;
             tx_en_a_d <= 0;
         end
         else begin
@@ -219,10 +223,17 @@ always @(posedge clk or negedge reset_n)
                         if (delay_cnt == break_ext_len)
                             ack_break <= 1;
                     end
+                    else if (page_wait) begin
+                        if (!has_data)
+                            bit_cnt <= 9;
+                        page_wait <= !has_data;
+                    end
                     else begin
                         ack_data <= 1;
-                        if (is_last_byte)
+                        if (is_last_byte) begin
                             bit_cnt <= 9;
+                            page_wait <= 1;
+                        end
                     end
                 end
             end

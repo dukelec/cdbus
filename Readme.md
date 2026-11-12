@@ -83,18 +83,18 @@ The CDBUS-BS mode is suitable for high-speed applications with few nodes, and is
 For protocols other than CDBUS over a plain UART (8N1 only), e.g. MODBUS RTU,
 the controller can pass raw frames through without header;
 it works with the traditional half-duplex mode and the full-duplex mode, set DIV_HS equal to DIV_LS and keep FILTER at 0xff.
-The CRC of CDBUS is the same as MODBUS, so the CRC is still appended and checked by hardware unless `CRC maintained by user` is set.
+The CRC is left to the host, as with `CRC maintained by user`: the hardware neither appends nor checks it.
 
-RX: bytes are collected into a page (up to 256 bytes), which is committed when the bus is idle for IDLE_WAIT_LEN;
-RX_LEN is the byte count minus one. A frame with CRC error or longer than 256 bytes is dropped and flagged
-like a broken CDBUS frame, or saved with `save broken frame` set (the page of an over-long frame is incomplete).
-A single byte is dropped as noise.
+RX: bytes are collected into pages of up to 255 bytes. A full page is committed at once and the frame goes on in the next page;
+the frame ends with a shorter page when the bus is idle for IDLE_WAIT_LEN, an empty page if the frame ends with a full one.
+RX_LEN is the byte count minus one, 0xff for an empty page. A single byte is dropped as noise, unless it follows a full page.
 In half-duplex mode, the echo of the own transmission is dropped unless the loopback bit is set.
 
-TX: the page layout is the same as a CDBUS frame, `[reserved, reserved, data_len, data...]`, only the data (up to 253 bytes)
-and the CRC are sent; with `CRC maintained by user`, the last two bytes come from the page as well,
-data_len can still be 253: the bytes beyond the end of the page wrap around to the reserved bytes at the start.
-The idle time between frames is IDLE_WAIT_LEN (half-duplex, if RX sees TX) plus TX_PERMIT_LEN plus the TX_EN pre-assert time,
+TX: the page layout is the same as a CDBUS frame, `[reserved, reserved, data_len, data...]`, data_len + 2 bytes are sent (2 to 255):
+the bytes beyond the end of the page wrap around to the reserved bytes at the start.
+A page that is ready when the previous one is sent follows it in the same frame, after up to 3 extra stop bits;
+to send separate frames, write the next page only after bit5 of INT_FLAG is set.
+Otherwise the idle time between frames is IDLE_WAIT_LEN (half-duplex, if RX sees TX) plus TX_PERMIT_LEN plus the TX_EN pre-assert time,
 which must be longer than the IDLE_WAIT_LEN of the receiver.
 
 
@@ -244,7 +244,7 @@ there are 64 RX pages waiting to be read.
 
 The default value of this register corresponds to the data_len of the frame to be read.  
 If `save broken frame` is enabled, this register's value equals the size of the frame to be read minus one (including CRC).
-In transparent mode, it is the size of the page minus one (including CRC).
+In transparent mode, it is the size of the page minus one, 0xff for an empty page.
 
 For interfaces like SPI, when two or three bytes are read from the INT_FLAG_L register in a single transfer,
 the first byte represents INT_FLAG_L, the second byte represents RX_LEN, and the third byte represents INT_FLAG_H.
