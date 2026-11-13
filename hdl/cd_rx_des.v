@@ -74,6 +74,8 @@ always @(posedge clk or negedge reset_n)
                 is_first_byte <= 1;
                 if (idle_cnt >= idle_wait_len) begin
                     state <= BUS_IDLE;
+                    baud_sync <= rx; // hold the baud counter from the first idle clock
+                    baud_sync_3x <= !rx; // start bit already there: one count ahead
                 end
             end
 
@@ -84,6 +86,7 @@ always @(posedge clk or negedge reset_n)
                 end
                 else if (idle_cnt >= idle_wait_len) begin
                     state <= BUS_IDLE;
+                    baud_sync <= 1;
                 end
             end
 
