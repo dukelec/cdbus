@@ -64,7 +64,7 @@ async def test_cdbus(dut):
         await exit_err()
 
     # frame 2: the addresses were reset by CTRL; read in two bursts, the second after RX_ADDR
-    frame = b'\x01\x02\x05\xaa\xbb\xcc\xdd\xee' # seek offset word-aligned for the 32-bit version
+    frame = b'\x01\x02\x05\xaa\xbb\xcc\xdd\xee'
     await write_tx_submit(dut, 0, frame)
     await wait_rx(dut, 1)
     rx = await read_rx(dut, 1, 2)

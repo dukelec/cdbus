@@ -70,7 +70,7 @@ always @(posedge clk)
                 data <= crc_data[7:0];
             is_crc_byte <= 1;
         end
-        else if (byte_cnt == data_len + 4) begin
+        else if (is_crc_byte) begin // byte_cnt is data_len + 4
             if (hw_crc)
                 data <= crc_data[15:8];
             is_last_byte <= 1;

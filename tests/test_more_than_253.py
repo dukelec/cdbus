@@ -74,10 +74,7 @@ async def test_cdbus(dut):
     #await csr_write(dut, 0, REG_CTRL, BIT_TX_START)
     await Timer(250, unit='us')
     
-    if IS_32BITS:
-        rx_str_ = (await read_rx(dut, 1, 5)).hex() # read 5 bytes (include crc)
-    else:
-        rx_str_ = (await read_rx(dut, 1, 256)).hex() # read 256 bytes
+    rx_str_ = (await read_rx(dut, 1, 256)).hex() # read 256 bytes
     dut._log.info(f'idx1: rx ram: {rx_str_}  (not received)')
     
     dut._log.info('test_cdbus done.')

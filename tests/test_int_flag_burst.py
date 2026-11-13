@@ -57,7 +57,7 @@ async def test_cdbus(dut):
     # transfer 1: 3-byte burst read of INT_FLAG_L, break #2 arrives between the bytes
     await RisingEdge(dut.clk0)
     dut.cs0.value = 1
-    val0 = int((await read_in_transfer(dut, 0, REG_INT_FLAG_L))[7:0]) # low byte: the 32-bit version adds RX_LEN
+    val0 = int(await read_in_transfer(dut, 0, REG_INT_FLAG_L))
     dut._log.info(f'idx0: INT_FLAG_L: 0x{val0:02x}')
     if not (val0 & BIT_FLAG_RX_BREAK):
         dut._log.error('idx0: break #1 not reported')

@@ -21,7 +21,6 @@ from PyCRC.CRC16 import CRC16
 def modbus_crc(data):
     return CRC16(modbus_flag=True).calculate(data).to_bytes(2, byteorder='little')
 
-IS_32BITS           = False
 DFT_VERSION         = 0x0f
 
 REG_VERSION         = 0x00

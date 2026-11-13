@@ -43,8 +43,8 @@ reg [7:0] idle_cnt;
 reg [3:0] bit_cnt; // range: [0, 9]
 reg bit_err;
 
-reg [1:0] rx_d;
-always @(posedge clk) rx_d <= {rx_d[0], rx};
+reg rx_d;
+always @(posedge clk) rx_d <= rx;
 
 reg crc_clk;
 wire [15:0] crc_data;
@@ -103,7 +103,7 @@ always @(posedge clk or negedge reset_n)
 
             DATA: begin
                 // triggered simultaneously with data_clk
-                if (bit_cap && bit_cnt == 9 && rx_d[0] == 1) begin
+                if (bit_cap && bit_cnt == 9 && rx_d == 1) begin
                     if (rx == 1) begin
                         state <= WAIT_DATA;
                         baud_sel <= 0;
@@ -168,13 +168,13 @@ always @(posedge clk or negedge reset_n)
             bit_cnt <= bit_cnt + 1'd1;
 
             if (bit_cnt == 0) begin
-                if (rx_d[0] == 1)
+                if (rx_d == 1)
                     bit_err <= 1;
             end
             else if (bit_cnt == 9) begin
                 bit_cnt <= 0;
 
-                if (rx_d[0] == 0) begin
+                if (rx_d == 0) begin
                     if (data == 0)
                         rx_break <= 1;
                     else
@@ -185,7 +185,7 @@ always @(posedge clk or negedge reset_n)
                 end
             end
             else begin
-                data <= {rx_d[0], data[7:1]};
+                data <= {rx_d, data[7:1]};
                 crc_clk <= 1'd1;
             end
         end
@@ -209,7 +209,7 @@ cd_crc cd_crc_rx_m(
     .clk(clk),
     .clean(state == BUS_IDLE),
     .data_clk(crc_clk),
-    .data_in(rx_d[1]),
+    .data_in(data[7]),
     .crc_out(crc_data)
 );
 

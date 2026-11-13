@@ -47,12 +47,11 @@ module cd_tx_ser(
         output reg          tx_en_a
     );
 
-reg [3:0] state;
+reg [2:0] state;
 localparam
-    WAIT            = 4'b0001,
-    BS_PRE          = 4'b0010,
-    TX_PRE          = 4'b0100,
-    DATA            = 4'b1000;
+    WAIT            = 3'b001,
+    TX_PRE          = 3'b010,
+    DATA            = 3'b100;
 
 assign tx_busy = (state != WAIT);
 
@@ -100,18 +99,17 @@ always @(posedge clk or negedge reset_n)
 
             if (tx_permit && (has_data || has_break)) begin
                 is_break <= has_break;
-                // bs mode: no tx_en before a break, as for the one sent at max idle
-                state <= arbitration ? DATA : (break_sync && has_break) ? BS_PRE : TX_PRE;
+                state <= arbitration ? DATA : TX_PRE;
                 baud_sync <= 1;
             end
             else if (break_sync && reach_max_idle && (has_data || has_break)) begin
                 is_break <= 1;
-                state <= BS_PRE;
+                state <= TX_PRE;
                 baud_sync <= 1;
             end
         end
 
-        BS_PRE, TX_PRE: begin
+        TX_PRE: begin
             if (delay_cnt[2:0] == tx_pre_len) begin
                 state <= DATA;
                 baud_sync <= 1;
@@ -197,7 +195,7 @@ always @(posedge clk or negedge reset_n)
         if (state != DATA) begin
             bit_cnt <= 0;
             tx <= 1;
-            tx_en <= (state == TX_PRE);
+            tx_en <= (state == TX_PRE && !(break_sync && is_break)); // bs mode: tx_en comes with the break
             arbitration_field <= 1;
             page_wait <= 0;
             tx_en_a_d <= 0;

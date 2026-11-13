@@ -54,9 +54,9 @@ reg [8:0] byte_cnt;
 reg [7:0] data_len; // backup 3rd byte
 reg drop_flag;
 reg finish;
-reg is_promiscuous;
-reg is_multicast;
-reg is_data_too_long;
+wire is_promiscuous = (filter == 8'hff);
+wire is_multicast = (des_data & filter_msk0) == filter_m0 || (des_data & filter_msk1) == filter_m1;
+wire is_data_too_long = (data_len > (user_crc ? 8'd251 : 8'd253));
 reg raw_cont;       // raw: the previous page was full, the frame goes on
 
 // raw: byte count minus one, 0xff for an empty page
@@ -113,13 +113,6 @@ always @(posedge clk or negedge reset_n)
         ram_wr_en <= 0;
         ram_switch <= 0;
         finish <= 0;
-        is_promiscuous <= (filter == 8'hff);
-        is_data_too_long <= (data_len > (user_crc ? 8'd251 : 8'd253));
-
-        if ((des_data & filter_msk0) == filter_m0 || (des_data & filter_msk1) == filter_m1)
-            is_multicast <= 1;
-        else
-            is_multicast <= 0;
 
         if (state == INIT) begin
             byte_cnt <= 0;

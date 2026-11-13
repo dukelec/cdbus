@@ -130,15 +130,14 @@ reg flag_rd_d;      // read data is valid in the clock after csr_read: the side 
                     // reading INT_FLAG_L (shift, clear) are delayed to keep that clock intact
 
 `ifdef CD_CHIP_SELECT
-reg [1:0] chip_select_d;
+reg chip_select_d;
 reg has_read_rx;    // DAT accessed in this transfer: auto finish at end
 reg has_write_tx;
 reg flag_cleared;   // INT_FLAG_L read in this transfer: clear the flags only once,
                     // the later bytes of a burst must not clear events after the snapshot
 reg rx_open;        // set by DAT_HOLD, cleared by DAT or CTRL: keep page and address across transfers
 reg tx_open;
-reg [23:0] int_flag_shift;
-reg [15:0] int_flag_snapshot;
+reg [23:0] int_flag_shift; // {INT_FLAG_H, RX_LEN, INT_FLAG_L} taken before the transfer
 `endif
 
 `ifdef CD_CSR_CRC
@@ -197,7 +196,7 @@ always @(*)
         REG_INT_FLAG_L:
             csr_readdata = int_flag_shift[7:0];
         REG_INT_FLAG_H:
-            csr_readdata = int_flag_snapshot[15:8];
+            csr_readdata = int_flag_shift[23:16];
 `else
         REG_INT_FLAG_L:
             csr_readdata = int_flag[7:0];
@@ -288,19 +287,19 @@ always @(posedge clk or negedge reset_n)
         if (flag_rd_d) begin
 `ifdef CD_CHIP_SELECT
             if (!flag_cleared && !crc_mode) begin
-                if (int_flag_snapshot[3])
+                if (int_flag_shift[3])
                     rx_error_flag <= 0; // not care when not_drop
-                if (int_flag_snapshot[2])
+                if (int_flag_shift[2])
                     rx_lost_flag <= 0;
-                if (int_flag_snapshot[1])
+                if (int_flag_shift[1])
                     rx_break_flag <= 0;
-                if (int_flag_snapshot[6])
+                if (int_flag_shift[6])
                     cd_flag <= 0;
-                if (int_flag_snapshot[7])
+                if (int_flag_shift[7])
                     tx_error_flag <= 0;
             end
             flag_cleared <= 1;
-            int_flag_shift <= {8'd0, int_flag_shift[23:8]};
+            int_flag_shift <= {int_flag_shift[23:16], int_flag_shift[23:8]};
 `else
             if (!crc_mode) begin
                 rx_error_flag <= 0;
@@ -327,9 +326,8 @@ always @(posedge clk or negedge reset_n)
         end
 
 `ifdef CD_CHIP_SELECT
-        chip_select_d <= {chip_select_d[0], chip_select};
+        chip_select_d <= chip_select;
         if (!chip_select) begin
-            int_flag_snapshot <= int_flag;
             int_flag_shift <= {int_flag[15:8], rx_ram_rd_len, int_flag[7:0]};
             has_read_rx <= 0;
             has_write_tx <= 0;
@@ -338,7 +336,7 @@ always @(posedge clk or negedge reset_n)
                 rx_ram_rd_addr <= 0;
             if (!tx_open)
                 tx_ram_wr_addr <= 0;
-            if (chip_select_d[0]) begin // end of transfer
+            if (chip_select_d) begin // end of transfer
                 rx_ram_rd_done <= has_read_rx && !crc_mode;
                 tx_ram_wr_done <= has_write_tx && !cancel;
             end

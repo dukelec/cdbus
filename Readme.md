@@ -205,6 +205,8 @@ DIV_xx[15:0] = sysclk ÷ baud_rate − 1
 
 The minimum value is 2.
 
+In arbitration mode, the low-speed rate must not be too high: allow for the delays of the devices and of the transmission line.
+
 For single-rate operation, set DIV_HS to the same value as DIV_LS.
 
 

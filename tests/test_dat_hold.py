@@ -12,7 +12,6 @@
 
 # Access one TX / RX page across multiple chip-select transfers through DAT_HOLD,
 # and set the read position through RX_ADDR.
-# Segments are kept word-aligned so this test also runs on the 32-bit branch.
 
 from common import *
 
