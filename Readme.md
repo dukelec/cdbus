@@ -185,7 +185,8 @@ Example waveforms for TX output and TX_EN pins (pre-assert time = 1 bit):
 
 <img alt="arbitration" src="docs/img/to_te_wave_pre.svg" width="75%">
 
-The pre-assert time is not used in arbitration mode, nor for the break character automatically generated in BS mode.
+The pre-assert time is not used in arbitration mode, nor for break characters in BS mode:
+there TX_EN is asserted that time later, together with the break (with bit1 of PIN_CFG, TX is low from the start of that time).
 
 The extra length applies to all break characters sent, the receiver accepts any break of 10 bits or longer.
 

@@ -100,7 +100,8 @@ always @(posedge clk or negedge reset_n)
 
             if (tx_permit && (has_data || has_break)) begin
                 is_break <= has_break;
-                state <= arbitration ? DATA : TX_PRE;
+                // bs mode: no tx_en before a break, as for the one sent at max idle
+                state <= arbitration ? DATA : (break_sync && has_break) ? BS_PRE : TX_PRE;
                 baud_sync <= 1;
             end
             else if (break_sync && reach_max_idle && (has_data || has_break)) begin
@@ -238,7 +239,7 @@ always @(posedge clk or negedge reset_n)
                 end
             end
 
-            if (bit_cnt == 9)
+            if (bit_cnt == 9 && !is_break)
                 tx_en_a_d <= 1;
 
             if (abort) begin
@@ -263,15 +264,15 @@ always @(posedge clk or negedge reset_n)
         if (arbitration) begin
             if (tx_en_a_d2 != tx_en_a_d)
                 en_cnt <= div_ls[15:9] ? 8'hff : div_ls[8:1]; // 0.5-bit
-            if (en_cnt == 1)
+            else if (en_cnt <= 1)
                 tx_en_a <= tx_en_a_d;
         end
         else begin
             if (is_break)
                 tx_en_a <= 0;
-            if (tx_en_a_d2 && !is_break)
+            else if (tx_en_a_d2)
                 en_cnt <= div_ls[15:7] ? 8'hff : {div_ls[6:0], 1'b1}; // 2-bit
-            if (en_cnt == 1)
+            else if (en_cnt <= 1)
                 tx_en_a <= 1;
         end
     end
