@@ -95,7 +95,7 @@ always @(posedge clk or negedge reset_n)
         case (state)
         WAIT: begin
             baud_sel <= 0;
-            if ((!full_duplex && !bus_idle) || reach_max_idle)
+            if ((!full_duplex && !bus_idle) || (reach_max_idle && tx_permit_d[0]))
                 baud_sync <= 1;
 
             if (tx_permit && (has_data || has_break)) begin

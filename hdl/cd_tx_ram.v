@@ -31,12 +31,15 @@ module cd_tx_ram(
 
 parameter B_WIDTH = 9; // buffer bit width, 2^9 = 2 x 256 bytes
 
-reg wr_sel;
 reg rd_sel;
-reg [1:0] dirty;
+reg [1:0] unread_cnt;                   // pages waiting to be sent: 0 to 2
+wire wr_sel = rd_sel ^ unread_cnt[0];   // the page after them
 
-assign unread = dirty[rd_sel];
-assign wr_full = dirty[!rd_sel];
+assign unread = (unread_cnt != 0);
+assign wr_full = unread_cnt[1];
+
+wire len_inc = wr_done && !wr_drop && !wr_full; // page submit
+wire len_dec = rd_done && unread;               // page sent
 
 
 cd_sdpram #(.A_WIDTH(B_WIDTH)) cd_tx_ram_buf_m(
@@ -55,25 +58,13 @@ cd_sdpram #(.A_WIDTH(B_WIDTH)) cd_tx_ram_buf_m(
 always @(posedge clk or negedge reset_n)
     if (!reset_n) begin
         rd_sel <= 0;
-        wr_sel <= 0;
-        dirty <= 0;
+        unread_cnt <= 0;
     end
     else begin
-        if (wr_drop) begin
-            dirty[!rd_sel] <= 0;
-            wr_sel <= unread ? !rd_sel : rd_sel;
-        end
-        else if (wr_done) begin
-            if (!dirty[wr_sel]) begin
-                dirty[wr_sel] <= 1;
-                wr_sel <= !wr_sel;
-            end
-        end
-
-        if (rd_done && dirty[rd_sel]) begin
-            dirty[rd_sel] <= 0;
+        // wr_drop removes the page behind the one being sent
+        unread_cnt <= ((wr_drop && wr_full) ? 2'd1 : unread_cnt) + len_inc - len_dec;
+        if (len_dec)
             rd_sel <= !rd_sel;
-        end
     end
 
 endmodule
