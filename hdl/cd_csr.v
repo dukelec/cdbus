@@ -45,7 +45,8 @@ module cd_csr
         output reg  [7:0]   idle_wait_len,
         output reg  [9:0]   tx_permit_len,
         output reg  [9:0]   max_idle_len,
-        output reg  [1:0]   tx_pre_len,
+        output reg  [2:0]   tx_pre_len,
+        output reg  [3:0]   break_ext_len,
         output reg  [7:0]   filter,
         output reg  [7:0]   filter_m0,
         output reg  [7:0]   filter_m1,
@@ -86,7 +87,7 @@ localparam
     REG_IDLE_WAIT_LEN   = 'h02,
     REG_TX_PERMIT_LEN   = 'h03,
     REG_MAX_IDLE_LEN    = 'h04,
-    REG_TX_PRE_LEN      = 'h05,
+    REG_TX_CFG          = 'h05,
     REG_FILTER          = 'h06,
     REG_DIV_LS          = 'h07,
     REG_DIV_HS          = 'h08,
@@ -125,7 +126,8 @@ reg [23:0] int_flag_snapshot; // avoid metastability
 `endif
 
 wire is_dat_addr = (csr_address == REG_DAT) || (csr_address == REG_DAT_HOLD);
-assign tx_ram_wr_en = is_dat_addr ? csr_write : 1'b0;
+// when no page is free, the write page is the one waiting to be sent
+assign tx_ram_wr_en = is_dat_addr && csr_write && !tx_ram_full;
 
 assign full_duplex = mode_sel == 2'd3;
 assign break_sync = mode_sel == 2'd2;
@@ -145,8 +147,8 @@ always @(*)
             csr_readdata = {22'd0, tx_permit_len};
         REG_MAX_IDLE_LEN:
             csr_readdata = {22'd0, max_idle_len};
-        REG_TX_PRE_LEN:
-            csr_readdata = {30'd0, tx_pre_len};
+        REG_TX_CFG:
+            csr_readdata = {24'd0, break_ext_len, 1'd0, tx_pre_len};
         REG_FILTER:
             csr_readdata = {24'd0, filter};
         REG_DIV_LS:
@@ -187,6 +189,7 @@ always @(posedge clk or negedge reset_n)
         tx_permit_len <= 20;
         max_idle_len <= 200;
         tx_pre_len <= 1;
+        break_ext_len <= 0;
         filter <= 8'hff;
         filter_m0 <= 8'hff;
         filter_m1 <= 8'hff;
@@ -256,6 +259,20 @@ always @(posedge clk or negedge reset_n)
 `endif
         end
 
+        // write 1 to clear, placed before the set conditions below: a new event wins
+        if (csr_write && csr_address == REG_INT_FLAG) begin
+            if (csr_writedata[7])
+                tx_error_flag <= 0;
+            if (csr_writedata[6])
+                cd_flag <= 0;
+            if (csr_writedata[3])
+                rx_error_flag <= 0;
+            if (csr_writedata[2])
+                rx_lost_flag <= 0;
+            if (csr_writedata[1])
+                rx_break_flag <= 0;
+        end
+
 `ifdef CD_CHIP_SELECT
         chip_select_d <= {chip_select_d[0], chip_select};
         if (!chip_select_d[0]) begin
@@ -319,8 +336,10 @@ always @(posedge clk or negedge reset_n)
                     tx_permit_len <= csr_writedata[9:0];
                 REG_MAX_IDLE_LEN:
                     max_idle_len <= csr_writedata[9:0];
-                REG_TX_PRE_LEN:
-                    tx_pre_len <= csr_writedata[1:0];
+                REG_TX_CFG: begin
+                    tx_pre_len <= csr_writedata[2:0];
+                    break_ext_len <= csr_writedata[7:4];
+                end
                 REG_FILTER:
                     filter <= csr_writedata[7:0];
                 REG_DIV_LS:

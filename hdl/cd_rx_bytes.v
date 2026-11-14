@@ -23,10 +23,10 @@ module cd_rx_bytes(
         input       [7:0]   filter_msk1,
         input               user_crc,
         input               not_drop,
-        input               raw,        // transparent mode: no header, commit on idle
+        input               raw,        // transparent mode: no header, no crc check, pages of up to 255 bytes
         input               drop_echo,  // raw mode: drop own tx echo
         input               abort,
-        output reg          error, // frame incomplete or crc error
+        output reg          error, // frame incomplete or crc error, not in raw mode
 
         // rx_des
         input               des_bus_idle,
@@ -54,12 +54,13 @@ reg [8:0] byte_cnt;
 reg [7:0] data_len; // backup 3rd byte
 reg drop_flag;
 reg finish;
-reg is_promiscuous;
-reg is_multicast;
-reg is_data_too_long;
-reg raw_too_long;   // raw: more than 256 bytes received, the frame is broken
+wire is_promiscuous = (filter == 8'hff);
+wire is_multicast = (des_data & filter_msk0) == filter_m0 || (des_data & filter_msk1) == filter_m1;
+wire is_data_too_long = (data_len > (user_crc ? 8'd251 : 8'd253));
+reg raw_cont;       // raw: the previous page was full, the frame goes on
 
-assign ram_wr_len = (not_drop || raw) ? ram_wr_addr : data_len;
+// raw: byte count minus one, 0xff for an empty page
+assign ram_wr_len = (raw && byte_cnt == 0) ? 8'hff : (not_drop || raw) ? ram_wr_addr : data_len;
 
 
 // FSM
@@ -102,7 +103,7 @@ always @(posedge clk or negedge reset_n)
 
         byte_cnt <= 0;
         data_len <= 0;
-        raw_too_long <= 0;
+        raw_cont <= 0;
 
         drop_flag <= 0;
         finish <= 0;
@@ -112,30 +113,28 @@ always @(posedge clk or negedge reset_n)
         ram_wr_en <= 0;
         ram_switch <= 0;
         finish <= 0;
-        is_promiscuous <= (filter == 8'hff);
-        is_data_too_long <= (data_len > (user_crc ? 8'd251 : 8'd253));
-
-        if ((des_data & filter_msk0) == filter_m0 || (des_data & filter_msk1) == filter_m1)
-            is_multicast <= 1;
-        else
-            is_multicast <= 0;
 
         if (state == INIT) begin
             byte_cnt <= 0;
             data_len <= 0;
-            raw_too_long <= 0;
             drop_flag <= 0;
         end
         else begin
 
             if (des_bus_idle) begin
-                if (byte_cnt != 0) begin
-                    if (byte_cnt != 1 && !drop_flag) begin
-                        error <= raw ? (!(des_crc_eq_zero || user_crc) || raw_too_long) : 1'b1; // raw: crc and length only
-                        ram_switch <= not_drop || (raw && (des_crc_eq_zero || user_crc) && !raw_too_long);
+                if (byte_cnt != 0 || raw_cont) begin
+                    // raw: frame end; a single byte is noise, unless it follows a full page
+                    if ((byte_cnt != 1 || raw_cont) && !drop_flag) begin
+                        error <= !raw;
+                        ram_switch <= raw || not_drop;
+                        if (byte_cnt == 0) begin // raw: empty page; cd_rx_ram claims a block only at a write
+                            ram_wr_addr <= 0;
+                            ram_wr_en <= 1;
+                        end
                     end
                     finish <= 1;
                     drop_flag <= 1; // avoid multi-clock ram_switch signal
+                    raw_cont <= 0;
                 end
             end
 
@@ -146,18 +145,16 @@ always @(posedge clk or negedge reset_n)
                     ram_wr_addr <= byte_cnt[7:0];
                     ram_wr_en <= 1;
                 end
-                else if (raw) begin
-                    raw_too_long <= 1;
-                end
 
+                // only set: raw mode, the echo flag must stay after tx is done
                 if (byte_cnt == 0) begin
-                    if (des_data == filter)
-                        drop_flag <= ~is_promiscuous;
+                    if (des_data == filter && !is_promiscuous)
+                        drop_flag <= 1;
                 end
 
                 if (byte_cnt == 1) begin
-                    if (des_data != filter && des_data != 8'hff && !is_multicast)
-                        drop_flag <= ~is_promiscuous;
+                    if (des_data != filter && des_data != 8'hff && !is_multicast && !is_promiscuous)
+                        drop_flag <= 1;
                 end
 
                 if (byte_cnt == 2) begin
@@ -178,6 +175,12 @@ always @(posedge clk or negedge reset_n)
                     finish <= 1;
                 end
 
+                if (raw && byte_cnt == 254) begin // page full, the frame goes on in the next page
+                    ram_switch <= !drop_flag;
+                    raw_cont <= !drop_flag;
+                    finish <= 1;
+                end
+
                 byte_cnt <= byte_cnt + 1'd1;
             end
 
@@ -189,6 +192,9 @@ always @(posedge clk or negedge reset_n)
                 ram_switch <= 0;
             end
         end
+
+        if (abort)
+            raw_cont <= 0;
     end
 
 endmodule

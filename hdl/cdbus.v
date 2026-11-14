@@ -48,7 +48,8 @@ wire tx_push_pull;
 wire [7:0] idle_wait_len;
 wire [9:0] tx_permit_len;
 wire [9:0] max_idle_len;
-wire [1:0] tx_pre_len;
+wire [2:0] tx_pre_len;
+wire [3:0] break_ext_len;
 wire [7:0] filter;
 wire [7:0] filter_m0;
 wire [7:0] filter_m1;
@@ -157,6 +158,7 @@ cd_csr #(
     .tx_permit_len(tx_permit_len),
     .max_idle_len(max_idle_len),
     .tx_pre_len(tx_pre_len),
+    .break_ext_len(break_ext_len),
     .filter(filter),
     .filter_m0(filter_m0),
     .filter_m1(filter_m1),
@@ -312,6 +314,7 @@ cd_tx_ser cd_tx_ser_m(
 
     .data(ser_data),
     .has_data(ser_has_data),
+    .has_page(raw && tx_pending),
     .ack_data(ser_ack_data),
     .is_crc_byte(ser_is_crc_byte),
     .is_last_byte(ser_is_last_byte),
@@ -327,6 +330,7 @@ cd_tx_ser cd_tx_ser_m(
     .tx_permit_len(tx_permit_len),
     .max_idle_len(max_idle_len),
     .tx_pre_len(tx_pre_len),
+    .break_ext_len(break_ext_len),
     .full_duplex(full_duplex),
     .break_sync(break_sync),
     .arbitration(arbitration),

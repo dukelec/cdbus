@@ -17,6 +17,7 @@ module cd_tx_ser(
 
         input       [7:0]   data,
         input               has_data,
+        input               has_page,   // raw: a page is queued, the frame goes on with it
         output reg          ack_data,
         input               is_crc_byte,
         input               is_last_byte,
@@ -31,7 +32,8 @@ module cd_tx_ser(
         input       [15:0]  div_hs,
         input       [9:0]   tx_permit_len,
         input       [9:0]   max_idle_len,
-        input       [1:0]   tx_pre_len,
+        input       [2:0]   tx_pre_len,
+        input       [3:0]   break_ext_len,
         input               full_duplex,
         input               break_sync,
         input               arbitration,
@@ -45,12 +47,11 @@ module cd_tx_ser(
         output reg          tx_en_a
     );
 
-reg [3:0] state;
+reg [2:0] state;
 localparam
-    WAIT            = 4'b0001,
-    BS_PRE          = 4'b0010,
-    TX_PRE          = 4'b0100,
-    DATA            = 4'b1000;
+    WAIT            = 3'b001,
+    TX_PRE          = 3'b010,
+    DATA            = 3'b100;
 
 assign tx_busy = (state != WAIT);
 
@@ -59,13 +60,14 @@ always @(posedge clk) tx_permit_d[1] <= tx_permit_d[0];
 wire tx_permit = break_sync ? (tx_permit_d == 2'b01) : tx_permit_d[0];
 reg reach_max_idle;
 reg [9:0] tx_wait_cnt;
-reg [1:0] delay_cnt;
+reg [3:0] delay_cnt; // TX_EN pre-assert bits, then extra break bits
 
 reg is_break;
 wire [9:0] tx_data = is_break ? 10'd0 : {1'b1, data, 1'b0};
 
 reg [3:0] bit_cnt; // range: [0, 9]
 reg arbitration_field;
+reg page_wait; // stop bit held until the next page is prefetched, its first byte not sent yet
 
 reg crc_clk;
 
@@ -92,7 +94,7 @@ always @(posedge clk or negedge reset_n)
         case (state)
         WAIT: begin
             baud_sel <= 0;
-            if ((!full_duplex && !bus_idle) || reach_max_idle)
+            if ((!full_duplex && !bus_idle) || (reach_max_idle && tx_permit_d[0]))
                 baud_sync <= 1;
 
             if (tx_permit && (has_data || has_break)) begin
@@ -102,20 +104,20 @@ always @(posedge clk or negedge reset_n)
             end
             else if (break_sync && reach_max_idle && (has_data || has_break)) begin
                 is_break <= 1;
-                state <= BS_PRE;
+                state <= TX_PRE;
                 baud_sync <= 1;
             end
         end
 
-        BS_PRE, TX_PRE: begin
-            if (delay_cnt == tx_pre_len) begin
+        TX_PRE: begin
+            if (delay_cnt[2:0] == tx_pre_len) begin
                 state <= DATA;
                 baud_sync <= 1;
             end
         end
 
         DATA: begin
-            if (cd || err || (!has_data && !is_break))
+            if (cd || err || (!has_data && !has_page && !is_break))
                 state <= WAIT;
 
             if (ack_data)
@@ -159,7 +161,7 @@ always @(posedge clk or negedge reset_n)
 // delay_cnt
 
 always @(posedge clk) begin
-    if (state == WAIT)
+    if (state == WAIT || (state == DATA && bit_cnt != 9))
         delay_cnt <= 0;
     else if (bit_inc)
         delay_cnt <= delay_cnt + 1'b1;
@@ -177,6 +179,7 @@ always @(posedge clk or negedge reset_n)
         ack_break <= 0;
         bit_cnt <= 0;
         arbitration_field <= 1;
+        page_wait <= 0;
 
         tx <= 1;
         tx_en <= 0;
@@ -192,8 +195,9 @@ always @(posedge clk or negedge reset_n)
         if (state != DATA) begin
             bit_cnt <= 0;
             tx <= 1;
-            tx_en <= (state == TX_PRE);
+            tx_en <= (state == TX_PRE && !(break_sync && is_break)); // bs mode: tx_en comes with the break
             arbitration_field <= 1;
+            page_wait <= 0;
             tx_en_a_d <= 0;
         end
         else begin
@@ -214,18 +218,26 @@ always @(posedge clk or negedge reset_n)
                 if (bit_cnt == 9) begin
                     bit_cnt <= 0;
                     if (is_break) begin
-                        ack_break <= 1;
-                        bit_cnt <= 9; // tx remains 1 before exiting DATA state
+                        bit_cnt <= 9; // tx stays low for the extra bits
+                        if (delay_cnt == break_ext_len)
+                            ack_break <= 1;
+                    end
+                    else if (page_wait) begin
+                        if (!has_data)
+                            bit_cnt <= 9;
+                        page_wait <= !has_data;
                     end
                     else begin
                         ack_data <= 1;
-                        if (is_last_byte)
+                        if (is_last_byte) begin
                             bit_cnt <= 9;
+                            page_wait <= 1;
+                        end
                     end
                 end
             end
 
-            if (bit_cnt == 9)
+            if (bit_cnt == 9 && !is_break)
                 tx_en_a_d <= 1;
 
             if (abort) begin
@@ -250,15 +262,15 @@ always @(posedge clk or negedge reset_n)
         if (arbitration) begin
             if (tx_en_a_d2 != tx_en_a_d)
                 en_cnt <= div_ls[15:9] ? 8'hff : div_ls[8:1]; // 0.5-bit
-            if (en_cnt == 1)
+            else if (en_cnt <= 1)
                 tx_en_a <= tx_en_a_d;
         end
         else begin
             if (is_break)
                 tx_en_a <= 0;
-            if (tx_en_a_d2 && !is_break)
+            else if (tx_en_a_d2)
                 en_cnt <= div_ls[15:7] ? 8'hff : {div_ls[6:0], 1'b1}; // 2-bit
-            if (en_cnt == 1)
+            else if (en_cnt <= 1)
                 tx_en_a <= 1;
         end
     end

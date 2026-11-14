@@ -1,0 +1,117 @@
+# This Source Code Form is subject to the terms of the CERN Open
+# Hardware Licence Version 2 - Strongly Reciprocal (CERN-OHL-S v2):
+# https://ohwr.org/cern_ohl_s_v2.txt (see the LICENSE file).
+# Notice: The CDBUS Exception (see the LICENSE_EXCEPTION file)
+# grants free commercial use in FPGAs and other programmable logic
+# devices; it does not extend to ASIC design or manufacturing.
+#
+# Copyright (c) 2017-2026 DUKELEC, All rights reserved.
+#
+# Author: Duke Fong <d@d-l.io>
+#
+
+from common import *
+
+@cocotb.test(timeout_time=500, timeout_unit='us')
+async def test_cdbus(dut):
+    dut._log.info('test_cdbus start.')
+    
+    sys_clk = 40000000
+    clk_period = 1000000000000 / sys_clk
+
+    cocotb.start_soon(Clock(dut.clk0, clk_period).start())
+    cocotb.start_soon(Clock(dut.clk1, clk_period).start())
+    cocotb.start_soon(Clock(dut.clk2, clk_period).start())
+    await reset(dut, 0)
+    await reset(dut, 1)
+    await reset(dut, 2)
+    await check_version(dut, 0)
+    await check_version(dut, 1)
+    await check_version(dut, 2)
+    
+    val = await csr_read(dut, 0, REG_SETTING)
+    dut._log.info(f'idx0 REG_SETTING: 0x{int(val):02x}')
+
+    await csr_write(dut, 0, REG_PIN_CFG, 0b00000001) # push-pull
+    await csr_write(dut, 1, REG_PIN_CFG, 0b00000001) # push-pull
+    await csr_write(dut, 1, REG_INT_MASK_L, 0b11001111)
+    
+    await set_div(dut, 0, 39, 2) # 1Mbps, 13.333Mbps
+    await set_div(dut, 1, 39, 2)
+    
+    await csr_write(dut, 0, REG_FILTER, 0x01) # set local filter to 0x01
+    await csr_write(dut, 1, REG_FILTER, 0x02) # set local filter to 0x02
+    if 'REG_FILTER_M0' in globals():
+        await csr_write(dut, 1, REG_FILTER_M0, 0xe0) # set mcast filter
+    else:
+        await csr_write(dut, 1, REG_FILTER_M, 0xffffffe0) # for 23-bit branch
+    
+    await write_tx(dut, 0, b'\x01\xe0\x01\xcd')
+    #await csr_write(dut, 0, REG_CTRL, BIT_TX_START)
+
+    await RisingEdge(dut.irq1)
+    val = await read_int_flag(dut, 1)
+    dut._log.info(f'REG_INT_FLAG: 0x{int(val):02x}')
+    
+    str_ = (await read_rx(dut, 1, 4)).hex()
+    dut._log.info(f'idx1: received: {str_}')
+    if str_ != '01e001cd':
+        dut._log.error(f'idx1: receive mismatch')
+        await exit_err()
+    
+    #await csr_write(dut, 1, REG_CTRL, BIT_RX_CLR_PENDING)
+    await FallingEdge(dut.irq1)
+    
+    # test another maddr
+    if 'REG_FILTER_M1' in globals():
+        await csr_write(dut, 1, REG_FILTER_M1, 0xe1) # set mcast filter
+    else:
+        await csr_write(dut, 1, REG_FILTER_M, 0xffffe1e0) # for 23-bit branch
+    
+    await write_tx(dut, 0, b'\x01\xe1\x01\xcd')
+    #await csr_write(dut, 0, REG_CTRL, BIT_TX_START)
+
+    await RisingEdge(dut.irq1)
+    val = await read_int_flag(dut, 1)
+    dut._log.info(f'REG_INT_FLAG: 0x{int(val):02x}')
+    
+    str_ = (await read_rx(dut, 1, 4)).hex()
+    dut._log.info(f'idx1: received: {str_}')
+    if str_ != '01e101cd':
+        dut._log.error(f'idx1: receive mismatch')
+        await exit_err()
+    
+    #await csr_write(dut, 1, REG_CTRL, BIT_RX_CLR_PENDING)
+    await FallingEdge(dut.irq1)
+    
+    
+    # test broadcast when all mcast addr in use
+    await write_tx(dut, 0, b'\x01\xff\x01\xcd')
+    #await csr_write(dut, 0, REG_CTRL, BIT_TX_START)
+
+    await RisingEdge(dut.irq1)
+    val = await read_int_flag(dut, 1)
+    dut._log.info(f'REG_INT_FLAG: 0x{int(val):02x}')
+    
+    str_ = (await read_rx(dut, 1, 4)).hex()
+    dut._log.info(f'idx1: received: {str_}')
+    if str_ != '01ff01cd':
+        dut._log.error(f'idx1: receive mismatch')
+        await exit_err()
+    
+    #await csr_write(dut, 1, REG_CTRL, BIT_RX_CLR_PENDING)
+    await FallingEdge(dut.irq1)
+    
+    # test not receive
+    await write_tx(dut, 0, b'\x01\xf0\x01\xcd')
+    #await csr_write(dut, 0, REG_CTRL, BIT_TX_START)
+
+    await Timer(60, unit='us')
+    dut.dbg0.value = 1
+    if int(dut.irq1.value) != 0:
+        dut._log.error(f'idx1: should not receive')
+        await exit_err()
+    
+    dut._log.info('test_cdbus done.')
+    await exit_ok()
+

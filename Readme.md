@@ -15,12 +15,12 @@ This document only describes the modifications. For the full protocol and docume
 | IDLE_WAIT_LEN |  0x02   | RD/WR  | 0x0a                   |                                           |
 | TX_PERMIT_LEN |  0x03   | RD/WR  | 0x14                   |                                           |
 | MAX_IDLE_LEN  |  0x04   | RD/WR  | 0xc8                   |                                           |
-| TX_PRE_LEN    |  0x05   | RD/WR  | 0x01                   |                                           |
+| TX_CFG        |  0x05   | RD/WR  | 0x01                   |                                           |
 | FILTER        |  0x06   | RD/WR  | 0xff                   |                                           |
 | DIV_LS        |  0x07   | RD/WR  | 0x015a                 |                                           |
 | DIV_HS        |  0x08   | RD/WR  | 0x015a                 |                                           |
 | INT_MASK      |  0x09   | RD/WR  | 0x00                   |                                           |
-| INT_FLAG      |  0x0a   | RD     | n/a                    | RX_LEN: byte 2, INT_FLAG: bytes 0-1       |
+| INT_FLAG      |  0x0a   | RD/WR  | n/a                    | RX_LEN: byte 2, INT_FLAG: bytes 0-1       |
 | DAT           |  0x0b   | RD/WR  | n/a                    | 32-bit width                              |
 | CTRL          |  0x0c   | WR     | n/a                    |                                           |
 | DAT_HOLD      |  0x0d   | RD/WR  | n/a                    | Same as DAT, but keeps the page open      |
@@ -30,7 +30,7 @@ This document only describes the modifications. For the full protocol and docume
 DAT_HOLD and RX_ADDR only differ from the 8-bit version in that the RX_ADDR value is a 32-bit word offset instead of a byte offset.
 
 SETTING byte 0 is the SETTING of the 8-bit version, byte 1 is its PIN_CFG.
-In transparent mode with `CRC maintained by user`, a frame with data_len above 251 still fits in the 64 words of the page,
+In transparent mode, a frame with data_len above 251 still fits in the 64 words of the page,
 since the bytes beyond the end of the page are placed at the reserved bytes at the start.
 
 

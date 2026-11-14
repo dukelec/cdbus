@@ -1,0 +1,81 @@
+# This Source Code Form is subject to the terms of the CERN Open
+# Hardware Licence Version 2 - Strongly Reciprocal (CERN-OHL-S v2):
+# https://ohwr.org/cern_ohl_s_v2.txt (see the LICENSE file).
+# Notice: The CDBUS Exception (see the LICENSE_EXCEPTION file)
+# grants free commercial use in FPGAs and other programmable logic
+# devices; it does not extend to ASIC design or manufacturing.
+#
+# Copyright (c) 2017-2026 DUKELEC, All rights reserved.
+#
+# Author: Duke Fong <d@d-l.io>
+#
+
+from common import *
+
+@cocotb.test(timeout_time=500, timeout_unit='us')
+async def test_cdbus(dut):
+    dut._log.info('test_cdbus start.')
+    
+    sys_clk = 40000000
+    clk_period = 1000000000000 / sys_clk
+
+    cocotb.start_soon(Clock(dut.clk0, clk_period).start())
+    cocotb.start_soon(Clock(dut.clk1, clk_period).start())
+    await reset(dut, 0)
+    await reset(dut, 1)
+    await check_version(dut, 0)
+    await check_version(dut, 1)
+    
+    val = await csr_read(dut, 0, REG_SETTING)
+    dut._log.info(f'idx0 REG_SETTING: 0x{int(val):02x}')
+
+    await csr_write(dut, 0, REG_SETTING, 0b00000011) # full-duplex
+    await csr_write(dut, 1, REG_SETTING, 0b00000011)
+    await csr_write(dut, 0, REG_PIN_CFG, 0b00000001) # push-pull
+    await csr_write(dut, 1, REG_PIN_CFG, 0b00000001)
+    await csr_write(dut, 0, REG_INT_MASK_L, 0b11001111)
+    await csr_write(dut, 1, REG_INT_MASK_L, 0b11001111)
+    
+    await set_div(dut, 0, 2, 2)
+    await set_div(dut, 1, 2, 2)
+    
+    await csr_write(dut, 0, REG_FILTER, 0x01) # set local filter to 0x01
+    await csr_write(dut, 1, REG_FILTER, 0x02) # set local filter to 0x02
+    
+    await write_tx(dut, 0, b'\x01\x02\x01\x12') # node 0x01 send to 0x02
+    await Timer(3, unit='us')
+    await write_tx(dut, 1, b'\x02\x01\x01\x21') # node 0x02 send to 0x01
+    
+    await Timer(4, unit='us')
+    dut.dbg0.value = 0
+    val = await read_int_flag(dut, 1)
+    dut._log.info(f'REG_INT_FLAG: 0x{int(val):02x}')
+    
+    str_ = (await read_rx(dut, 1, 4)).hex()
+    dut._log.info(f'idx1: received: {str_}')
+    if str_ != '01020112':
+        dut._log.error(f'idx1: receive mismatch')
+        await exit_err()
+    
+    #await csr_write(dut, 1, REG_CTRL, BIT_RX_CLR_PENDING)
+    await FallingEdge(dut.irq1)
+    dut.dbg0.value = 1
+    
+    await Timer(1, unit='us')
+    dut.dbg0.value = 0
+    val = await read_int_flag(dut, 0)
+    dut._log.info(f'REG_INT_FLAG: 0x{int(val):02x}')
+    
+    str_ = (await read_rx(dut, 0, 4)).hex()
+    dut._log.info(f'idx1: received: {str_}')
+    if str_ != '02010121':
+        dut._log.error(f'idx0: receive mismatch')
+        await exit_err()
+    
+    #await csr_write(dut, 0, REG_CTRL, BIT_RX_CLR_PENDING)
+    await FallingEdge(dut.irq0)
+    dut.dbg0.value = 1
+    
+    dut._log.info('test_cdbus done.')
+    await exit_ok()
+

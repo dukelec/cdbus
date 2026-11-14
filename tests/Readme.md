@@ -1,9 +1,5 @@
 
-Copy test cases from 8-bit branch first:
-```
-git checkout master test_*.py
-git restore --staged test_*.py
-```
+The test cases come from the 8-bit branch with each merge, common.py adapts them to the 32-bit registers.
 
-Then, run `./test_all.sh` or `./test_all.sh test_xxx.py`
+Run `./test_all.sh` or `./test_all.sh test_xxx.py`
 

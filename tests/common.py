@@ -31,7 +31,7 @@ REG_SETTING         = 0x01
 REG_IDLE_WAIT_LEN   = 0x02
 REG_TX_PERMIT_LEN   = 0x03
 REG_MAX_IDLE_LEN    = 0x04
-REG_TX_PRE_LEN      = 0x05
+REG_TX_CFG          = 0x05
 REG_FILTER          = 0x06
 REG_DIV_LS          = 0x07
 REG_DIV_HS          = 0x08
@@ -178,6 +178,8 @@ async def set_tx_permit_len(dut, idx, tx_permit_len):
 async def write_tx(dut, idx, bytes_, reg=REG_DAT):
     if len(bytes_) == 0:
         return
+    if len(bytes_) > 256: # bytes beyond the page go to its start, as the 8-bit address wraps
+        bytes_ = bytes_[256:] + bytes_[len(bytes_) - 256:256]
     blk_cnt = int((len(bytes_)+3)/4)
     for i in range(blk_cnt):
         val = struct.unpack('<I', (bytes_[i*4:i*4+4] + b'\x00\x00\x00')[0:4])[0]
@@ -185,7 +187,8 @@ async def write_tx(dut, idx, bytes_, reg=REG_DAT):
             await csr_write(dut, idx, reg, val, True)
         else:
             await csr_write(dut, idx, reg, val, False)
-    await RisingEdge(getattr(dut, f'clk{idx}')) # let the auto submit finish before the next transfer
+    for _ in range(2): # let the auto submit finish before the next transfer, chip_select is registered
+        await RisingEdge(getattr(dut, f'clk{idx}'))
 
 async def seek_rx(dut, idx, offset): # byte offset, must be word-aligned
     await csr_write(dut, idx, REG_RX_ADDR, offset // 4)
