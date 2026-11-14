@@ -38,7 +38,11 @@ assign has_data = ram_unread && !ram_rd_done && hdr_done;
 assign ram_rd_en = ram_unread;
 
 reg [8:0] byte_cnt;
+`ifdef CD_SPRAM_ONLY
+assign ram_rd_addr = byte_cnt[7:0] + ack_data; // one clock early: a read may be lost to a write
+`else
 assign ram_rd_addr = byte_cnt[7:0];
+`endif
 reg [7:0] data_len; // backup 3rd byte
 reg hdr_done;       // raw mode: header prefetched, 2 clocks per byte for ram latency
 reg pf_tick;

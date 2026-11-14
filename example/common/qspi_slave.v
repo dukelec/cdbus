@@ -130,11 +130,14 @@ reg [7:0] ram[1:0]; // FIFO
 reg ra;
 reg wa;
 
+reg csr_read_d;
+
 always @(posedge clk) begin
+    csr_read_d <= csr_read;
     if (!chip_select) begin
         wa <= 0;
     end
-    else if (csr_read) begin
+    else if (csr_read_d) begin // data is valid in the clock after csr_read
         ram[wa] <= csr_readdata;
         wa <= !wa;
     end
